@@ -1,0 +1,48 @@
+version: v0.1.0
+
+layers:
+  core_ontology:
+    change_allowed: manual_only
+    reviewers_required: 2
+    change_quota_per_cycle: 5
+    rollback_supported: true
+    description: Top-level classes, relation type system, core domain skeleton
+
+  domain_ontology:
+    change_allowed: semi_auto
+    reviewers_required: 1
+    change_quota_per_cycle: 20
+    rollback_supported: true
+    description: Sub-domain concepts and relation additions
+
+  lexicon_layer:
+    change_allowed: auto_with_threshold
+    min_confidence: 0.80
+    min_source_count: 2
+    rollback_supported: true
+    description: Aliases, abbreviations, vendor terms
+
+candidate_admission:
+  min_source_count: 3
+  min_source_diversity: 0.6        # at least 3 distinct sites
+  min_temporal_stability: 0.7      # appeared in at least 2 crawl cycles
+  min_structural_fit: 0.65         # can attach to a clear parent node
+  min_composite_score: 0.65
+  synonym_risk_max: 0.4            # synonym probability must be below threshold
+  require_human_review: true       # all candidates need final human sign-off
+
+scoring_weights:
+  source_authority: 0.25
+  source_diversity: 0.20
+  temporal_stability: 0.20
+  structural_fit: 0.20
+  retrieval_gain: 0.10
+  synonym_risk_penalty: 0.05       # subtracted
+
+anti_drift:
+  block_parentless_candidate: true
+  block_alias_promotion_to_concept: true
+  require_impact_analysis_before_publish: true
+  max_core_changes_per_release: 5
+  min_days_in_candidate_pool: 7    # must stay in candidate pool at least 7 days
+  freeze_core_during_major_ingestion: true

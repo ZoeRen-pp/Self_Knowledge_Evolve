@@ -1,0 +1,122 @@
+"""Stage 5: Deduplication + merge — rules D1-D5."""
+
+from __future__ import annotations
+
+import logging
+import uuid
+
+from src.db.postgres import fetchall, execute, get_conn
+from src.utils.hashing import hamming_distance, jaccard_similarity
+from src.utils.text import normalize_text
+
+log = logging.getLogger(__name__)
+
+SIMHASH_NEAR_DUP_THRESHOLD = 3    # hamming distance ≤ 3
+JACCARD_DUP_THRESHOLD      = 0.85
+
+
+class DedupStage:
+    def process_document(self, source_doc_id: str) -> dict:
+        """Rule D2: segment-level SimHash dedup within a document."""
+        segments = fetchall(
+            "SELECT segment_id, raw_text, simhash_value, source_doc_id FROM segments "
+            "WHERE source_doc_id=%s AND lifecycle_state='active' ORDER BY segment_index",
+            (source_doc_id,),
+        )
+        superseded = 0
+        n = len(segments)
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                a, b = segments[i], segments[j]
+                if a.get("simhash_value") is None or b.get("simhash_value") is None:
+                    continue
+                hd = hamming_distance(a["simhash_value"], b["simhash_value"])
+                if hd <= SIMHASH_NEAR_DUP_THRESHOLD:
+                    # Confirm with Jaccard
+                    norm_a = self._normalize_for_dedup(a["raw_text"])
+                    norm_b = self._normalize_for_dedup(b["raw_text"])
+                    if jaccard_similarity(norm_a, norm_b) >= JACCARD_DUP_THRESHOLD:
+                        # Supersede segment j (later one)
+                        execute(
+                            "UPDATE segments SET lifecycle_state='superseded' WHERE segment_id=%s",
+                            (b["segment_id"],),
+                        )
+                        superseded += 1
+
+        log.info("Doc %s: %d segments superseded by SimHash dedup", source_doc_id, superseded)
+        return {"segments_superseded": superseded}
+
+    def process_facts(self, source_doc_id: str) -> dict:
+        """Rule D3-D5: fact-level dedup and conflict detection."""
+        # Get all facts from this document via evidence → segment → doc join
+        new_facts = fetchall(
+            """
+            SELECT DISTINCT f.*
+            FROM facts f
+            JOIN evidence e ON f.fact_id = e.fact_id
+            WHERE e.source_doc_id = %s AND f.lifecycle_state = 'active'
+            """,
+            (source_doc_id,),
+        )
+
+        merged = 0
+        conflicted = 0
+
+        for fact in new_facts:
+            # Rule D3 condition A: exact (subject, predicate, object) match
+            existing = fetchall(
+                """
+                SELECT fact_id, confidence, merge_cluster_id
+                FROM facts
+                WHERE subject=%s AND predicate=%s AND object=%s
+                  AND fact_id != %s AND lifecycle_state='active'
+                """,
+                (fact["subject"], fact["predicate"], fact["object"], fact["fact_id"]),
+            )
+
+            if existing:
+                # Multi-source merge: assign same cluster_id
+                cluster_id = existing[0].get("merge_cluster_id") or str(uuid.uuid4())
+                execute(
+                    "UPDATE facts SET merge_cluster_id=%s WHERE fact_id=%s",
+                    (cluster_id, fact["fact_id"]),
+                )
+                for ex in existing:
+                    execute(
+                        "UPDATE facts SET merge_cluster_id=%s WHERE fact_id=%s",
+                        (cluster_id, ex["fact_id"]),
+                    )
+                merged += 1
+                continue
+
+            # Rule D4: conflict detection — same subject+predicate, different object
+            conflicts = fetchall(
+                """
+                SELECT fact_id FROM facts
+                WHERE subject=%s AND predicate=%s AND object != %s
+                  AND lifecycle_state='active'
+                """,
+                (fact["subject"], fact["predicate"], fact["object"]),
+            )
+            for conf_fact in conflicts:
+                execute(
+                    "UPDATE facts SET lifecycle_state='conflicted' WHERE fact_id IN (%s,%s)",
+                    (fact["fact_id"], conf_fact["fact_id"]),  # Note: use separate params
+                )
+                execute(
+                    """
+                    INSERT INTO conflict_records (conflict_id, fact_id_a, fact_id_b, conflict_type)
+                    VALUES (%s,%s,%s,'contradictory_value')
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (str(uuid.uuid4()), fact["fact_id"], conf_fact["fact_id"]),
+                )
+                conflicted += 1
+
+        log.info("Doc %s: %d facts merged, %d conflicts", source_doc_id, merged, conflicted)
+        return {"facts_merged": merged, "facts_conflicted": conflicted}
+
+    def _normalize_for_dedup(self, text: str) -> str:
+        """Rule D5: normalize before dedup — lowercase, collapse whitespace."""
+        return normalize_text(text)

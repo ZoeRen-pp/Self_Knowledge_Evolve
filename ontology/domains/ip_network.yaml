@@ -1,0 +1,811 @@
+version: v0.1.0
+domain: IP / Data Communication Network
+domain_id: IP
+
+nodes:
+
+  # ════════════════════════════════════════════
+  # L2 SWITCHING
+  # ════════════════════════════════════════════
+  - id: IP.L2_SWITCHING
+    canonical_name: L2 Switching
+    display_name_zh: 二层交换
+    parent_id: null
+    maturity_level: core
+    description: Data link layer forwarding based on MAC addresses
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IEEE]
+    allowed_relations: [contains, depends_on, configured_by]
+
+  - id: IP.ETHERNET
+    canonical_name: Ethernet
+    display_name_zh: 以太网
+    parent_id: IP.L2_SWITCHING
+    maturity_level: core
+    description: IEEE 802.3 wired LAN technology using CSMA/CD
+    aliases: [以太网, IEEE 802.3]
+    allowed_relations: [uses_protocol, encapsulates, depends_on, constrained_by, configured_by]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.VLAN
+    canonical_name: VLAN
+    display_name_zh: 虚拟局域网
+    parent_id: IP.L2_SWITCHING
+    maturity_level: core
+    description: IEEE 802.1Q logical network isolation mechanism using VLAN tags
+    aliases: [Virtual LAN, 802.1Q VLAN, Virtual Local Area Network, 虚拟局域网]
+    allowed_relations: [encapsulates, depends_on, configured_by, contains, isolates]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QINQ
+    canonical_name: QinQ
+    display_name_zh: 双层VLAN
+    parent_id: IP.VLAN
+    maturity_level: core
+    description: IEEE 802.1ad VLAN stacking (double tagging) for provider networks
+    aliases: [802.1ad, Stacked VLAN, Double Tagging, Provider Bridging, 双层VLAN]
+    allowed_relations: [encapsulates, depends_on, configured_by]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.STP
+    canonical_name: STP
+    display_name_zh: 生成树协议
+    parent_id: IP.L2_SWITCHING
+    maturity_level: core
+    description: IEEE 802.1D loop prevention protocol using spanning tree algorithm
+    aliases: [Spanning Tree Protocol, 802.1D, 生成树协议]
+    allowed_relations: [depends_on, establishes, protects, configured_by, constrained_by]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.RSTP
+    canonical_name: RSTP
+    display_name_zh: 快速生成树协议
+    parent_id: IP.STP
+    maturity_level: core
+    description: IEEE 802.1w rapid convergence enhancement of STP
+    aliases: [Rapid Spanning Tree Protocol, 802.1w, 快速生成树]
+    allowed_relations: [depends_on, establishes, protects, configured_by]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.MSTP
+    canonical_name: MSTP
+    display_name_zh: 多生成树协议
+    parent_id: IP.STP
+    maturity_level: core
+    description: IEEE 802.1s multiple spanning tree instances mapped to VLANs
+    aliases: [Multiple Spanning Tree Protocol, 802.1s, 多生成树]
+    allowed_relations: [depends_on, establishes, protects, contains, configured_by]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.LACP
+    canonical_name: LACP
+    display_name_zh: 链路聚合控制协议
+    parent_id: IP.L2_SWITCHING
+    maturity_level: core
+    description: IEEE 802.3ad link aggregation control protocol for bonding multiple links
+    aliases: [Link Aggregation Control Protocol, 802.3ad, 链路聚合, LAG, Etherchannel]
+    allowed_relations: [establishes, depends_on, configured_by, contains, protects]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.LLDP
+    canonical_name: LLDP
+    display_name_zh: 链路层发现协议
+    parent_id: IP.L2_SWITCHING
+    maturity_level: core
+    description: IEEE 802.1AB neighbour discovery protocol for topology visibility
+    aliases: [Link Layer Discovery Protocol, 802.1AB, 链路层发现协议, CDP]
+    allowed_relations: [monitored_by, configured_by, depends_on]
+    source_basis: [IEEE]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # L3 ROUTING
+  # ════════════════════════════════════════════
+  - id: IP.L3_ROUTING
+    canonical_name: L3 Routing
+    display_name_zh: 三层路由
+    parent_id: null
+    maturity_level: core
+    description: Network layer forwarding based on IP addresses
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, depends_on, configured_by]
+
+  - id: IP.IPV4
+    canonical_name: IPv4
+    display_name_zh: IPv4
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Internet Protocol version 4, RFC 791. 32-bit addressing.
+    aliases: [Internet Protocol version 4, IP version 4]
+    allowed_relations: [uses_protocol, encapsulates, depends_on, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.IPV6
+    canonical_name: IPv6
+    display_name_zh: IPv6
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Internet Protocol version 6, RFC 8200. 128-bit addressing.
+    aliases: [Internet Protocol version 6, IP version 6, IPv6协议]
+    allowed_relations: [uses_protocol, encapsulates, depends_on, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.ARP
+    canonical_name: ARP
+    display_name_zh: 地址解析协议
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Address Resolution Protocol mapping IPv4 to MAC, RFC 826
+    aliases: [Address Resolution Protocol, 地址解析协议]
+    allowed_relations: [depends_on, uses_protocol]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.ROUTING_PROTOCOL
+    canonical_name: Routing Protocol
+    display_name_zh: 路由协议
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Abstract class for all dynamic routing protocols
+    aliases: [路由协议, Dynamic Routing]
+    allowed_relations: [contains, establishes, advertises, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.OSPF
+    canonical_name: OSPF
+    display_name_zh: 开放最短路径优先
+    parent_id: IP.ROUTING_PROTOCOL
+    maturity_level: core
+    description: Link-state IGP using Dijkstra SPF algorithm. RFC 2328 (v2), RFC 5340 (v3).
+    aliases: [Open Shortest Path First, OSPFv2, OSPFv3, 开放最短路径优先, OSPF协议]
+    allowed_relations: [uses_protocol, establishes, advertises, depends_on, configured_by, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.IS_IS
+    canonical_name: IS-IS
+    display_name_zh: 中间系统到中间系统
+    parent_id: IP.ROUTING_PROTOCOL
+    maturity_level: core
+    description: Link-state IGP based on ISO 10589 / RFC 1142. Widely used in SP networks.
+    aliases: [Intermediate System to Intermediate System, ISIS, IS IS, 中间系统协议]
+    allowed_relations: [uses_protocol, establishes, advertises, depends_on, configured_by]
+    source_basis: [IETF, ITU-T]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.BGP
+    canonical_name: BGP
+    display_name_zh: 边界网关协议
+    parent_id: IP.ROUTING_PROTOCOL
+    maturity_level: core
+    description: Path-vector EGP for inter-AS routing. RFC 4271.
+    aliases: [Border Gateway Protocol, BGP-4, eBGP, iBGP, 边界网关协议, BGP协议]
+    allowed_relations: [uses_protocol, establishes, advertises, depends_on, configured_by, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.RIP
+    canonical_name: RIP
+    display_name_zh: 路由信息协议
+    parent_id: IP.ROUTING_PROTOCOL
+    maturity_level: extended
+    description: Distance-vector IGP. RFC 2080 (RIPng for IPv6). Legacy protocol.
+    aliases: [Routing Information Protocol, RIPv2, RIPng]
+    allowed_relations: [uses_protocol, establishes, advertises, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.STATIC_ROUTE
+    canonical_name: StaticRoute
+    display_name_zh: 静态路由
+    parent_id: IP.ROUTING_PROTOCOL
+    maturity_level: core
+    description: Manually configured routing table entries without dynamic exchange
+    aliases: [Static Routing, 静态路由, ip route]
+    allowed_relations: [configured_by, depends_on, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.ROUTE_POLICY
+    canonical_name: RoutePolicy
+    display_name_zh: 路由策略
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Mechanism to control route import, filtering, and attribute modification
+    aliases: [Route Map, route-map, Route Policy, Policy-Based Routing, 路由策略, Routing Policy]
+    allowed_relations: [configured_by, constrained_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.PREFIX_LIST
+    canonical_name: PrefixList
+    display_name_zh: 前缀列表
+    parent_id: IP.ROUTE_POLICY
+    maturity_level: core
+    description: Ordered list of IP prefix match rules used in route filtering
+    aliases: [Prefix List, ip prefix-list, 前缀列表]
+    allowed_relations: [configured_by, constrained_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.COMMUNITY
+    canonical_name: Community
+    display_name_zh: BGP 团体属性
+    parent_id: IP.BGP
+    maturity_level: core
+    description: BGP community attribute for route tagging and policy. RFC 1997.
+    aliases: [BGP Community, BGP Community Attribute, 团体属性]
+    allowed_relations: [configured_by, constrained_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.ROUTE_REFLECTOR
+    canonical_name: RouteReflector
+    display_name_zh: 路由反射器
+    parent_id: IP.BGP
+    maturity_level: core
+    description: BGP iBGP scalability mechanism to avoid full mesh. RFC 4456.
+    aliases: [Route Reflector, RR, BGP RR, 路由反射器]
+    allowed_relations: [depends_on, configured_by, establishes]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.VRRP
+    canonical_name: VRRP
+    display_name_zh: 虚拟路由冗余协议
+    parent_id: IP.L3_ROUTING
+    maturity_level: core
+    description: Virtual gateway redundancy protocol. RFC 5798.
+    aliases: [Virtual Router Redundancy Protocol, 虚拟路由冗余协议, HSRP, GLBP]
+    allowed_relations: [establishes, protects, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # MPLS / SR
+  # ════════════════════════════════════════════
+  - id: IP.MPLS_SR
+    canonical_name: MPLS / SR
+    display_name_zh: MPLS 与段路由
+    parent_id: null
+    maturity_level: core
+    description: Label switching and segment routing technology stack
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, depends_on]
+
+  - id: IP.MPLS
+    canonical_name: MPLS
+    display_name_zh: 多协议标签交换
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Multiprotocol Label Switching data plane. RFC 3031.
+    aliases: [Multiprotocol Label Switching, 多协议标签交换, MPLS转发]
+    allowed_relations: [uses_protocol, encapsulates, depends_on, establishes, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.LDP
+    canonical_name: LDP
+    display_name_zh: 标签分发协议
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Label Distribution Protocol for MPLS label exchange. RFC 5036.
+    aliases: [Label Distribution Protocol, 标签分发协议]
+    allowed_relations: [establishes, depends_on, uses_protocol, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.RSVP_TE
+    canonical_name: RSVP-TE
+    display_name_zh: 资源预留协议流量工程扩展
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Resource reservation signaling for MPLS-TE path setup. RFC 3209.
+    aliases: [Resource Reservation Protocol Traffic Engineering, RSVP TE, 资源预留协议]
+    allowed_relations: [establishes, depends_on, uses_protocol, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.SR_MPLS
+    canonical_name: SR-MPLS
+    display_name_zh: 段路由 MPLS
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Segment Routing with MPLS data plane. RFC 8402.
+    aliases: [Segment Routing MPLS, SR MPLS, Segment Routing over MPLS]
+    allowed_relations: [depends_on, encapsulates, uses_protocol, establishes, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.SRV6
+    canonical_name: SRv6
+    display_name_zh: 段路由 IPv6
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Segment Routing with IPv6 data plane. RFC 8986.
+    aliases: [Segment Routing over IPv6, Segment Routing IPv6, SRv6 BE, SRv6 TE]
+    allowed_relations: [depends_on, encapsulates, uses_protocol, establishes, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.LABEL
+    canonical_name: Label
+    display_name_zh: MPLS 标签
+    parent_id: IP.MPLS
+    maturity_level: core
+    description: 20-bit value used for MPLS forwarding lookup
+    aliases: [MPLS Label, 标签, MPLS标签]
+    allowed_relations: [part_of, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.LSP
+    canonical_name: LSP
+    display_name_zh: 标签交换路径
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Label Switched Path - forwarding path through MPLS network
+    aliases: [Label Switched Path, 标签交换路径, MPLS LSP]
+    allowed_relations: [depends_on, protects, established_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.TUNNEL
+    canonical_name: Tunnel
+    display_name_zh: 隧道
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Logical encapsulation path between two endpoints
+    aliases: [IP Tunnel, 隧道, Network Tunnel]
+    allowed_relations: [encapsulates, established_by, depends_on, protects]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.TE_POLICY
+    canonical_name: TE-Policy
+    display_name_zh: 流量工程策略
+    parent_id: IP.MPLS_SR
+    maturity_level: core
+    description: Segment Routing Traffic Engineering policy for path selection. RFC 9256.
+    aliases: [SR Policy, SR TE Policy, Traffic Engineering Policy, TE Policy]
+    allowed_relations: [configured_by, depends_on, forwards_via]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # VPN / OVERLAY
+  # ════════════════════════════════════════════
+  - id: IP.VPN_OVERLAY
+    canonical_name: VPN / Overlay
+    display_name_zh: VPN 与覆盖网络
+    parent_id: null
+    maturity_level: core
+    description: Tunnel-based network isolation and overlay technologies
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, depends_on]
+
+  - id: IP.VRF
+    canonical_name: VRF
+    display_name_zh: 虚拟路由转发实例
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Virtual Routing and Forwarding instance for L3 isolation
+    aliases: [Virtual Routing and Forwarding, VRF instance, 虚拟路由转发, VPN instance]
+    allowed_relations: [contains, depends_on, configured_by, isolates]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.L2VPN
+    canonical_name: L2VPN
+    display_name_zh: 二层 VPN
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Layer 2 Virtual Private Network providing Ethernet connectivity
+    aliases: [Layer 2 VPN, L2 VPN, 二层VPN]
+    allowed_relations: [depends_on, uses_protocol, contains, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.L3VPN
+    canonical_name: L3VPN
+    display_name_zh: 三层 VPN
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: BGP/MPLS IP VPN for L3 enterprise connectivity. RFC 4364.
+    aliases: [Layer 3 VPN, BGP MPLS VPN, BGP/MPLS IP VPN, 三层VPN, L3 VPN]
+    allowed_relations: [depends_on, uses_protocol, contains, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.VPLS
+    canonical_name: VPLS
+    display_name_zh: 虚拟专用局域网服务
+    parent_id: IP.L2VPN
+    maturity_level: core
+    description: Virtual Private LAN Service providing multipoint L2 connectivity. RFC 4761/4762.
+    aliases: [Virtual Private LAN Service, 虚拟专用局域网]
+    allowed_relations: [depends_on, uses_protocol, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.EVPN
+    canonical_name: EVPN
+    display_name_zh: 以太网 VPN
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Ethernet VPN using BGP control plane. RFC 7432.
+    aliases: [Ethernet VPN, BGP EVPN, BGP-EVPN, 以太网VPN, 以太网虚拟专用网]
+    allowed_relations: [uses_protocol, depends_on, encapsulates, establishes, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.VXLAN
+    canonical_name: VXLAN
+    display_name_zh: 虚拟可扩展局域网
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Virtual Extensible LAN UDP-based overlay encapsulation. RFC 7348.
+    aliases: [Virtual Extensible LAN, Virtual Extensible Local Area Network, 虚拟可扩展局域网]
+    allowed_relations: [encapsulates, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.EVPN_VXLAN
+    canonical_name: EVPN-VXLAN
+    display_name_zh: EVPN over VXLAN
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: EVPN control plane over VXLAN data plane — DC fabric standard
+    aliases: [EVPN over VXLAN, EVPN VXLAN, BGP EVPN VXLAN]
+    allowed_relations: [depends_on, uses_protocol, encapsulates, contains, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.VTEP
+    canonical_name: VTEP
+    display_name_zh: VXLAN 隧道端点
+    parent_id: IP.VXLAN
+    maturity_level: core
+    description: VXLAN Tunnel Endpoint performing encapsulation/decapsulation
+    aliases: [VXLAN Tunnel Endpoint, VxLAN TEP, 隧道端点]
+    allowed_relations: [encapsulates, peers_with, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.BRIDGE_DOMAIN
+    canonical_name: BridgeDomain
+    display_name_zh: 桥接域
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Logical L2 broadcast domain used in EVPN/VXLAN overlay networks
+    aliases: [Bridge Domain, BD, 桥接域, MAC-VRF]
+    allowed_relations: [contains, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.GRE
+    canonical_name: GRE
+    display_name_zh: 通用路由封装
+    parent_id: IP.VPN_OVERLAY
+    maturity_level: core
+    description: Generic Routing Encapsulation tunnel protocol. RFC 2784.
+    aliases: [Generic Routing Encapsulation, GRE tunnel, 通用路由封装]
+    allowed_relations: [encapsulates, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # QOS
+  # ════════════════════════════════════════════
+  - id: IP.QOS
+    canonical_name: QoS
+    display_name_zh: 服务质量
+    parent_id: null
+    maturity_level: core
+    description: Quality of Service — traffic classification, scheduling, and policing mechanisms
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, configured_by, constrained_by]
+
+  - id: IP.QOS_CLASSIFIER
+    canonical_name: TrafficClassifier
+    display_name_zh: 流量分类器
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Classifies packets by header fields (DSCP, 802.1p, ACL) for QoS treatment
+    aliases: [Traffic Classifier, Classifier, Class-map, class map, 流量分类器, 分类器]
+    allowed_relations: [configured_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QOS_QUEUE
+    canonical_name: Queue
+    display_name_zh: 队列
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Buffer holding packets awaiting transmission, managed by scheduling algorithm
+    aliases: [QoS Queue, Traffic Queue, 队列, FIFO, PQ, WFQ]
+    allowed_relations: [configured_by, depends_on, contains]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QOS_SCHEDULER
+    canonical_name: Scheduler
+    display_name_zh: 调度器
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Controls dequeue order and bandwidth allocation (WFQ, CBWFQ, DRR, PQ)
+    aliases: [Scheduler, Traffic Scheduler, 调度器, WFQ, CBWFQ, DRR, SP]
+    allowed_relations: [configured_by, depends_on, contains]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QOS_POLICER
+    canonical_name: Policer
+    display_name_zh: 流量监管器
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Rate-limits traffic and drops/marks non-conforming packets (CAR/token bucket)
+    aliases: [Traffic Policing, Policer, CAR, 流量监管, 限速器]
+    allowed_relations: [configured_by, constrained_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QOS_SHAPER
+    canonical_name: Shaper
+    display_name_zh: 流量整形器
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Buffers and delays traffic to smooth rate to configured peak (GTS/traffic shaping)
+    aliases: [Traffic Shaping, Shaper, GTS, 流量整形, 整形器]
+    allowed_relations: [configured_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.QOS_DROP_POLICY
+    canonical_name: DropPolicy
+    display_name_zh: 丢包策略
+    parent_id: IP.QOS
+    maturity_level: core
+    description: Congestion avoidance policy (WRED, tail-drop) controlling packet discard
+    aliases: [Drop Profile, WRED, Tail Drop, RED, 丢包策略, 拥塞避免]
+    allowed_relations: [configured_by, depends_on, constrained_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # SECURITY / CONTROL
+  # ════════════════════════════════════════════
+  - id: IP.SECURITY_CTRL
+    canonical_name: Security / Control
+    display_name_zh: 安全与控制
+    parent_id: null
+    maturity_level: core
+    description: IP-layer security filtering and access control mechanisms
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, configured_by]
+
+  - id: IP.ACL
+    canonical_name: ACL
+    display_name_zh: 访问控制列表
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: Access Control List — ordered set of packet-match rules for filtering
+    aliases: [Access Control List, 访问控制列表, access-list, 访问列表, ip access-group]
+    allowed_relations: [configured_by, constrained_by, depends_on]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.NAT
+    canonical_name: NAT
+    display_name_zh: 网络地址转换
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: Network Address Translation for IPv4 address reuse. RFC 3022.
+    aliases: [Network Address Translation, NAPT, PAT, 网络地址转换, 地址转换]
+    allowed_relations: [configured_by, depends_on, conflicts_with]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.IPSEC
+    canonical_name: IPsec
+    display_name_zh: IP 安全协议
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: IP Security protocol suite for encryption and authentication. RFC 4301.
+    aliases: [IP Security, IPSec, Internet Protocol Security, 网络层安全协议]
+    allowed_relations: [encapsulates, authenticates, depends_on, configured_by, establishes]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.BFD
+    canonical_name: BFD
+    display_name_zh: 双向转发检测
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: Bidirectional Forwarding Detection for rapid link/path failure detection. RFC 5880.
+    aliases: [Bidirectional Forwarding Detection, 双向转发检测, BFD Session]
+    allowed_relations: [depends_on, monitored_by, establishes, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.DHCP
+    canonical_name: DHCP
+    display_name_zh: 动态主机配置协议
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: Dynamic Host Configuration Protocol for automated IP assignment. RFC 2131.
+    aliases: [Dynamic Host Configuration Protocol, 动态主机配置协议, DHCPv6]
+    allowed_relations: [uses_protocol, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.DNS
+    canonical_name: DNS
+    display_name_zh: 域名系统
+    parent_id: IP.SECURITY_CTRL
+    maturity_level: core
+    description: Domain Name System for name-to-address resolution. RFC 1034/1035.
+    aliases: [Domain Name System, 域名系统, DNS Server, DNS64]
+    allowed_relations: [uses_protocol, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  # ════════════════════════════════════════════
+  # OAM / MONITORING
+  # ════════════════════════════════════════════
+  - id: IP.OAM_MONITORING
+    canonical_name: OAM / Monitoring
+    display_name_zh: 运维监控
+    parent_id: null
+    maturity_level: core
+    description: Operations, Administration and Maintenance plus observability mechanisms
+    lifecycle_state: active
+    version_introduced: v0.1.0
+    source_basis: [IETF]
+    allowed_relations: [contains, configured_by, monitored_by]
+
+  - id: IP.TELEMETRY
+    canonical_name: Telemetry
+    display_name_zh: 遥测
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: Model-driven telemetry for streaming device metrics and state
+    aliases: [Model-driven Telemetry, gRPC Telemetry, gNMI Telemetry, MDT, 遥测, 网络遥测]
+    allowed_relations: [collects, monitored_by, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.SYSLOG
+    canonical_name: Syslog
+    display_name_zh: 系统日志
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: System logging protocol for device events. RFC 5424.
+    aliases: [System Log, System Logging, 系统日志, syslog server]
+    allowed_relations: [depends_on, configured_by, monitored_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.NETCONF
+    canonical_name: NETCONF
+    display_name_zh: 网络配置协议
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: XML/YANG-based network configuration management protocol. RFC 6241.
+    aliases: [Network Configuration Protocol, 网络配置协议, NETCONF/YANG]
+    allowed_relations: [configured_by, depends_on, uses_protocol]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.YANG
+    canonical_name: YANG
+    display_name_zh: YANG 数据模型
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: Data modeling language for NETCONF/RESTCONF. RFC 7950.
+    aliases: [YANG Data Model, YANG Model, YANG模型, RFC 7950]
+    allowed_relations: [depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.SNMP
+    canonical_name: SNMP
+    display_name_zh: 简单网络管理协议
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: Simple Network Management Protocol for device monitoring. RFC 3411.
+    aliases: [Simple Network Management Protocol, SNMPv2c, SNMPv3, 简单网络管理协议]
+    allowed_relations: [monitored_by, depends_on, configured_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0
+
+  - id: IP.ICMP
+    canonical_name: ICMP
+    display_name_zh: 互联网控制报文协议
+    parent_id: IP.OAM_MONITORING
+    maturity_level: core
+    description: Internet Control Message Protocol for diagnostics (ping/traceroute). RFC 792.
+    aliases: [Internet Control Message Protocol, ICMPv6, ping, traceroute, 互联网控制报文协议]
+    allowed_relations: [depends_on, uses_protocol, monitored_by]
+    source_basis: [IETF]
+    lifecycle_state: active
+    version_introduced: v0.1.0

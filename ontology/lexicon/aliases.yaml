@@ -1,0 +1,694 @@
+version: v0.1.0
+
+aliases:
+  # ── BGP ───────────────────────────────────────────────────────
+  - surface_form: Border Gateway Protocol
+    canonical_node_id: IP.BGP
+    alias_type: full_name
+    language: en
+
+  - surface_form: BGP-4
+    canonical_node_id: IP.BGP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: eBGP
+    canonical_node_id: IP.BGP
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: iBGP
+    canonical_node_id: IP.BGP
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 边界网关协议
+    canonical_node_id: IP.BGP
+    alias_type: full_name
+    language: zh
+
+  - surface_form: BGP协议
+    canonical_node_id: IP.BGP
+    alias_type: alternate_spelling
+    language: zh
+
+  - surface_form: External BGP
+    canonical_node_id: IP.BGP
+    alias_type: full_name
+    language: en
+
+  # ── OSPF ──────────────────────────────────────────────────────
+  - surface_form: Open Shortest Path First
+    canonical_node_id: IP.OSPF
+    alias_type: full_name
+    language: en
+
+  - surface_form: OSPFv2
+    canonical_node_id: IP.OSPF
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: OSPFv3
+    canonical_node_id: IP.OSPF
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 开放最短路径优先
+    canonical_node_id: IP.OSPF
+    alias_type: full_name
+    language: zh
+
+  - surface_form: OSPF协议
+    canonical_node_id: IP.OSPF
+    alias_type: alternate_spelling
+    language: zh
+
+  - surface_form: OSPF routing
+    canonical_node_id: IP.OSPF
+    alias_type: alternate_spelling
+    language: en
+
+  # ── IS-IS ─────────────────────────────────────────────────────
+  - surface_form: ISIS
+    canonical_node_id: IP.IS_IS
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: Intermediate System to Intermediate System
+    canonical_node_id: IP.IS_IS
+    alias_type: full_name
+    language: en
+
+  - surface_form: IS IS
+    canonical_node_id: IP.IS_IS
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 中间系统到中间系统
+    canonical_node_id: IP.IS_IS
+    alias_type: full_name
+    language: zh
+
+  - surface_form: 中间系统协议
+    canonical_node_id: IP.IS_IS
+    alias_type: alternate_spelling
+    language: zh
+
+  # ── MPLS ──────────────────────────────────────────────────────
+  - surface_form: Multiprotocol Label Switching
+    canonical_node_id: IP.MPLS
+    alias_type: full_name
+    language: en
+
+  - surface_form: 多协议标签交换
+    canonical_node_id: IP.MPLS
+    alias_type: full_name
+    language: zh
+
+  - surface_form: MPLS forwarding
+    canonical_node_id: IP.MPLS
+    alias_type: alternate_spelling
+    language: en
+
+  # ── LDP ───────────────────────────────────────────────────────
+  - surface_form: Label Distribution Protocol
+    canonical_node_id: IP.LDP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 标签分发协议
+    canonical_node_id: IP.LDP
+    alias_type: full_name
+    language: zh
+
+  # ── RSVP-TE ───────────────────────────────────────────────────
+  - surface_form: Resource Reservation Protocol Traffic Engineering
+    canonical_node_id: IP.RSVP_TE
+    alias_type: full_name
+    language: en
+
+  - surface_form: RSVP TE
+    canonical_node_id: IP.RSVP_TE
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 资源预留协议
+    canonical_node_id: IP.RSVP_TE
+    alias_type: full_name
+    language: zh
+
+  # ── SR-MPLS ───────────────────────────────────────────────────
+  - surface_form: Segment Routing MPLS
+    canonical_node_id: IP.SR_MPLS
+    alias_type: full_name
+    language: en
+
+  - surface_form: SR MPLS
+    canonical_node_id: IP.SR_MPLS
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: Segment Routing over MPLS
+    canonical_node_id: IP.SR_MPLS
+    alias_type: full_name
+    language: en
+
+  - surface_form: 段路由MPLS
+    canonical_node_id: IP.SR_MPLS
+    alias_type: full_name
+    language: zh
+
+  # ── SRv6 ──────────────────────────────────────────────────────
+  - surface_form: Segment Routing over IPv6
+    canonical_node_id: IP.SRV6
+    alias_type: full_name
+    language: en
+
+  - surface_form: Segment Routing IPv6
+    canonical_node_id: IP.SRV6
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: SRv6 BE
+    canonical_node_id: IP.SRV6
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: SRv6 TE
+    canonical_node_id: IP.SRV6
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 段路由IPv6
+    canonical_node_id: IP.SRV6
+    alias_type: full_name
+    language: zh
+
+  # ── EVPN ──────────────────────────────────────────────────────
+  - surface_form: Ethernet VPN
+    canonical_node_id: IP.EVPN
+    alias_type: full_name
+    language: en
+
+  - surface_form: BGP EVPN
+    canonical_node_id: IP.EVPN
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: BGP-EVPN
+    canonical_node_id: IP.EVPN
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 以太网VPN
+    canonical_node_id: IP.EVPN
+    alias_type: full_name
+    language: zh
+
+  - surface_form: 以太网虚拟专用网
+    canonical_node_id: IP.EVPN
+    alias_type: full_name
+    language: zh
+
+  # ── VXLAN ─────────────────────────────────────────────────────
+  - surface_form: Virtual Extensible LAN
+    canonical_node_id: IP.VXLAN
+    alias_type: full_name
+    language: en
+
+  - surface_form: Virtual Extensible Local Area Network
+    canonical_node_id: IP.VXLAN
+    alias_type: full_name
+    language: en
+
+  - surface_form: 虚拟可扩展局域网
+    canonical_node_id: IP.VXLAN
+    alias_type: full_name
+    language: zh
+
+  # ── EVPN-VXLAN ────────────────────────────────────────────────
+  - surface_form: EVPN over VXLAN
+    canonical_node_id: IP.EVPN_VXLAN
+    alias_type: full_name
+    language: en
+
+  - surface_form: EVPN VXLAN
+    canonical_node_id: IP.EVPN_VXLAN
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: BGP EVPN VXLAN
+    canonical_node_id: IP.EVPN_VXLAN
+    alias_type: alternate_spelling
+    language: en
+
+  # ── VTEP ──────────────────────────────────────────────────────
+  - surface_form: VXLAN Tunnel Endpoint
+    canonical_node_id: IP.VTEP
+    alias_type: full_name
+    language: en
+
+  - surface_form: VxLAN TEP
+    canonical_node_id: IP.VTEP
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 隧道端点
+    canonical_node_id: IP.VTEP
+    alias_type: full_name
+    language: zh
+
+  # ── VRF ───────────────────────────────────────────────────────
+  - surface_form: Virtual Routing and Forwarding
+    canonical_node_id: IP.VRF
+    alias_type: full_name
+    language: en
+
+  - surface_form: VRF instance
+    canonical_node_id: IP.VRF
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: VPN instance
+    canonical_node_id: IP.VRF
+    alias_type: vendor_term
+    vendor: Huawei
+    language: en
+
+  - surface_form: 虚拟路由转发
+    canonical_node_id: IP.VRF
+    alias_type: full_name
+    language: zh
+
+  # ── L3VPN ─────────────────────────────────────────────────────
+  - surface_form: Layer 3 VPN
+    canonical_node_id: IP.L3VPN
+    alias_type: full_name
+    language: en
+
+  - surface_form: BGP MPLS VPN
+    canonical_node_id: IP.L3VPN
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: BGP/MPLS IP VPN
+    canonical_node_id: IP.L3VPN
+    alias_type: full_name
+    language: en
+
+  - surface_form: 三层VPN
+    canonical_node_id: IP.L3VPN
+    alias_type: full_name
+    language: zh
+
+  # ── VRRP ──────────────────────────────────────────────────────
+  - surface_form: Virtual Router Redundancy Protocol
+    canonical_node_id: IP.VRRP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 虚拟路由冗余协议
+    canonical_node_id: IP.VRRP
+    alias_type: full_name
+    language: zh
+
+  - surface_form: HSRP
+    canonical_node_id: IP.VRRP
+    alias_type: vendor_term
+    vendor: Cisco
+    language: en
+
+  - surface_form: GLBP
+    canonical_node_id: IP.VRRP
+    alias_type: vendor_term
+    vendor: Cisco
+    language: en
+
+  # ── ACL ───────────────────────────────────────────────────────
+  - surface_form: Access Control List
+    canonical_node_id: IP.ACL
+    alias_type: full_name
+    language: en
+
+  - surface_form: 访问控制列表
+    canonical_node_id: IP.ACL
+    alias_type: full_name
+    language: zh
+
+  - surface_form: access-list
+    canonical_node_id: IP.ACL
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: ip access-group
+    canonical_node_id: IP.ACL
+    alias_type: alternate_spelling
+    language: en
+
+  # ── NAT ───────────────────────────────────────────────────────
+  - surface_form: Network Address Translation
+    canonical_node_id: IP.NAT
+    alias_type: full_name
+    language: en
+
+  - surface_form: NAPT
+    canonical_node_id: IP.NAT
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: PAT
+    canonical_node_id: IP.NAT
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 网络地址转换
+    canonical_node_id: IP.NAT
+    alias_type: full_name
+    language: zh
+
+  # ── IPsec ─────────────────────────────────────────────────────
+  - surface_form: IP Security
+    canonical_node_id: IP.IPSEC
+    alias_type: full_name
+    language: en
+
+  - surface_form: IPSec
+    canonical_node_id: IP.IPSEC
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: Internet Protocol Security
+    canonical_node_id: IP.IPSEC
+    alias_type: full_name
+    language: en
+
+  - surface_form: 网络层安全协议
+    canonical_node_id: IP.IPSEC
+    alias_type: full_name
+    language: zh
+
+  # ── BFD ───────────────────────────────────────────────────────
+  - surface_form: Bidirectional Forwarding Detection
+    canonical_node_id: IP.BFD
+    alias_type: full_name
+    language: en
+
+  - surface_form: BFD Session
+    canonical_node_id: IP.BFD
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 双向转发检测
+    canonical_node_id: IP.BFD
+    alias_type: full_name
+    language: zh
+
+  # ── STP ───────────────────────────────────────────────────────
+  - surface_form: Spanning Tree Protocol
+    canonical_node_id: IP.STP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 802.1D
+    canonical_node_id: IP.STP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 生成树协议
+    canonical_node_id: IP.STP
+    alias_type: full_name
+    language: zh
+
+  # ── RSTP ──────────────────────────────────────────────────────
+  - surface_form: Rapid Spanning Tree Protocol
+    canonical_node_id: IP.RSTP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 802.1w
+    canonical_node_id: IP.RSTP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 快速生成树
+    canonical_node_id: IP.RSTP
+    alias_type: full_name
+    language: zh
+
+  # ── MSTP ──────────────────────────────────────────────────────
+  - surface_form: Multiple Spanning Tree Protocol
+    canonical_node_id: IP.MSTP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 802.1s
+    canonical_node_id: IP.MSTP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 多生成树
+    canonical_node_id: IP.MSTP
+    alias_type: full_name
+    language: zh
+
+  # ── LACP ──────────────────────────────────────────────────────
+  - surface_form: Link Aggregation Control Protocol
+    canonical_node_id: IP.LACP
+    alias_type: full_name
+    language: en
+
+  - surface_form: 802.3ad
+    canonical_node_id: IP.LACP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: LAG
+    canonical_node_id: IP.LACP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: Etherchannel
+    canonical_node_id: IP.LACP
+    alias_type: vendor_term
+    vendor: Cisco
+    language: en
+
+  - surface_form: Eth-Trunk
+    canonical_node_id: IP.LACP
+    alias_type: vendor_term
+    vendor: Huawei
+    language: en
+
+  - surface_form: 链路聚合
+    canonical_node_id: IP.LACP
+    alias_type: full_name
+    language: zh
+
+  # ── NETCONF ───────────────────────────────────────────────────
+  - surface_form: Network Configuration Protocol
+    canonical_node_id: IP.NETCONF
+    alias_type: full_name
+    language: en
+
+  - surface_form: NETCONF/YANG
+    canonical_node_id: IP.NETCONF
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 网络配置协议
+    canonical_node_id: IP.NETCONF
+    alias_type: full_name
+    language: zh
+
+  # ── YANG ──────────────────────────────────────────────────────
+  - surface_form: YANG Data Model
+    canonical_node_id: IP.YANG
+    alias_type: full_name
+    language: en
+
+  - surface_form: YANG Model
+    canonical_node_id: IP.YANG
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: YANG模型
+    canonical_node_id: IP.YANG
+    alias_type: full_name
+    language: zh
+
+  # ── Telemetry ─────────────────────────────────────────────────
+  - surface_form: Model-driven Telemetry
+    canonical_node_id: IP.TELEMETRY
+    alias_type: full_name
+    language: en
+
+  - surface_form: gRPC Telemetry
+    canonical_node_id: IP.TELEMETRY
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: gNMI Telemetry
+    canonical_node_id: IP.TELEMETRY
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: MDT
+    canonical_node_id: IP.TELEMETRY
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 网络遥测
+    canonical_node_id: IP.TELEMETRY
+    alias_type: full_name
+    language: zh
+
+  # ── QoS ───────────────────────────────────────────────────────
+  - surface_form: Quality of Service
+    canonical_node_id: IP.QOS
+    alias_type: full_name
+    language: en
+
+  - surface_form: 服务质量
+    canonical_node_id: IP.QOS
+    alias_type: full_name
+    language: zh
+
+  # ── DHCP ──────────────────────────────────────────────────────
+  - surface_form: Dynamic Host Configuration Protocol
+    canonical_node_id: IP.DHCP
+    alias_type: full_name
+    language: en
+
+  - surface_form: DHCPv6
+    canonical_node_id: IP.DHCP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 动态主机配置协议
+    canonical_node_id: IP.DHCP
+    alias_type: full_name
+    language: zh
+
+  # ── SNMP ──────────────────────────────────────────────────────
+  - surface_form: Simple Network Management Protocol
+    canonical_node_id: IP.SNMP
+    alias_type: full_name
+    language: en
+
+  - surface_form: SNMPv2c
+    canonical_node_id: IP.SNMP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: SNMPv3
+    canonical_node_id: IP.SNMP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 简单网络管理协议
+    canonical_node_id: IP.SNMP
+    alias_type: full_name
+    language: zh
+
+  # ── Ethernet ──────────────────────────────────────────────────
+  - surface_form: IEEE 802.3
+    canonical_node_id: IP.ETHERNET
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 以太网
+    canonical_node_id: IP.ETHERNET
+    alias_type: full_name
+    language: zh
+
+  # ── VLAN ──────────────────────────────────────────────────────
+  - surface_form: Virtual LAN
+    canonical_node_id: IP.VLAN
+    alias_type: full_name
+    language: en
+
+  - surface_form: 802.1Q VLAN
+    canonical_node_id: IP.VLAN
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 虚拟局域网
+    canonical_node_id: IP.VLAN
+    alias_type: full_name
+    language: zh
+
+  # ── ICMP ──────────────────────────────────────────────────────
+  - surface_form: Internet Control Message Protocol
+    canonical_node_id: IP.ICMP
+    alias_type: full_name
+    language: en
+
+  - surface_form: ICMPv6
+    canonical_node_id: IP.ICMP
+    alias_type: abbreviation
+    language: en
+
+  - surface_form: 互联网控制报文协议
+    canonical_node_id: IP.ICMP
+    alias_type: full_name
+    language: zh
+
+  # ── GRE ───────────────────────────────────────────────────────
+  - surface_form: Generic Routing Encapsulation
+    canonical_node_id: IP.GRE
+    alias_type: full_name
+    language: en
+
+  - surface_form: GRE tunnel
+    canonical_node_id: IP.GRE
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: 通用路由封装
+    canonical_node_id: IP.GRE
+    alias_type: full_name
+    language: zh
+
+  # ── TE-Policy ─────────────────────────────────────────────────
+  - surface_form: SR Policy
+    canonical_node_id: IP.TE_POLICY
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: SR TE Policy
+    canonical_node_id: IP.TE_POLICY
+    alias_type: alternate_spelling
+    language: en
+
+  - surface_form: Traffic Engineering Policy
+    canonical_node_id: IP.TE_POLICY
+    alias_type: full_name
+    language: en
+
+  - surface_form: 流量工程策略
+    canonical_node_id: IP.TE_POLICY
+    alias_type: full_name
+    language: zh
+
+  # ── RoutePolicy ───────────────────────────────────────────────
+  - surface_form: Route Map
+    canonical_node_id: IP.ROUTE_POLICY
+    alias_type: vendor_term
+    vendor: Cisco
+    language: en
+
+  - surface_form: route-map
+    canonical_node_id: IP.ROUTE_POLICY
+    alias_type: vendor_term
+    vendor: Cisco
+    language: en
+
+  - surface_form: Routing Policy
+    canonical_node_id: IP.ROUTE_POLICY
+    alias_type: full_name
+    language: en
+
+  - surface_form: 路由策略
+    canonical_node_id: IP.ROUTE_POLICY
+    alias_type: full_name
+    language: zh
