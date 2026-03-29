@@ -78,7 +78,10 @@ class IngestStage(Stage):
             return None
 
         extracted = _extractor.extract(raw_html, task["url"])
-        clean_text = _normalizer.normalize(extracted["text"])
+        # Plain-text docs (RFC .txt) need newlines preserved for structural splitting
+        url = task.get("url", "")
+        is_plaintext = url.endswith(".txt") or extracted.get("content_type", "").startswith("text/plain")
+        clean_text = _normalizer.normalize(extracted["text"], preserve_newlines=is_plaintext)
         _, norm_hash = _normalizer.compute_hashes(raw_html, clean_text)
         cleaned_uri = self._store_cleaned_text(objects, norm_hash, clean_text)
         raw_uri = task.get("raw_storage_uri") or ""

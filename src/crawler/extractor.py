@@ -13,24 +13,51 @@ _CODE_BLOCK = re.compile(r'```[\s\S]*?```|^\s{4,}\S', re.M)
 
 class ContentExtractor:
     def extract(self, html: str, url: str) -> dict:
-        """Extract clean body text from raw HTML."""
-        text, quality = self._try_trafilatura(html, url)
-        if not text or quality < 0.3:
-            text, quality = self._try_readability(html)
-        if not text:
-            text = self._fallback_strip_tags(html)
-            quality = 0.1
+        """Extract clean body text from raw HTML or plain text."""
+        # Plain-text documents (RFC .txt, etc.) — skip HTML extraction entirely
+        if self._is_plaintext(html, url):
+            text = html.strip()
+            quality = 0.9
+            title = self._extract_title_from_text(text)
+        else:
+            text, quality = self._try_trafilatura(html, url)
+            if not text or quality < 0.3:
+                text, quality = self._try_readability(html)
+            if not text:
+                text = self._fallback_strip_tags(html)
+                quality = 0.1
+            title = self._extract_title(html)
 
         from src.utils.text import token_count
         tc = token_count(text)
+        content_type = "text/plain" if self._is_plaintext(html, url) else "text/html"
         return {
-            "title":          self._extract_title(html),
+            "title":          title,
             "text":           text.strip(),
             "language":       self._detect_language(text),
             "quality":        quality,
             "is_low_quality": tc < 200,
             "token_count":    tc,
+            "content_type":   content_type,
         }
+
+    @staticmethod
+    def _is_plaintext(content: str, url: str) -> bool:
+        """Detect if content is plain text (not HTML)."""
+        if url.endswith(".txt"):
+            return True
+        # No HTML tags in first 500 chars → likely plain text
+        sample = content[:500]
+        return "<" not in sample or not re.search(r"<\w+[\s>]", sample)
+
+    @staticmethod
+    def _extract_title_from_text(text: str) -> str:
+        """Extract title from plain-text document (first non-empty line)."""
+        for line in text.split("\n"):
+            line = line.strip()
+            if line and len(line) > 3:
+                return line[:255]
+        return ""
 
     def detect_doc_type(self, url: str, title: str, text: str) -> str:
         """Rule C5: classify document type from URL, title, and content signals."""

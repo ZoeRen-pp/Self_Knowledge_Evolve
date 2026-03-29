@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     POSTGRES_POOL_MIN: int
     POSTGRES_POOL_MAX: int
-    POSTGRES_ADMIN_DB: str
-    POSTGRES_AUTO_CREATE: bool
+    POSTGRES_ADMIN_DB: str = "postgres"
+    POSTGRES_AUTO_CREATE: bool = True
 
     @computed_field
     @property

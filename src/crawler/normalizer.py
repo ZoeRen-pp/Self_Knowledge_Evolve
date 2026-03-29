@@ -18,13 +18,35 @@ _BOILERPLATE = [
 
 
 class DocumentNormalizer:
-    def normalize(self, raw_text: str) -> str:
-        """Strip boilerplate, normalize whitespace and punctuation."""
+    def normalize(self, raw_text: str, preserve_newlines: bool = False) -> str:
+        """Strip boilerplate, normalize whitespace and punctuation.
+
+        Args:
+            preserve_newlines: If True, keep line structure intact (for plain-text
+                docs like RFCs where headings depend on line position).
+        """
         text = raw_text
         for pattern in _BOILERPLATE:
             text = pattern.sub(' ', text)
         text = self._remove_repeated_blocks(text)
+        if preserve_newlines:
+            return self._normalize_preserve_lines(text)
         return normalize_text(text)
+
+    @staticmethod
+    def _normalize_preserve_lines(text: str) -> str:
+        """Normalize without collapsing newlines — for plain-text RFC/spec docs."""
+        import unicodedata
+        text = unicodedata.normalize('NFKC', text)
+        # Normalize each line individually: collapse inline whitespace, strip trailing
+        lines = []
+        for line in text.split('\n'):
+            line = re.sub(r'[ \t]+', ' ', line).rstrip()
+            lines.append(line)
+        # Remove form-feed page headers (RFC page breaks: \f followed by header lines)
+        result = '\n'.join(lines)
+        result = re.sub(r'\f[^\n]*\n?', '\n', result)
+        return result
 
     def compute_hashes(self, raw_html: str, clean_text: str) -> tuple[str, str]:
         """Return (content_hash_of_raw, normalized_hash_of_clean)."""
