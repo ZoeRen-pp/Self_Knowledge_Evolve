@@ -124,11 +124,18 @@ def _init_schema() -> None:
         CREATE TABLE IF NOT EXISTS evolution_candidates (
             candidate_id    INTEGER PRIMARY KEY AUTOINCREMENT,
             surface_forms   TEXT,
-            normalized_form TEXT,
+            normalized_form TEXT UNIQUE,
             source_count    INTEGER DEFAULT 1,
             first_seen_at   TEXT,
             last_seen_at    TEXT,
-            review_status   TEXT DEFAULT 'discovered'
+            review_status   TEXT DEFAULT 'discovered',
+            seen_source_doc_ids TEXT DEFAULT '{}',
+            candidate_parent_id TEXT,
+            source_diversity_score REAL DEFAULT 0,
+            temporal_stability_score REAL DEFAULT 0,
+            structural_fit_score REAL DEFAULT 0,
+            synonym_risk_score REAL DEFAULT 0,
+            composite_score REAL DEFAULT 0
         );
         CREATE TABLE IF NOT EXISTS t_edu_detail (
             edu_id          TEXT PRIMARY KEY,

@@ -30,6 +30,7 @@ candidate_admission:
   min_composite_score: 0.65
   synonym_risk_max: 0.4            # synonym probability must be below threshold
   require_human_review: true       # all candidates need final human sign-off
+  auto_accept_threshold: 0.85      # composite_score above this → auto-add to Neo4j (lifecycle_state='candidate')
 
 scoring_weights:
   source_authority: 0.25

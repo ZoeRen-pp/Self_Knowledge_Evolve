@@ -165,7 +165,12 @@ class AlignStage(Stage):
     def _collect_candidates(
         self, text: str, matched_nodes: dict, source_doc_id: str
     ) -> int:
-        """Rule A3: terms that don't match ontology -> candidate pool."""
+        """Rule A3: terms that don't match ontology -> candidate pool.
+
+        Uses normalized_form as dedup key; accumulates source_count and
+        seen_source_doc_ids across documents.
+        """
+        from src.utils.normalize import normalize_term
         ontology = self._ontology
         store = self._store
         candidates = re.findall(r"\b([A-Z][A-Za-z0-9\-]{2,}|[A-Z]{2,10})\b", text)
@@ -174,13 +179,28 @@ class AlignStage(Stage):
             if not ontology.lookup_alias(c.lower())
         ]
         for term in set(unmatched):
+            normalized = normalize_term(term)
             store.execute(
                 """
-                INSERT INTO evolution_candidates (surface_forms, source_count, last_seen_at)
-                VALUES (ARRAY[%s], 1, NOW())
-                ON CONFLICT DO NOTHING
+                INSERT INTO evolution_candidates
+                    (surface_forms, normalized_form, source_count, last_seen_at,
+                     first_seen_at, seen_source_doc_ids, review_status)
+                VALUES (ARRAY[%s], %s, 1, NOW(), NOW(), ARRAY[%s::uuid], 'discovered')
+                ON CONFLICT (normalized_form) DO UPDATE SET
+                    source_count = evolution_candidates.source_count + 1,
+                    last_seen_at = NOW(),
+                    surface_forms = CASE
+                        WHEN NOT (%s = ANY(evolution_candidates.surface_forms))
+                        THEN array_append(evolution_candidates.surface_forms, %s)
+                        ELSE evolution_candidates.surface_forms
+                    END,
+                    seen_source_doc_ids = CASE
+                        WHEN NOT (%s::uuid = ANY(evolution_candidates.seen_source_doc_ids))
+                        THEN array_append(evolution_candidates.seen_source_doc_ids, %s::uuid)
+                        ELSE evolution_candidates.seen_source_doc_ids
+                    END
                 """,
-                (term,),
+                (term, normalized, source_doc_id, term, term, source_doc_id, source_doc_id),
             )
         return len(set(unmatched))
 
