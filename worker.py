@@ -225,7 +225,7 @@ def main() -> None:
 
     app = get_app()
     _auto_enqueue_seeds(app.store)
-    spider = Spider(object_store=app.objects)
+    spider = Spider(object_store=app.objects, store=app.store)
     log.info(
         "Worker started: crawl_limit=%d pipeline_limit=%d sleep=%ds",
         settings.WORKER_CRAWL_LIMIT,

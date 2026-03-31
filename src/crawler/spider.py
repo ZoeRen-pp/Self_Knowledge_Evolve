@@ -26,9 +26,7 @@ try:
 except ImportError:
     _SSL_VERIFY = True
 
-from semcore.providers.base import ObjectStore
-from src.db.postgres import fetchall, execute
-from src.providers.minio_store import MinioObjectStore
+from semcore.providers.base import ObjectStore, RelationalStore
 
 log = logging.getLogger(__name__)
 
@@ -59,10 +57,11 @@ class CrawlTask(TypedDict):
 
 
 class Spider:
-    def __init__(self, object_store: ObjectStore | None = None) -> None:
+    def __init__(self, object_store: ObjectStore, store: RelationalStore) -> None:
         self._robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
         self._last_request_time: dict[str, float] = {}
-        self._objects = object_store or MinioObjectStore()
+        self._objects = object_store
+        self._store = store
         self._client = httpx.Client(
             timeout=30,
             follow_redirects=True,
@@ -122,7 +121,7 @@ class Spider:
 
     def run_pending_tasks(self, limit: int = 10) -> list[dict]:
         """Fetch pending crawl_tasks from DB and process each."""
-        tasks = fetchall(
+        tasks = self._store.fetchall(
             """
             SELECT ct.id, ct.url, ct.site_key, ct.priority, ct.task_type,
                    sr.rate_limit_rps, sr.extra_headers
@@ -192,7 +191,7 @@ class Spider:
         log.info("Crawl task start: id=%s url=%s", task_id, url)
 
         # Mark running
-        execute(
+        self._store.execute(
             "UPDATE crawl_tasks SET status='running', started_at=NOW() WHERE id=%s",
             (task_id,),
         )
@@ -200,7 +199,7 @@ class Spider:
         try:
             # Check robots
             if not self.check_robots(task["site_key"], url):
-                execute(
+                self._store.execute(
                     "UPDATE crawl_tasks SET status='skipped', finished_at=NOW() WHERE id=%s",
                     (task_id,),
                 )
@@ -209,7 +208,7 @@ class Spider:
             result = self.fetch(url, extra_headers=task.get("extra_headers") or {})
 
             if result is None or result["status_code"] >= 400:
-                execute(
+                self._store.execute(
                     "UPDATE crawl_tasks SET status='failed', http_status=%s, finished_at=NOW() WHERE id=%s",
                     (result["status_code"] if result else 0, task_id),
                 )
@@ -228,7 +227,7 @@ class Spider:
                 content_type=result.get("content_type") or "text/html",
             )
 
-            execute(
+            self._store.execute(
                 """UPDATE crawl_tasks SET status='done', http_status=%s,
                    finished_at=NOW(), raw_storage_uri=%s WHERE id=%s""",
                 (result["status_code"], raw_uri, task_id),
@@ -243,7 +242,7 @@ class Spider:
             return {"task_id": task_id, "status": "done", "url": result["final_url"], "raw_uri": raw_uri}
 
         except Exception as exc:
-            execute(
+            self._store.execute(
                 "UPDATE crawl_tasks SET status='failed', error_msg=%s, finished_at=NOW() WHERE id=%s",
                 (str(exc)[:500], task_id),
             )
