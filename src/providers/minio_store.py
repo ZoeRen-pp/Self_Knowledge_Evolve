@@ -23,6 +23,7 @@ class MinioObjectStore(ObjectStore):
         self._secret_key = settings.MINIO_SECRET_KEY
         self._secure = bool(settings.MINIO_SECURE)
         self._default_bucket = settings.MINIO_BUCKET_RAW
+        self._cleaned_bucket = settings.MINIO_BUCKET_CLEANED
         self._buckets = {settings.MINIO_BUCKET_RAW, settings.MINIO_BUCKET_CLEANED}
 
         try:
@@ -102,4 +103,9 @@ class MinioObjectStore(ObjectStore):
         parts = key.split("/", 1)
         if len(parts) == 2 and parts[0] in self._buckets:
             return parts[0], parts[1]
+        # Map key prefix to the appropriate bucket
+        if key.startswith("cleaned/"):
+            return self._cleaned_bucket, key[len("cleaned/"):]
+        if key.startswith("raw/"):
+            return self._default_bucket, key[len("raw/"):]
         return self._default_bucket, key
