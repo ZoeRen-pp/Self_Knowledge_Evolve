@@ -97,6 +97,34 @@ CREATE TABLE t_rst_relation (
 );
 ```
 
+**relation_type 取值（21 种，6 类）**：
+
+| 类别 | 类型 | 语义 |
+|------|------|------|
+| 因果逻辑 | Cause-Result | A 导致 B |
+| | Result-Cause | B 是因为 A |
+| | Purpose | A 是为了 B |
+| | Means | 通过 B 实现 A |
+| 条件/使能 | Condition | 如果 A 则 B |
+| | Unless | 除非 A 否则 B |
+| | Enablement | A 使 B 成为可能 |
+| 展开/细化 | Elaboration | B 对 A 细化展开 |
+| | Explanation | B 解释 A 的原理 |
+| | Restatement | B 换种方式复述 A |
+| | Summary | B 总结 A |
+| 对比/让步 | Contrast | A 和 B 形成对比 |
+| | Concession | 尽管 A 但 B |
+| 证据/评价 | Evidence | B 为 A 提供证据 |
+| | Evaluation | B 对 A 做出评价 |
+| | Justification | B 为 A 的决策提供理由 |
+| 结构/组织 | Background | A 为理解 B 提供背景 |
+| | Preparation | A 为 B 做铺垫 |
+| | Sequence | A 在 B 之前 |
+| | Joint | A 和 B 并列同层级 |
+| | Problem-Solution | A 提出问题 B 给出方案 |
+
+判定方式：LLM 启用时从 21 种中选择；LLM 关闭时 37 条规则映射回退，未命中默认 Sequence。`relation_source` 字段记录来源（`llm` / `rule`）。
+
 ### segment_tags
 
 ```sql
