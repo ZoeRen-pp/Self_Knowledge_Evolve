@@ -190,32 +190,28 @@ def _retry_failed_tasks(store) -> int:
     return retried
 
 
-def _fetch_pipeline_tasks(store, limit: int) -> list[int]:
-    rows = store.fetchall(
+def _fetch_pipeline_tasks(knowledge_store, limit: int) -> list[str]:
+    """Find documents in 'raw' status ready for pipeline processing."""
+    rows = knowledge_store.fetchall(
         """
-        SELECT ct.id
-        FROM crawl_tasks ct
-        WHERE ct.status = 'done'
-          AND NOT EXISTS (
-            SELECT 1 FROM documents d
-            WHERE d.crawl_task_id = ct.id AND d.status != 'raw'
-          )
-        ORDER BY ct.priority DESC, ct.id ASC
+        SELECT source_doc_id FROM documents
+        WHERE status = 'raw'
+        ORDER BY created_at ASC
         LIMIT %s
         """,
         (limit,),
     )
-    return [row["id"] for row in rows]
+    return [str(row["source_doc_id"]) for row in rows]
 
 
-def _run_pipeline(app, task_ids: list[int]) -> None:
-    for task_id in task_ids:
-        ctx = PipelineContext(source_doc_id="", meta={"crawl_task_id": task_id})
+def _run_pipeline(app, doc_ids: list[str]) -> None:
+    for doc_id in doc_ids:
+        ctx = PipelineContext(source_doc_id=doc_id)
         try:
             app.ingest_context(ctx)
-            log.info("Pipeline completed for crawl_task_id=%s errors=%d", task_id, len(ctx.errors))
+            log.info("Pipeline completed for doc=%s errors=%d", doc_id, len(ctx.errors))
         except Exception as exc:
-            log.error("Pipeline failed for crawl_task_id=%s err=%s", task_id, exc, exc_info=True)
+            log.error("Pipeline failed for doc=%s err=%s", doc_id, exc, exc_info=True)
 
 
 def main() -> None:
@@ -224,8 +220,9 @@ def main() -> None:
         raise SystemExit("Startup health check failed.")
 
     app = get_app()
-    _auto_enqueue_seeds(app.store)
-    spider = Spider(object_store=app.objects, store=app.store)
+    crawler_store = app.crawler_store or app.store
+    _auto_enqueue_seeds(crawler_store)
+    spider = Spider(object_store=app.objects, store=crawler_store, knowledge_store=app.store)
     log.info(
         "Worker started: crawl_limit=%d pipeline_limit=%d sleep=%ds",
         settings.WORKER_CRAWL_LIMIT,
@@ -238,23 +235,22 @@ def main() -> None:
         while True:
             try:
                 # Retry failed tasks that are ready for another attempt
-                retried = _retry_failed_tasks(app.store)
+                retried = _retry_failed_tasks(crawler_store)
 
                 crawl_results = spider.run_pending_tasks(limit=settings.WORKER_CRAWL_LIMIT)
-                done_ids = [r["task_id"] for r in crawl_results if r.get("status") == "done"]
-                backlog_ids = _fetch_pipeline_tasks(app.store, settings.WORKER_PIPELINE_LIMIT)
-                task_ids = list(dict.fromkeys(done_ids + backlog_ids))
 
-                if task_ids:
-                    _run_pipeline(app, task_ids)
+                # Pipeline picks up all documents in 'raw' status (from any source)
+                doc_ids = _fetch_pipeline_tasks(app.store, settings.WORKER_PIPELINE_LIMIT)
+                if doc_ids:
+                    _run_pipeline(app, doc_ids)
 
-                has_work = len(crawl_results) > 0 or len(task_ids) > 0 or retried > 0
+                has_work = len(crawl_results) > 0 or len(doc_ids) > 0 or retried > 0
                 if has_work:
                     idle_count = 0
                     log.info(
-                        "Worker cycle done: crawled=%d pipeline_tasks=%d retried=%d",
+                        "Worker cycle done: crawled=%d pipeline_docs=%d retried=%d",
                         len(crawl_results),
-                        len(task_ids),
+                        len(doc_ids),
                         retried,
                     )
                 else:

@@ -68,7 +68,7 @@ class TelecomEvolutionGate(EvolutionGate):
         passed = len(blocking) == 0
         if passed:
             store.execute(
-                "UPDATE evolution_candidates SET review_status='pending_review' WHERE candidate_id=%s",
+                "UPDATE governance.evolution_candidates SET review_status='pending_review' WHERE candidate_id=%s",
                 (candidate.candidate_id,),
             )
 

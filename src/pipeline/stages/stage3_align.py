@@ -47,6 +47,7 @@ class AlignStage(Stage):
     def process(self, ctx: PipelineContext, app) -> PipelineContext:  # type: ignore[override]
         self._ontology = app.ontology
         self._store = app.store
+        self._crawler_store = getattr(app, "crawler_store", None) or app.store
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         self._run(source_doc_id)
         return ctx
@@ -75,7 +76,7 @@ class AlignStage(Stage):
                 )
                 pending += 1
 
-        store.execute(
+        self._crawler_store.execute(
             "INSERT INTO extraction_jobs (job_type, source_doc_id, status, pipeline_version) "
             "VALUES ('relation_extraction',%s,'pending','0.2.0')",
             (source_doc_id,),
@@ -182,22 +183,22 @@ class AlignStage(Stage):
             normalized = normalize_term(term)
             store.execute(
                 """
-                INSERT INTO evolution_candidates
+                INSERT INTO governance.evolution_candidates
                     (surface_forms, normalized_form, source_count, last_seen_at,
                      first_seen_at, seen_source_doc_ids, review_status)
                 VALUES (ARRAY[%s], %s, 1, NOW(), NOW(), ARRAY[%s::uuid], 'discovered')
                 ON CONFLICT (normalized_form) DO UPDATE SET
-                    source_count = evolution_candidates.source_count + 1,
+                    source_count = governance.evolution_candidates.source_count + 1,
                     last_seen_at = NOW(),
                     surface_forms = CASE
-                        WHEN NOT (%s = ANY(evolution_candidates.surface_forms))
-                        THEN array_append(evolution_candidates.surface_forms, %s)
-                        ELSE evolution_candidates.surface_forms
+                        WHEN NOT (%s = ANY(governance.evolution_candidates.surface_forms))
+                        THEN array_append(governance.evolution_candidates.surface_forms, %s)
+                        ELSE governance.evolution_candidates.surface_forms
                     END,
                     seen_source_doc_ids = CASE
-                        WHEN NOT (%s::uuid = ANY(evolution_candidates.seen_source_doc_ids))
-                        THEN array_append(evolution_candidates.seen_source_doc_ids, %s::uuid)
-                        ELSE evolution_candidates.seen_source_doc_ids
+                        WHEN NOT (%s::uuid = ANY(governance.evolution_candidates.seen_source_doc_ids))
+                        THEN array_append(governance.evolution_candidates.seen_source_doc_ids, %s::uuid)
+                        ELSE governance.evolution_candidates.seen_source_doc_ids
                     END
                 """,
                 (term, normalized, source_doc_id, term, term, source_doc_id, source_doc_id),

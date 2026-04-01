@@ -97,3 +97,108 @@ PostgreSQL (ontology_versions) → 治理，记录版本历史和审核状态
 1. 先跑 `scripts/load_ontology.py` 把 YAML 本体全量加载进 Neo4j（骨架）
 2. 选 2-3 个核心子域（如 IP 路由、MPLS）的高质量文档（RFC + 主流厂商白皮书）跑完整 pipeline
 3. 验证 `lookup` / `expand` / `path_infer` 三个算子有合理返回后，再扩大数据规模
+
+---
+
+## ADR-007 数据库分库分 schema
+
+**决策**：将单一 PostgreSQL 数据库拆分为三个职责域。
+
+**变更内容**：
+
+1. **爬虫库独立**（telecom_crawler 数据库）
+   - `source_registry`、`crawl_tasks`、`extraction_jobs` 迁入独立数据库
+   - 新增 `src/db/crawler_postgres.py` 独立连接池
+   - 新增 `src/providers/crawler_postgres_store.py`（RelationalStore 实现）
+   - `AppConfig` / `SemanticApp` 新增 `crawler_store` 字段
+   - Pipeline stage 中所有爬虫表操作走 `crawler_store`
+   - `worker.py` 中跨库 JOIN 拆为两步查询
+   - 配置项：`CRAWLER_POSTGRES_*`，默认复用主库的 host/user/password
+
+2. **治理表分 schema**（governance schema，同一数据库）
+   - `evolution_candidates`、`conflict_records`、`review_records`、`ontology_versions` 移入 `governance` schema
+   - 所有 SQL 中加 `governance.` 前缀
+   - 跨 schema 外键（如 `conflict_records.fact_id_a → public.facts.fact_id`）在同库内有效
+   - dev 模式下 `_to_sqlite()` 自动剥离 `governance.` 前缀
+
+3. **t_edu_detail 合并入 segments**
+   - `segments` 表新增 `title`、`title_vec`、`content_vec`、`content_source` 四列
+   - 删除 `t_edu_detail` 表
+   - `t_rst_relation` 外键改为引用 `segments(segment_id)`
+
+**为什么这样分**：
+- 爬虫调度是高频写/短生命周期，知识存储是低频写/长生命周期，生命周期不同不该混在一起
+- 治理表和知识表需要 JOIN（如 `conflict_records` 引用 `facts`），放同库不同 schema 既隔离命名又保留 JOIN 能力
+- t_edu_detail 与 segments 1:1、文本完全重复，合并消除冗余
+
+**迁移脚本**：
+- `scripts/migrations/002_merge_edu_into_segments.sql`
+- `scripts/migrations/003_governance_schema.sql`
+- `scripts/init_crawler_postgres.sql`（新爬虫库 DDL）
+
+---
+
+## ADR-008 RST 关系类型扩展为 21 种通用分类
+
+**决策**：将 RST 语篇关系类型从 11 种扩展为 21 种，按 6 个逻辑类别组织。
+
+**为什么改**：
+- 原 11 种类型过于粗放，无法区分因果方向（Cause-Result vs Result-Cause）、条件 vs 使能、对比 vs 让步等语义差异
+- 技术文档中常见的"目的"（Purpose）、"手段"（Means）、"评价"（Evaluation）、"理由"（Justification）等关系没有覆盖
+
+**新分类体系**：
+
+| 类别 | 类型 |
+|------|------|
+| 因果逻辑 | Cause-Result, Result-Cause, Purpose, Means |
+| 条件/使能 | Condition, Unless, Enablement |
+| 展开/细化 | Elaboration, Explanation, Restatement, Summary |
+| 对比/让步 | Contrast, Concession |
+| 证据/评价 | Evidence, Evaluation, Justification |
+| 结构/组织 | Background, Preparation, Sequence, Joint, Problem-Solution |
+
+**影响范围**：
+- `src/utils/llm_extract.py`：`RST_RELATION_TYPES` 列表 + LLM system prompt
+- `src/pipeline/stages/stage2_segment.py`：`_RULE_RST` 规则映射（13 条 → 37 条）
+- 未匹配的 segment type 组合默认仍为 `Sequence`
+- `t_rst_relation.relation_type` 字段为 VARCHAR(255)，无需改表结构
+
+---
+
+## ADR-009 爬虫与 Pipeline 解耦
+
+**决策**：爬虫（Spider）是 Pipeline 的外部数据源之一，不是 Pipeline 的一部分。Pipeline 的入参统一为 `source_doc_id`。
+
+**变更前**：
+```
+Spider.fetch() → crawl_tasks.status='done'
+    ↓
+worker 传 crawl_task_id → Pipeline
+    ↓
+Stage 1 (Ingest): 读 crawl_tasks → 创建 documents → 抽取正文 → 清洗 → 质量检查
+```
+
+Stage 1 同时承担了"数据源接入"和"文档清洗"两个职责，且只能处理爬虫来源。
+
+**变更后**：
+```
+[数据源层]                         [Pipeline 层]
+Spider → MinIO + documents(raw)
+文件导入 → MinIO + documents(raw)    →  Stage 1: 纯清洗（source_doc_id）
+API 上传 → MinIO + documents(raw)        raw → extract → normalize → cleaned
+                                     →  Stage 2: 切段 ...
+```
+
+- Spider 爬完后自己创建 `documents` 记录（`status='raw'`）+ 写 raw 到 MinIO
+- Pipeline 只接受 `source_doc_id`，从 documents 表 + MinIO 开始
+- Stage 1 变成纯清洗阶段：加载 raw → 正文提取 → 去噪归一化 → 质量门控 → 存 cleaned → 更新 documents
+- 新增数据源只需要：往 documents 表插记录 + 往 MinIO 放 raw 文件，不碰 Pipeline 代码
+
+**文件变更**：
+- `src/crawler/extractor.py` + `normalizer.py` → 移到 `src/pipeline/preprocessing/`（它们是文本处理，不是爬虫）
+- `src/crawler/spider.py`：新增 `_create_document()` 方法，爬完后建 documents 记录
+- `src/pipeline/stages/stage1_ingest.py`：重写为纯清洗，入参 `source_doc_id`
+- `worker.py`：pipeline 用 `source_doc_id` 驱动，不再传 `crawl_task_id`
+- `src/pipeline/runner.py`：同上
+
+**文档状态流转**：`raw → cleaned → segmented → indexed`

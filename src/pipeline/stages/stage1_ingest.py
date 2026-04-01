@@ -1,4 +1,15 @@
-"""Stage 1: Ingest - rules C1-C5."""
+"""Stage 1: Ingest (Clean) — rules C3-C5.
+
+Assumes the document record already exists in the `documents` table and
+raw content is stored in MinIO (raw_storage_uri). This stage:
+  C3: content-hash dedup (skip if duplicate)
+  C4: text extraction with quality gate
+  C5: doc_type detection
+  → writes cleaned text back to MinIO, updates the document record.
+
+Document creation is the responsibility of the data source (crawler, upload
+handler, file importer, etc.) and happens *before* the pipeline starts.
+"""
 
 from __future__ import annotations
 
@@ -10,8 +21,8 @@ from semcore.core.types import Document
 from semcore.pipeline.base import Stage
 from semcore.providers.base import ObjectStore, RelationalStore
 
-from src.crawler.extractor import ContentExtractor
-from src.crawler.normalizer import DocumentNormalizer
+from src.pipeline.preprocessing.extractor import ContentExtractor
+from src.pipeline.preprocessing.normalizer import DocumentNormalizer
 
 log = logging.getLogger(__name__)
 _extractor = ContentExtractor()
@@ -19,18 +30,19 @@ _normalizer = DocumentNormalizer()
 
 
 class IngestStage(Stage):
-    """semcore Stage wrapper - inputs via ctx.meta['crawl_task_id']."""
+    """Pipeline Stage 1: load raw document → clean → quality gate → update record."""
 
     name = "ingest"
 
     def process(self, ctx: PipelineContext, app) -> PipelineContext:  # type: ignore[override]
-        crawl_task_id = ctx.meta.get("crawl_task_id")
-        if crawl_task_id is None:
-            ctx.record_error("IngestStage: crawl_task_id missing from ctx.meta")
+        source_doc_id = ctx.source_doc_id or ctx.meta.get("source_doc_id")
+        if not source_doc_id:
+            ctx.record_error("IngestStage: source_doc_id missing")
             return ctx
+
         objects: ObjectStore | None = getattr(app, "objects", None)
         store: RelationalStore = app.store
-        doc_dict = self._run(crawl_task_id, objects, store)
+        doc_dict = self._run(source_doc_id, objects, store)
         if doc_dict:
             ctx.doc = Document(
                 source_doc_id=doc_dict["source_doc_id"],
@@ -40,151 +52,123 @@ class IngestStage(Stage):
         return ctx
 
     def _run(
-        self, crawl_task_id: int, objects: ObjectStore | None, store: RelationalStore
+        self, source_doc_id: str, objects: ObjectStore | None, store: RelationalStore,
     ) -> dict | None:
-        """
-        Rule C3: content_hash dedup.
-        Rule C4: text extraction with quality gate.
-        Rule C5: doc_type detection.
-        Returns document dict or None (skipped/low quality).
-        """
-        task = store.fetchone(
-            """
-            SELECT ct.*, sr.source_rank, sr.site_key as sk
-            FROM crawl_tasks ct
-            JOIN source_registry sr ON ct.site_key = sr.site_key
-            WHERE ct.id = %s
-            """,
-            (crawl_task_id,),
+        # Load existing document record
+        doc = store.fetchone(
+            "SELECT * FROM documents WHERE source_doc_id = %s", (source_doc_id,)
         )
-        if not task:
-            log.warning("Task %d not found", crawl_task_id)
+        if not doc:
+            log.error("Document %s not found", source_doc_id)
             return None
 
-        raw_html = self._load_raw(task, objects)
-        if not raw_html:
+        # Already cleaned? Skip.
+        if doc.get("status") not in ("raw", None):
+            log.info("Document %s already processed (status=%s), skipping", source_doc_id, doc["status"])
+            return doc
+
+        # Load raw content from MinIO
+        raw_content = self._load_raw(doc, objects)
+        if not raw_content:
             return None
 
+        # C3: content-hash dedup
         from src.utils.hashing import content_hash
-        c_hash = content_hash(raw_html)
+        c_hash = content_hash(raw_content)
         existing = store.fetchone(
-            "SELECT source_doc_id FROM documents WHERE content_hash = %s", (c_hash,)
+            "SELECT source_doc_id FROM documents WHERE content_hash = %s AND source_doc_id != %s",
+            (c_hash, source_doc_id),
         )
         if existing:
-            log.info("Task %d: content_hash duplicate, skipping", crawl_task_id)
+            log.info("Document %s: content_hash duplicate of %s, marking deduped",
+                     source_doc_id, existing["source_doc_id"])
             store.execute(
-                "UPDATE crawl_tasks SET status='deduped' WHERE id=%s", (crawl_task_id,)
+                "UPDATE documents SET status='deduped', content_hash=%s WHERE source_doc_id=%s",
+                (c_hash, source_doc_id),
             )
             return None
 
-        extracted = _extractor.extract(raw_html, task["url"])
-        # Plain-text docs (RFC .txt) need newlines preserved for structural splitting
-        url = task.get("url", "")
-        is_plaintext = url.endswith(".txt") or extracted.get("content_type", "").startswith("text/plain")
+        # C4: text extraction + quality gate
+        source_url = doc.get("source_url") or ""
+        extracted = _extractor.extract(raw_content, source_url)
+
+        is_plaintext = (
+            source_url.endswith(".txt")
+            or extracted.get("content_type", "").startswith("text/plain")
+        )
         clean_text = _normalizer.normalize(extracted["text"], preserve_newlines=is_plaintext)
-        _, norm_hash = _normalizer.compute_hashes(raw_html, clean_text)
+        _, norm_hash = _normalizer.compute_hashes(raw_content, clean_text)
+
+        # Store cleaned text to MinIO
         cleaned_uri = self._store_cleaned_text(objects, norm_hash, clean_text)
-        raw_uri = task.get("raw_storage_uri") or ""
 
         if extracted["is_low_quality"]:
-            log.info("Task %d: low quality page, skipping", crawl_task_id)
-            self._upsert_document(
-                store, task, extracted, c_hash, norm_hash,
-                raw_storage_uri=raw_uri,
-                cleaned_storage_uri=cleaned_uri,
-                status="low_quality",
+            log.info("Document %s: low quality, marking", source_doc_id)
+            store.execute(
+                """UPDATE documents SET status='low_quality', content_hash=%s,
+                   normalized_hash=%s, cleaned_storage_uri=%s,
+                   title=COALESCE(title,%s), language=COALESCE(language,%s)
+                   WHERE source_doc_id=%s""",
+                (c_hash, norm_hash, cleaned_uri,
+                 extracted["title"], extracted["language"], source_doc_id),
             )
             return None
 
+        # C5: doc_type detection
         doc_type = _extractor.detect_doc_type(
-            task["url"], extracted["title"], extracted["text"]
+            source_url, extracted["title"], extracted["text"]
         )
 
+        # Normalized-hash dedup grouping
         dup_group = store.fetchone(
-            "SELECT dedup_group_id FROM documents WHERE normalized_hash = %s", (norm_hash,)
+            "SELECT dedup_group_id FROM documents WHERE normalized_hash = %s AND source_doc_id != %s",
+            (norm_hash, source_doc_id),
         )
         dedup_group_id = dup_group["dedup_group_id"] if dup_group else str(uuid.uuid4())
 
-        doc = self._upsert_document(
-            store, task, extracted, c_hash, norm_hash,
-            raw_storage_uri=raw_uri,
-            cleaned_storage_uri=cleaned_uri,
-            doc_type=doc_type,
-            dedup_group_id=dedup_group_id,
-            status="raw",
-        )
-
+        # Update the document record with cleaning results
         store.execute(
-            """INSERT INTO extraction_jobs (job_type, source_doc_id, status, pipeline_version)
-               VALUES ('segmentation', %s, 'pending', '0.1.0')""",
-            (doc["source_doc_id"],),
+            """UPDATE documents SET
+                content_hash=%s, normalized_hash=%s,
+                cleaned_storage_uri=%s,
+                title=COALESCE(%s, title),
+                doc_type=%s, language=%s,
+                dedup_group_id=%s, status='cleaned'
+               WHERE source_doc_id=%s""",
+            (
+                c_hash, norm_hash, cleaned_uri,
+                extracted["title"], doc_type, extracted["language"],
+                dedup_group_id, source_doc_id,
+            ),
         )
+
         log.info(
-            "Ingested task=%s doc=%s type=%s raw_uri=%s cleaned_uri=%s",
-            crawl_task_id,
-            doc["source_doc_id"],
-            doc_type,
-            raw_uri or "n/a",
-            cleaned_uri or "n/a",
+            "Cleaned doc=%s type=%s cleaned_uri=%s",
+            source_doc_id, doc_type, cleaned_uri or "n/a",
         )
-        return doc
+        return {
+            "source_doc_id": source_doc_id,
+            "doc_type": doc_type,
+            "status": "cleaned",
+        }
 
-    def _upsert_document(
-        self,
-        store: RelationalStore,
-        task: dict,
-        extracted: dict,
-        c_hash: str,
-        norm_hash: str,
-        *,
-        raw_storage_uri: str,
-        cleaned_storage_uri: str | None,
-        doc_type: str = "unknown",
-        dedup_group_id: str | None = None,
-        status: str = "raw",
-    ) -> dict:
-        source_doc_id = str(uuid.uuid4())
-        with store.transaction() as cur:
-            cur.execute(
-                """
-                INSERT INTO documents (
-                    source_doc_id, crawl_task_id, site_key, source_url, canonical_url,
-                    title, doc_type, language, source_rank, crawl_time,
-                    content_hash, normalized_hash, status, dedup_group_id,
-                    raw_storage_uri, cleaned_storage_uri
-                ) VALUES (
-                    %s,%s,%s,%s,%s, %s,%s,%s,%s,NOW(),
-                    %s,%s,%s,%s, %s,%s
-                )
-                ON CONFLICT (source_doc_id) DO NOTHING
-                RETURNING source_doc_id
-                """,
-                (
-                    source_doc_id, task["id"], task["site_key"],
-                    task["url"], task.get("canonical_url") or task["url"],
-                    extracted["title"], doc_type, extracted["language"],
-                    task["source_rank"], c_hash, norm_hash, status, dedup_group_id,
-                    raw_storage_uri or None,
-                    cleaned_storage_uri or None,
-                ),
-            )
-        return {"source_doc_id": source_doc_id, "doc_type": doc_type, "status": status}
-
-    def _load_raw(self, task: dict, objects: ObjectStore | None) -> str | None:
-        """Load raw HTML from object storage or local cache."""
-        uri = task.get("raw_storage_uri", "")
+    def _load_raw(self, doc: dict, objects: ObjectStore | None) -> str | None:
+        """Load raw content from object storage."""
+        uri = doc.get("raw_storage_uri") or ""
         if uri.startswith("minio://") and objects is not None:
             try:
                 raw = objects.get(uri).decode("utf-8", errors="replace")
-                log.info("Loaded raw html: task=%s uri=%s bytes=%s", task["id"], uri, len(raw))
+                log.info("Loaded raw content: doc=%s uri=%s bytes=%d",
+                         doc.get("source_doc_id"), uri, len(raw))
                 return raw
             except Exception as exc:
-                log.error("Failed to load raw html: task=%s uri=%s err=%s", task["id"], uri, exc)
+                log.error("Failed to load raw content: doc=%s uri=%s err=%s",
+                          doc.get("source_doc_id"), uri, exc)
                 return None
         if uri.startswith("local://") or uri.startswith("raw://"):
             return "<html>Stub HTML content for testing</html>"
         if not uri:
-            log.warning("Task %d missing raw_storage_uri", task["id"])
+            log.warning("Document %s missing raw_storage_uri", doc.get("source_doc_id"))
         return None
 
     def _store_cleaned_text(
@@ -197,8 +181,6 @@ class IngestStage(Stage):
             return None
         if not clean_text.strip():
             return None
-        # Content-addressed key: same normalized text → same key (dedup),
-        # different text → different key (no overwrite)
         key = f"cleaned/{norm_hash}.txt"
         try:
             uri = objects.put(
@@ -206,7 +188,8 @@ class IngestStage(Stage):
                 clean_text.encode("utf-8", errors="replace"),
                 content_type="text/plain",
             )
-            log.info("Stored cleaned text: hash=%s uri=%s bytes=%s", norm_hash[:12], uri, len(clean_text))
+            log.info("Stored cleaned text: hash=%s uri=%s bytes=%d",
+                     norm_hash[:12], uri, len(clean_text))
             return uri
         except Exception as exc:
             log.error("Failed to store cleaned text: hash=%s err=%s", norm_hash[:12], exc)

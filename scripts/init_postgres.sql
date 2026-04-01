@@ -7,60 +7,20 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";      -- pgvector for embeddings
 
--- =============================================================
--- 1. source_registry
--- =============================================================
-CREATE TABLE IF NOT EXISTS source_registry (
-    id              SERIAL PRIMARY KEY,
-    site_key        VARCHAR(64)   NOT NULL UNIQUE,
-    site_name       VARCHAR(255)  NOT NULL,
-    home_url        VARCHAR(1024) NOT NULL,
-    source_rank     CHAR(1)       NOT NULL CHECK (source_rank IN ('S','A','B','C')),
-    crawl_enabled   BOOLEAN       NOT NULL DEFAULT true,
-    robots_policy   JSONB,
-    rate_limit_rps  NUMERIC(5,2)  DEFAULT 1.0,
-    seed_urls       JSONB,
-    scope_rules     JSONB,
-    extra_headers   JSONB,
-    created_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
-);
+-- Governance schema for evolution/conflict/review tables
+CREATE SCHEMA IF NOT EXISTS governance;
+
+-- NOTE: source_registry, crawl_tasks, and extraction_jobs have been moved
+-- to the separate telecom_crawler database. See init_crawler_postgres.sql.
 
 -- =============================================================
--- 2. crawl_tasks
--- =============================================================
-CREATE TABLE IF NOT EXISTS crawl_tasks (
-    id              BIGSERIAL PRIMARY KEY,
-    site_key        VARCHAR(64)  NOT NULL REFERENCES source_registry(site_key),
-    url             TEXT         NOT NULL,
-    canonical_url   TEXT,
-    task_type       VARCHAR(32)  NOT NULL DEFAULT 'full',
-    priority        SMALLINT     NOT NULL DEFAULT 5,
-    status          VARCHAR(32)  NOT NULL DEFAULT 'pending',
-    scheduled_at    TIMESTAMPTZ,
-    started_at      TIMESTAMPTZ,
-    finished_at     TIMESTAMPTZ,
-    retry_count     SMALLINT     NOT NULL DEFAULT 0,
-    http_status     SMALLINT,
-    error_msg       TEXT,
-    parent_task_id  BIGINT       REFERENCES crawl_tasks(id),
-    raw_storage_uri TEXT,
-    content_hash    CHAR(64),
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_crawl_tasks_url    ON crawl_tasks(url);
-CREATE        INDEX IF NOT EXISTS idx_crawl_tasks_status ON crawl_tasks(status);
-CREATE        INDEX IF NOT EXISTS idx_crawl_tasks_site   ON crawl_tasks(site_key);
-
--- =============================================================
--- 3. documents
+-- 1. documents
 -- =============================================================
 CREATE TABLE IF NOT EXISTS documents (
     id                  BIGSERIAL PRIMARY KEY,
     source_doc_id       UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    crawl_task_id       BIGINT       REFERENCES crawl_tasks(id),
-    site_key            VARCHAR(64)  NOT NULL REFERENCES source_registry(site_key),
+    crawl_task_id       BIGINT,      -- logical reference to crawler DB crawl_tasks.id
+    site_key            VARCHAR(64)  NOT NULL,
     source_url          TEXT         NOT NULL,
     canonical_url       TEXT,
     title               TEXT,
@@ -106,6 +66,10 @@ CREATE TABLE IF NOT EXISTS segments (
     simhash_value       BIGINT,
     embedding_ref       TEXT,
     embedding           vector(1024),    -- BAAI/bge-m3 produces 1024-dim vectors
+    title               VARCHAR(255),                          -- generated summary / section heading (merged from t_edu_detail)
+    title_vec           vector(1024),                          -- bge-m3 embedding of title
+    content_vec         vector(1024),                          -- bge-m3 embedding of content text
+    content_source      VARCHAR(128),                          -- site_key:canonical_url
     lifecycle_state     VARCHAR(32)  NOT NULL DEFAULT 'active',
     created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
@@ -119,40 +83,20 @@ CREATE INDEX IF NOT EXISTS idx_segments_simhash       ON segments(simhash_value)
 -- For HNSW (pgvector >= 0.5, better recall):
 -- CREATE INDEX ON segments USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
--- =============================================================
--- 4a. t_edu_detail  (Elementary Discourse Unit — primary text layer)
--- edu_id maps 1:1 to segments.segment_id; this table is the
--- canonical store for downstream retrieval and ontology mapping.
--- =============================================================
-CREATE TABLE IF NOT EXISTS t_edu_detail (
-    edu_id          VARCHAR(64)   NOT NULL PRIMARY KEY,   -- = segment_id (UUID)
-    title           VARCHAR(255),                          -- generated summary / section heading
-    content_text    TEXT          NOT NULL,                -- original text fragment
-    title_vec       vector(1024),                          -- bge-m3 embedding of title
-    content_vec     vector(1024),                          -- bge-m3 embedding of content_text
-    content_source  VARCHAR(128),                          -- site_key:canonical_url
-    meta_context    JSONB,                                 -- reserved metadata
-    update_time     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    status          VARCHAR(32)   NOT NULL DEFAULT 'active'
-                    CHECK (status IN ('active', 'outdated', 'archived'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_edu_status  ON t_edu_detail(status);
-CREATE INDEX IF NOT EXISTS idx_edu_source  ON t_edu_detail(content_source);
--- Vector ANN indexes (create after bulk load):
--- CREATE INDEX ON t_edu_detail USING hnsw (title_vec   vector_cosine_ops) WITH (m=16, ef_construction=64);
--- CREATE INDEX ON t_edu_detail USING hnsw (content_vec vector_cosine_ops) WITH (m=16, ef_construction=64);
+-- Vector ANN indexes for segments (create after bulk load):
+-- CREATE INDEX ON segments USING hnsw (title_vec   vector_cosine_ops) WITH (m=16, ef_construction=64);
+-- CREATE INDEX ON segments USING hnsw (content_vec vector_cosine_ops) WITH (m=16, ef_construction=64);
 
 -- =============================================================
--- 4b. t_rst_relation  (RST discourse relations between EDUs)
+-- 4a. t_rst_relation  (RST discourse relations between EDUs)
 -- Captures semantic-logical connections between EDU pairs,
 -- serving as the discourse graph before ontology alignment.
 -- =============================================================
 CREATE TABLE IF NOT EXISTS t_rst_relation (
     nn_relation_id  VARCHAR(36)   NOT NULL PRIMARY KEY,   -- UUID
     relation_type   VARCHAR(255)  NOT NULL,                -- RST type (Elaboration, Cause-Result, …)
-    src_edu_id      VARCHAR(64)   NOT NULL REFERENCES t_edu_detail(edu_id),
-    dst_edu_id      VARCHAR(64)   NOT NULL REFERENCES t_edu_detail(edu_id),
+    src_edu_id      UUID          NOT NULL REFERENCES segments(segment_id),
+    dst_edu_id      UUID          NOT NULL REFERENCES segments(segment_id),
     meta_context    JSONB,         -- symmetric relations: {"SYNTACTIC_ORDER": <int>}
     relation_source VARCHAR(255),  -- rule / llm / manual
     update_time     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
@@ -228,13 +172,13 @@ CREATE INDEX IF NOT EXISTS idx_evidence_fact_id    ON evidence(fact_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_segment_id ON evidence(segment_id);
 
 -- =============================================================
--- 8. conflict_records
+-- 8. governance.conflict_records
 -- =============================================================
-CREATE TABLE IF NOT EXISTS conflict_records (
+CREATE TABLE IF NOT EXISTS governance.conflict_records (
     id             BIGSERIAL PRIMARY KEY,
     conflict_id    UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    fact_id_a      UUID         NOT NULL REFERENCES facts(fact_id),
-    fact_id_b      UUID         NOT NULL REFERENCES facts(fact_id),
+    fact_id_a      UUID         NOT NULL REFERENCES public.facts(fact_id),
+    fact_id_b      UUID         NOT NULL REFERENCES public.facts(fact_id),
     conflict_type  VARCHAR(64)  NOT NULL,
     description    TEXT,
     resolution     VARCHAR(32)  DEFAULT 'open',
@@ -244,9 +188,9 @@ CREATE TABLE IF NOT EXISTS conflict_records (
 );
 
 -- =============================================================
--- 9. ontology_versions
+-- 9. governance.ontology_versions
 -- =============================================================
-CREATE TABLE IF NOT EXISTS ontology_versions (
+CREATE TABLE IF NOT EXISTS governance.ontology_versions (
     id             SERIAL PRIMARY KEY,
     version_tag    VARCHAR(32)  NOT NULL UNIQUE,
     description    TEXT,
@@ -259,9 +203,9 @@ CREATE TABLE IF NOT EXISTS ontology_versions (
 );
 
 -- =============================================================
--- 10. evolution_candidates
+-- 10. governance.evolution_candidates
 -- =============================================================
-CREATE TABLE IF NOT EXISTS evolution_candidates (
+CREATE TABLE IF NOT EXISTS governance.evolution_candidates (
     id                       BIGSERIAL PRIMARY KEY,
     candidate_id             UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     surface_forms            TEXT[]       NOT NULL,
@@ -284,9 +228,9 @@ CREATE TABLE IF NOT EXISTS evolution_candidates (
 );
 
 -- =============================================================
--- 11. review_records
+-- 11. governance.review_records
 -- =============================================================
-CREATE TABLE IF NOT EXISTS review_records (
+CREATE TABLE IF NOT EXISTS governance.review_records (
     id           BIGSERIAL PRIMARY KEY,
     review_id    UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     object_type  VARCHAR(64)  NOT NULL,
@@ -319,31 +263,15 @@ CREATE TABLE IF NOT EXISTS lexicon_aliases (
 
 CREATE INDEX IF NOT EXISTS idx_lexicon_aliases_surface ON lexicon_aliases(surface_form);
 
--- =============================================================
--- 13. extraction_jobs
--- =============================================================
-CREATE TABLE IF NOT EXISTS extraction_jobs (
-    id               BIGSERIAL PRIMARY KEY,
-    job_id           UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    job_type         VARCHAR(64)  NOT NULL,
-    source_doc_id    UUID         REFERENCES documents(source_doc_id),
-    status           VARCHAR(32)  NOT NULL DEFAULT 'pending',
-    pipeline_version VARCHAR(32),
-    config_snapshot  JSONB,
-    started_at       TIMESTAMPTZ,
-    finished_at      TIMESTAMPTZ,
-    error_msg        TEXT,
-    stats            JSONB,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
+-- NOTE: extraction_jobs moved to telecom_crawler database.
 
 -- =============================================================
 -- Seed: initial ontology version record
 -- =============================================================
-INSERT INTO ontology_versions (version_tag, description, status)
+INSERT INTO governance.ontology_versions (version_tag, description, status)
 VALUES ('v0.1.0', 'Initial IP/datacommunication subdomain ontology', 'active')
 ON CONFLICT (version_tag) DO NOTHING;
 
-INSERT INTO ontology_versions (version_tag, description, status)
+INSERT INTO governance.ontology_versions (version_tag, description, status)
 VALUES ('v0.2.0', 'Five-layer semantic structure: Concept/Mechanism/Method/Condition/Scenario', 'active')
 ON CONFLICT (version_tag) DO NOTHING;

@@ -74,7 +74,11 @@ def _init_schema() -> None:
             token_count     INTEGER DEFAULT 0,
             simhash_value   INTEGER,
             confidence      REAL DEFAULT 0.5,
-            lifecycle_state TEXT DEFAULT 'active'
+            lifecycle_state TEXT DEFAULT 'active',
+            title           TEXT,
+            title_vec       TEXT,
+            content_vec     TEXT,
+            content_source  TEXT
         );
         CREATE TABLE IF NOT EXISTS segment_tags (
             tag_id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,13 +118,6 @@ def _init_schema() -> None:
             fact_id_b       TEXT,
             conflict_type   TEXT
         );
-        CREATE TABLE IF NOT EXISTS extraction_jobs (
-            job_id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            job_type        TEXT,
-            source_doc_id   TEXT,
-            status          TEXT DEFAULT 'pending',
-            pipeline_version TEXT
-        );
         CREATE TABLE IF NOT EXISTS evolution_candidates (
             candidate_id    INTEGER PRIMARY KEY AUTOINCREMENT,
             surface_forms   TEXT,
@@ -137,14 +134,6 @@ def _init_schema() -> None:
             synonym_risk_score REAL DEFAULT 0,
             composite_score REAL DEFAULT 0
         );
-        CREATE TABLE IF NOT EXISTS t_edu_detail (
-            edu_id          TEXT PRIMARY KEY,
-            title           TEXT,
-            content_text    TEXT,
-            content_source  TEXT,
-            meta_context    TEXT,
-            status          TEXT DEFAULT 'active'
-        );
         CREATE TABLE IF NOT EXISTS t_rst_relation (
             nn_relation_id  TEXT PRIMARY KEY,
             relation_type   TEXT,
@@ -159,8 +148,9 @@ def _init_schema() -> None:
 
 def _to_sqlite(sql: str) -> str:
     """Convert psycopg2 syntax to SQLite-compatible syntax."""
-    sql = re.sub(r"%s::\w+", "?", sql)          # strip PG type casts (%s::jsonb → ?)
-    sql = re.sub(r"ARRAY\[%s\]", "%s", sql)     # ARRAY[%s] → %s (store as plain text)
+    sql = sql.replace("governance.", "")          # strip schema prefix (SQLite has no schemas)
+    sql = re.sub(r"%s::\w+", "?", sql)           # strip PG type casts (%s::jsonb → ?)
+    sql = re.sub(r"ARRAY\[%s\]", "%s", sql)      # ARRAY[%s] → %s (store as plain text)
     return sql.replace("%s", "?")
 
 

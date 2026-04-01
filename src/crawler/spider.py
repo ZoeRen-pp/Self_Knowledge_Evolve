@@ -57,11 +57,17 @@ class CrawlTask(TypedDict):
 
 
 class Spider:
-    def __init__(self, object_store: ObjectStore, store: RelationalStore) -> None:
+    def __init__(
+        self,
+        object_store: ObjectStore,
+        store: RelationalStore,
+        knowledge_store: RelationalStore | None = None,
+    ) -> None:
         self._robots_cache: dict[str, urllib.robotparser.RobotFileParser] = {}
         self._last_request_time: dict[str, float] = {}
         self._objects = object_store
-        self._store = store
+        self._store = store                    # crawler DB (crawl_tasks, source_registry)
+        self._knowledge_store = knowledge_store  # knowledge DB (documents)
         self._client = httpx.Client(
             timeout=30,
             follow_redirects=True,
@@ -229,17 +235,26 @@ class Spider:
 
             self._store.execute(
                 """UPDATE crawl_tasks SET status='done', http_status=%s,
-                   finished_at=NOW(), raw_storage_uri=%s WHERE id=%s""",
-                (result["status_code"], raw_uri, task_id),
+                   finished_at=NOW(), raw_storage_uri=%s, content_hash=%s WHERE id=%s""",
+                (result["status_code"], raw_uri, c_hash, task_id),
             )
+
+            # Create document record in knowledge DB so pipeline can pick it up
+            source_doc_id = self._create_document(task, raw_uri, c_hash, result)
+
             log.info(
-                "Crawl task done: id=%s http_status=%s raw_uri=%s bytes=%s",
+                "Crawl task done: id=%s doc=%s http_status=%s raw_uri=%s bytes=%s",
                 task_id,
+                source_doc_id or "skipped",
                 result["status_code"],
                 raw_uri,
                 len(html_bytes),
             )
-            return {"task_id": task_id, "status": "done", "url": result["final_url"], "raw_uri": raw_uri}
+            return {
+                "task_id": task_id, "status": "done",
+                "url": result["final_url"], "raw_uri": raw_uri,
+                "source_doc_id": source_doc_id,
+            }
 
         except Exception as exc:
             self._store.execute(
@@ -248,6 +263,37 @@ class Spider:
             )
             log.error("Task %d failed: %s", task_id, exc)
             return {"task_id": task_id, "status": "failed", "error": str(exc)}
+
+    def _create_document(self, task: dict, raw_uri: str, c_hash: str, result: dict) -> str | None:
+        """Create a document record in the knowledge DB for pipeline processing."""
+        kstore = self._knowledge_store
+        if kstore is None:
+            return None
+        import uuid
+        source_doc_id = str(uuid.uuid4())
+        try:
+            kstore.execute(
+                """INSERT INTO documents (
+                    source_doc_id, crawl_task_id, site_key, source_url, canonical_url,
+                    source_rank, crawl_time, content_hash,
+                    raw_storage_uri, status
+                ) VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, NOW(), %s,
+                    %s, 'raw'
+                )
+                ON CONFLICT (source_doc_id) DO NOTHING""",
+                (
+                    source_doc_id, task["id"], task["site_key"],
+                    task["url"], result.get("final_url") or task["url"],
+                    task.get("source_rank") or "C", c_hash,
+                    raw_uri,
+                ),
+            )
+            return source_doc_id
+        except Exception as exc:
+            log.error("Failed to create document for task %s: %s", task["id"], exc)
+            return None
 
     def _respect_rate_limit(self, site_key: str, rps: float = 1.0) -> None:
         last = self._last_request_time.get(site_key, 0.0)

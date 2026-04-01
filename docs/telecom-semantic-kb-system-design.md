@@ -193,16 +193,32 @@
 
 ### PostgreSQL
 
+> **v0.3 更新**：PostgreSQL 已拆分为两个数据库 + 两个 schema：
+> - **telecom_kb**（知识库）：`public` schema 存知识数据（documents, segments, facts, evidence, segment_tags, lexicon_aliases）；`governance` schema 存治理数据（evolution_candidates, conflict_records, review_records, ontology_versions）
+> - **telecom_crawler**（爬虫库）：存爬虫调度数据（source_registry, crawl_tasks, extraction_jobs）
+>
+> 原 `t_edu_detail` 表已合并入 `segments` 表（新增 title/title_vec/content_vec/content_source 列）。
+
 用途：
 
-- source registry
-- crawl任务管理
-- pipeline状态
-- 文档元数据
-- 分片元数据
-- 版本管理
-- 规则配置
-- 审计日志
+**知识库 telecom_kb**：
+- 文档元数据（documents）
+- 知识片段及嵌入向量（segments，含 EDU 标题/向量）
+- 片段标签（segment_tags）
+- 事实与证据（facts, evidence）
+- 词汇别名（lexicon_aliases）
+- RST 语篇关系（t_rst_relation）
+
+**知识库 governance schema**：
+- 本体版本管理（ontology_versions）
+- 候选概念（evolution_candidates）
+- 冲突记录（conflict_records）
+- 审核记录（review_records）
+
+**爬虫库 telecom_crawler**：
+- 来源注册（source_registry）
+- 爬取任务（crawl_tasks）
+- 流水线任务追踪（extraction_jobs）
 
 ### 图数据库
 
@@ -748,17 +764,30 @@
 
 ## 17.1 PostgreSQL
 
-主要表建议：
+> **v0.3 更新**：已拆分为两个数据库，知识库内再分两个 schema。
 
-- source_registry
-- crawl_tasks
-- documents
-- segments
-- extraction_jobs
-- ontology_versions
-- evolution_candidates
-- review_records
-- conflict_records
+**知识库 telecom_kb — public schema**：
+
+- documents（文档元数据）
+- segments（知识片段 + EDU 标题/向量，原 t_edu_detail 已合并）
+- segment_tags（片段本体标签）
+- facts（三元组知识）
+- evidence（事实溯源）
+- lexicon_aliases（词汇别名）
+- t_rst_relation（RST 语篇关系，21 种通用类型）
+
+**知识库 telecom_kb — governance schema**：
+
+- governance.ontology_versions（本体版本）
+- governance.evolution_candidates（候选概念）
+- governance.conflict_records（冲突记录）
+- governance.review_records（审核记录）
+
+**爬虫库 telecom_crawler**：
+
+- source_registry（来源注册）
+- crawl_tasks（爬取任务）
+- extraction_jobs（流水线任务追踪）
 
 ## 17.2 图数据库
 

@@ -17,7 +17,8 @@
 |------|------|
 | semcore | 自研框架包（`semcore/`），零外部依赖，定义所有 ABC |
 | FastAPI | REST API，15 个语义算子，通过 OperatorRegistry 分发 |
-| PostgreSQL | 13 张表，文档/事实/候选词治理，segments.embedding（pgvector） |
+| PostgreSQL (telecom_kb) | 知识库：public schema（documents/segments/facts/evidence/…）+ governance schema（evolution_candidates/conflict_records/…） |
+| PostgreSQL (telecom_crawler) | 爬虫库：source_registry/crawl_tasks/extraction_jobs |
 | Neo4j | 图数据库，运行时本体 + 知识图谱，5 类节点 label |
 | MinIO | 对象存储，原始爬取文档 |
 | BAAI/bge-m3 | 向量嵌入，1024 维，中英双语，本地部署 |
@@ -73,29 +74,38 @@ src/
   app.py                   ← FastAPI entry point（生产）
   app_factory.py           ← build_app() + get_app() singleton
   config/settings.py       ← Pydantic settings，读 .env
-  db/postgres.py           ← PG 连接池
+  db/postgres.py           ← 知识库 PG 连接池
+  db/crawler_postgres.py   ← 爬虫库 PG 连接池
   db/neo4j_client.py       ← Neo4j driver wrapper
   dev/                     ← 本地开发内存替代
-    fake_postgres.py       ← SQLite :memory: 替代 psycopg2
+    fake_postgres.py       ← SQLite :memory: 替代知识库 PG
+    fake_crawler_postgres.py ← SQLite :memory: 替代爬虫库 PG
     fake_neo4j.py          ← dict 替代 neo4j driver
-    seed.py                ← 从 YAML 本体 seed 两个假库
-  providers/               ← semcore Provider 实现（postgres/neo4j/llm/embedding/minio）
+    seed.py                ← 从 YAML 本体 seed 假库
+  pipeline/
+    preprocessing/         ← 文本预处理（从 crawler 解耦）
+      extractor.py         ← HTML 正文提取（trafilatura/readability/回退）
+      normalizer.py        ← 去噪、归一化、hash
+    stages/                ← stage1~stage6
+    pipeline_factory.py    ← build_pipeline()
+    runner.py              ← legacy 批量 runner
+  providers/               ← semcore Provider 实现（postgres/crawler_postgres/neo4j/llm/embedding/minio）
   ontology/
     registry.py            ← 内存本体注册表（YAML loader）
     validator.py           ← YAML 校验
     yaml_provider.py       ← OntologyProvider 包装 registry
   governance/              ← TelecomConfidenceScorer / ConflictDetector / EvolutionGate
   operators/               ← 15 个 SemanticOperator（ALL_OPERATORS 在 __init__.py）
-  pipeline/
-    pipeline_factory.py    ← build_pipeline()，含 switch 路由（rfc/cli/default）
-    stages/                ← stage1~stage6，均继承 semcore Stage ABC
   api/semantic/            ← 算子业务逻辑（lookup.py … router.py）
+  crawler/                 ← Spider（纯 HTTP 抓取 + 存 MinIO + 建 documents 记录，Pipeline 外部）
   utils/                   ← text / hashing / confidence / embedding / llm_extract / logging
 
 scripts/
-  init_postgres.sql        ← 13 张表 DDL + pgvector
+  init_postgres.sql        ← 知识库 DDL（public + governance schema）
+  init_crawler_postgres.sql ← 爬虫库 DDL（source_registry/crawl_tasks/extraction_jobs）
   init_neo4j.py            ← 约束和索引
   load_ontology.py         ← YAML → Neo4j + PG lexicon
+  migrations/              ← 002_merge_edu_into_segments / 003_governance_schema
 
 ontology/
   top/relations.yaml       ← 54 种受控关系类型
@@ -124,6 +134,9 @@ docker-compose.yml         ← PostgreSQL + Neo4j 容器
 - 本地开发模式已验证（`run_dev.py`），无需任何外部服务即可运行 `/lookup` `/resolve`
 - Stage 4 抽取仍用正则，召回率有限；启用 `LLM_ENABLED=true` 可接 Claude API
 - 知识冷启动：先跑 `load_ontology.py`，再灌文档数据
+- **数据库已分库分 schema**：爬虫表 → telecom_crawler 独立库，治理表 → governance schema，t_edu_detail 已合并入 segments（详见 ADR-007）
+- **RST 关系类型已扩展为 21 种**通用分类，按 6 个逻辑类别组织（详见 ADR-008）
+- **爬虫已与 Pipeline 解耦**：Spider 在 Pipeline 外部负责抓取 + 建 documents 记录；Stage 1 纯清洗，接受 source_doc_id 入参，不感知数据来源（详见 ADR-009）
 
 ## 开发注意事项
 
@@ -135,3 +148,5 @@ docker-compose.yml         ← PostgreSQL + Neo4j 容器
 - semcore 包通过 `sys.path.insert(0, "semcore")` 引用（未安装），或 `pip install -e semcore`（需 setuptools≥68）
 - Docker 容器：Neo4j 和 PostgreSQL，连接配置在 `.env.example` 和 `docker-compose.yml`
 - 本地无 Docker 调试：`python run_dev.py`，内存模式已通过 `/health`、`/lookup`、`/resolve` 验证
+- 爬虫表（source_registry/crawl_tasks/extraction_jobs）在独立数据库 `telecom_crawler`，通过 `app.crawler_store` 访问；Pipeline stage 中操作这些表必须用 `crawler_store` 而非 `store`
+- 治理表（evolution_candidates/conflict_records/review_records/ontology_versions）在 `governance` schema，SQL 中必须写 `governance.` 前缀；dev 模式 SQLite 自动剥离前缀

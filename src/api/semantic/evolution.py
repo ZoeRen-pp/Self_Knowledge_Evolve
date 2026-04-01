@@ -29,7 +29,7 @@ def candidate_discover(
         """
         SELECT normalized_form, COUNT(*) AS freq, MAX(last_seen_at) AS latest,
                source_count, review_status
-        FROM evolution_candidates
+        FROM governance.evolution_candidates
         WHERE first_seen_at >= NOW() - INTERVAL '%s days'
           AND source_count >= %s
         GROUP BY normalized_form, source_count, review_status
@@ -54,7 +54,7 @@ def attach_score(
     graph: GraphStore,
 ) -> dict:
     candidate = store.fetchone(
-        "SELECT * FROM evolution_candidates WHERE candidate_id=%s", (candidate_id,)
+        "SELECT * FROM governance.evolution_candidates WHERE candidate_id=%s", (candidate_id,)
     )
     if not candidate:
         return {"error": f"Candidate '{candidate_id}' not found"}
@@ -99,7 +99,7 @@ def evolution_gate(
     store: RelationalStore,
 ) -> dict:
     candidate = store.fetchone(
-        "SELECT * FROM evolution_candidates WHERE candidate_id=%s", (candidate_id,)
+        "SELECT * FROM governance.evolution_candidates WHERE candidate_id=%s", (candidate_id,)
     )
     if not candidate:
         return {"error": f"Candidate '{candidate_id}' not found", "gate_passed": False}
@@ -142,7 +142,7 @@ def evolution_gate(
     gate_passed = len(blocking) == 0
     if gate_passed:
         store.execute(
-            "UPDATE evolution_candidates SET review_status='pending_review' WHERE candidate_id=%s",
+            "UPDATE governance.evolution_candidates SET review_status='pending_review' WHERE candidate_id=%s",
             (candidate_id,),
         )
 

@@ -63,6 +63,7 @@ class AppConfig:
     graph:      GraphStore
     store:      RelationalStore
     objects:    ObjectStore
+    crawler_store: RelationalStore | None = None  # separate DB for crawler tables
 
     # ── Knowledge ─────────────────────────────────────────────────────────────
     ontology:   OntologyProvider
@@ -132,6 +133,7 @@ class SemanticApp:
         self.graph:     GraphStore        = config.graph
         self.store:     RelationalStore   = config.store
         self.objects:   ObjectStore       = config.objects
+        self.crawler_store: RelationalStore | None = config.crawler_store
 
         # ── Ontology ──────────────────────────────────────────────────────────
         self.ontology:  OntologyProvider  = config.ontology

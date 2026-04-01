@@ -282,21 +282,21 @@ class IndexStage(Stage):
         log.info("Wrote embeddings for %d segments", len(segment_ids))
 
     def _write_edu_embeddings(self, segments: list[dict]) -> None:
-        """Generate title_vec + content_vec for t_edu_detail rows (best-effort)."""
+        """Generate title_vec + content_vec for segments (best-effort)."""
         if not segments:
             return
 
         store = self._store
-        edu_ids   = [str(seg["segment_id"]) for seg in segments]
-        contents  = [seg.get("normalized_text") or seg.get("raw_text", "") for seg in segments]
+        seg_ids  = [str(seg["segment_id"]) for seg in segments]
+        contents = [seg.get("normalized_text") or seg.get("raw_text", "") for seg in segments]
 
-        # Fetch titles from t_edu_detail (written by stage2)
+        # Fetch titles from segments (written by stage2)
         rows = store.fetchall(
-            "SELECT edu_id, title FROM t_edu_detail WHERE edu_id = ANY(%s)",
-            (edu_ids,),
+            "SELECT segment_id, title FROM segments WHERE segment_id = ANY(%s)",
+            (seg_ids,),
         )
-        title_map = {r["edu_id"]: r.get("title") or "" for r in rows}
-        titles = [title_map.get(eid, "") for eid in edu_ids]
+        title_map = {str(r["segment_id"]): r.get("title") or "" for r in rows}
+        titles = [title_map.get(sid, "") for sid in seg_ids]
 
         content_vecs = get_embeddings(contents)
         title_vecs   = get_embeddings(titles) if any(titles) else None
@@ -305,16 +305,16 @@ class IndexStage(Stage):
             return
 
         with store.transaction() as cur:
-            for i, edu_id in enumerate(edu_ids):
+            for i, seg_id in enumerate(seg_ids):
                 c_vec = vector_to_pg_literal(content_vecs[i])
                 t_vec = vector_to_pg_literal(title_vecs[i]) if title_vecs else None
                 cur.execute(
                     """
-                    UPDATE t_edu_detail
+                    UPDATE segments
                     SET content_vec = %s::vector,
                         title_vec   = CASE WHEN %s IS NOT NULL THEN %s::vector ELSE title_vec END
-                    WHERE edu_id = %s
+                    WHERE segment_id = %s
                     """,
-                    (c_vec, t_vec, t_vec, edu_id),
+                    (c_vec, t_vec, t_vec, seg_id),
                 )
-        log.info("Wrote EDU embeddings for %d rows", len(edu_ids))
+        log.info("Wrote EDU embeddings for %d segments", len(seg_ids))

@@ -29,16 +29,18 @@ if _semcore_path not in sys.path:
 # Must patch src.db package itself AND its submodules so that both
 # `from src.db.postgres import ...` and `import src.db.postgres as pg` work.
 import types
-from src.dev import fake_postgres, fake_neo4j   # these have zero src.db deps
+from src.dev import fake_postgres, fake_neo4j, fake_crawler_postgres
 
 _db_mod = types.ModuleType("src.db")
 _db_mod.postgres = fake_postgres        # type: ignore[attr-defined]
 _db_mod.neo4j_client = fake_neo4j       # type: ignore[attr-defined]
-_db_mod.health_check = lambda: {"postgres": True, "neo4j": True}  # type: ignore[attr-defined]
+_db_mod.crawler_postgres = fake_crawler_postgres  # type: ignore[attr-defined]
+_db_mod.health_check = lambda: {"postgres": True, "neo4j": True, "crawler_postgres": True}  # type: ignore[attr-defined]
 
-sys.modules["src.db"]              = _db_mod          # type: ignore[assignment]
-sys.modules["src.db.postgres"]     = fake_postgres    # type: ignore[assignment]
-sys.modules["src.db.neo4j_client"] = fake_neo4j       # type: ignore[assignment]
+sys.modules["src.db"]                  = _db_mod                # type: ignore[assignment]
+sys.modules["src.db.postgres"]         = fake_postgres          # type: ignore[assignment]
+sys.modules["src.db.neo4j_client"]     = fake_neo4j             # type: ignore[assignment]
+sys.modules["src.db.crawler_postgres"] = fake_crawler_postgres  # type: ignore[assignment]
 
 # ── Step 2: seed in-memory stores from YAML ontology ─────────────────────────
 from src.dev.seed import seed_from_registry

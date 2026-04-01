@@ -45,28 +45,49 @@ Extract triples as a JSON array:"""
 
 
 RST_RELATION_TYPES = [
-    "Elaboration",     # dst elaborates or details src
-    "Cause-Result",    # src causes dst
-    "Condition",       # src is a condition for dst
-    "Contrast",        # dst contrasts with src
-    "Sequence",        # src precedes dst in logical/temporal order
-    "Background",      # src provides background for understanding dst
-    "Restatement",     # dst restates or paraphrases src
-    "Summary",         # dst summarises src
-    "Explanation",     # dst explains the mechanism described in src
-    "Problem-Solution",# src states a problem; dst provides solution
-    "Evidence",        # dst provides evidence supporting src claim
+    # ── Causal / logical ──────────────────────────────────────
+    "Cause-Result",      # A causes B (retrospective)
+    "Result-Cause",      # B is because of A (reverse narrative order)
+    "Purpose",           # A is done in order to achieve B (prospective)
+    "Means",             # B is the method/path to accomplish A
+    # ── Conditional / enablement ──────────────────────────────
+    "Condition",         # if A then B
+    "Unless",            # unless A, B holds
+    "Enablement",        # A makes B possible (prerequisite)
+    # ── Elaborative / refinement ──────────────────────────────
+    "Elaboration",       # B elaborates or details A
+    "Explanation",       # B explains the mechanism/rationale of A
+    "Restatement",       # B restates A in different words
+    "Summary",           # B summarises A
+    # ── Contrastive / concessive ──────────────────────────────
+    "Contrast",          # A and B form a parallel comparison
+    "Concession",        # despite A, B (acknowledge A, pivot to B)
+    # ── Evidential / evaluative ───────────────────────────────
+    "Evidence",          # B provides evidence supporting A's claim
+    "Evaluation",        # B evaluates or judges A
+    "Justification",     # B justifies the action/decision stated in A
+    # ── Structural / organisational ───────────────────────────
+    "Background",        # A provides background for understanding B
+    "Preparation",       # A prepares the reader's attention for B
+    "Sequence",          # A precedes B in temporal/logical order
+    "Joint",             # A and B are co-enumerated at the same level
+    "Problem-Solution",  # A states a problem; B provides solution
 ]
 
 _RST_SYSTEM_PROMPT = """\
-You are a discourse analyst for technical network engineering texts.
+You are a discourse analyst for technical texts.
 
 Given two adjacent text fragments (EDU-A then EDU-B) from the same document,
 identify the most appropriate RST (Rhetorical Structure Theory) relation type.
 
-Choose EXACTLY ONE type from this list:
-Elaboration, Cause-Result, Condition, Contrast, Sequence, Background,
-Restatement, Summary, Explanation, Problem-Solution, Evidence
+Choose EXACTLY ONE type from this list (grouped by category):
+
+Causal/logical:     Cause-Result, Result-Cause, Purpose, Means
+Conditional:        Condition, Unless, Enablement
+Elaborative:        Elaboration, Explanation, Restatement, Summary
+Contrastive:        Contrast, Concession
+Evidential:         Evidence, Evaluation, Justification
+Structural:         Background, Preparation, Sequence, Joint, Problem-Solution
 
 Return ONLY a JSON array of relation objects, one per pair.
 Each object: {"src_idx": <int>, "relation_type": "<type>"}

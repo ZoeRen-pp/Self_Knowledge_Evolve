@@ -53,7 +53,7 @@ def conflict_detect(
                fa.confidence AS conf_a, fa.lifecycle_state AS state_a,
                fb.fact_id AS fact_id_b, fb.object AS obj_b,
                fb.confidence AS conf_b
-        FROM conflict_records cr
+        FROM governance.conflict_records cr
         JOIN facts fa ON cr.fact_id_a = fa.fact_id
         JOIN facts fb ON cr.fact_id_b = fb.fact_id
         WHERE (fa.subject = %s OR fa.object = %s)

@@ -18,20 +18,56 @@ from src.utils.llm_extract import LLMExtractor, RST_RELATION_TYPES
 log = logging.getLogger(__name__)
 
 # Rule-based RST fallback: (src_segment_type, dst_segment_type) -> relation_type
+# Uses the 20-type universal RST taxonomy (see RST_RELATION_TYPES in llm_extract.py)
 _RULE_RST: dict[tuple[str, str], str] = {
-    ("definition",      "mechanism"):       "Elaboration",
-    ("definition",      "config"):          "Elaboration",
+    # definition → X
+    ("definition",      "definition"):      "Joint",
+    ("definition",      "mechanism"):       "Explanation",
+    ("definition",      "config"):          "Enablement",
     ("definition",      "constraint"):      "Background",
-    ("mechanism",       "config"):          "Sequence",
+    # mechanism → X
+    ("mechanism",       "mechanism"):       "Joint",
+    ("mechanism",       "config"):          "Means",
     ("mechanism",       "constraint"):      "Condition",
     ("mechanism",       "troubleshooting"): "Problem-Solution",
+    ("mechanism",       "best_practice"):   "Justification",
+    ("mechanism",       "performance"):     "Cause-Result",
+    # config → X
+    ("config",          "config"):          "Joint",
     ("config",          "troubleshooting"): "Problem-Solution",
-    ("config",          "best_practice"):   "Evidence",
+    ("config",          "best_practice"):   "Evaluation",
+    ("config",          "constraint"):      "Condition",
+    ("config",          "mechanism"):       "Purpose",
+    # constraint → X
     ("constraint",      "config"):          "Condition",
+    ("constraint",      "constraint"):      "Joint",
+    ("constraint",      "troubleshooting"): "Enablement",
+    ("constraint",      "best_practice"):   "Concession",
+    # fault → X
     ("fault",           "troubleshooting"): "Problem-Solution",
-    ("troubleshooting", "best_practice"):   "Summary",
+    ("fault",           "mechanism"):       "Cause-Result",
+    ("fault",           "fault"):           "Joint",
+    ("fault",           "config"):          "Result-Cause",
+    # troubleshooting → X
+    ("troubleshooting", "best_practice"):   "Justification",
+    ("troubleshooting", "config"):          "Means",
+    ("troubleshooting", "troubleshooting"): "Sequence",
+    # best_practice → X
+    ("best_practice",   "best_practice"):   "Joint",
+    ("best_practice",   "config"):          "Means",
+    ("best_practice",   "constraint"):      "Concession",
+    # performance → X
     ("performance",     "comparison"):      "Contrast",
-    ("comparison",      "best_practice"):   "Evidence",
+    ("performance",     "performance"):     "Joint",
+    ("performance",     "config"):          "Cause-Result",
+    # comparison → X
+    ("comparison",      "best_practice"):   "Evaluation",
+    ("comparison",      "comparison"):      "Joint",
+    # code / table → X (structural)
+    ("code",            "code"):            "Joint",
+    ("table",           "table"):           "Joint",
+    ("code",            "definition"):      "Evidence",
+    ("table",           "definition"):      "Evidence",
 }
 
 # Rule S2: semantic role keyword patterns
@@ -80,6 +116,7 @@ class SegmentStage(Stage):
     def process(self, ctx: PipelineContext, app) -> PipelineContext:  # type: ignore[override]
         self._objects = getattr(app, "objects", None)
         self._store = app.store
+        self._crawler_store = getattr(app, "crawler_store", None) or app.store
         if hasattr(app, "llm"):
             if hasattr(app.llm, "is_enabled"):
                 self.llm = app.llm
@@ -110,13 +147,15 @@ class SegmentStage(Stage):
             for idx, seg in enumerate(raw_segments):
                 seg_id = str(uuid.uuid4())
                 sh = simhash(seg["raw_text"])
+                title = self._extract_title(seg)
                 cur.execute(
                     """
                     INSERT INTO segments (
                         segment_id, source_doc_id, section_path, section_title,
                         segment_index, segment_type, raw_text, normalized_text,
-                        token_count, simhash_value, confidence, lifecycle_state
-                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'active')
+                        token_count, simhash_value, confidence, lifecycle_state,
+                        title, content_source
+                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s)
                     ON CONFLICT DO NOTHING
                     """,
                     (
@@ -130,22 +169,8 @@ class SegmentStage(Stage):
                         seg["token_count"],
                         sh,
                         seg.get("confidence", 0.7),
-                    ),
-                )
-                title = self._extract_title(seg)
-                cur.execute(
-                    """
-                    INSERT INTO t_edu_detail
-                        (edu_id, title, content_text, content_source, meta_context, status)
-                    VALUES (%s, %s, %s, %s, %s::jsonb, 'active')
-                    ON CONFLICT (edu_id) DO NOTHING
-                    """,
-                    (
-                        seg_id,
                         title,
-                        seg["raw_text"],
                         content_source,
-                        json.dumps({"segment_type": seg["segment_type"], "segment_index": idx}),
                     ),
                 )
                 saved.append({
@@ -160,7 +185,7 @@ class SegmentStage(Stage):
         store.execute(
             "UPDATE documents SET status='segmented' WHERE source_doc_id=%s", (source_doc_id,)
         )
-        store.execute(
+        self._crawler_store.execute(
             "INSERT INTO extraction_jobs (job_type, source_doc_id, status, pipeline_version)"
             " VALUES ('tagging',%s,'pending','0.2.0')",
             (source_doc_id,),
@@ -168,9 +193,8 @@ class SegmentStage(Stage):
         segment_ids = [seg["segment_id"] for seg in saved]
         id_preview = self._preview_ids(segment_ids)
         log.info(
-            "Segmented doc=%s segments=%d edu_rows=%d rst_relations=%d segment_ids=%s",
+            "Segmented doc=%s segments=%d rst_relations=%d segment_ids=%s",
             source_doc_id,
-            len(saved),
             len(saved),
             rst_count,
             id_preview,
@@ -367,7 +391,7 @@ class SegmentStage(Stage):
         return (first or seg["raw_text"][:80])[:255]
 
     def _make_content_source(self, doc: dict) -> str:
-        """Return '{site_key}:{canonical_url}' for t_edu_detail.content_source."""
+        """Return '{site_key}:{canonical_url}' for segments.content_source."""
         site_key = doc.get("site_key") or ""
         url = doc.get("canonical_url") or doc.get("source_url") or ""
         return f"{site_key}:{url}"[:128]

@@ -124,7 +124,7 @@ class DedupStage(Stage):
                 )
                 store.execute(
                     """
-                    INSERT INTO conflict_records (conflict_id, fact_id_a, fact_id_b, conflict_type)
+                    INSERT INTO governance.conflict_records (conflict_id, fact_id_a, fact_id_b, conflict_type)
                     VALUES (%s,%s,%s,'contradictory_value')
                     ON CONFLICT DO NOTHING
                     """,

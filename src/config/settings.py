@@ -9,7 +9,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── PostgreSQL ────────────────────────────────────────────
+    # ── PostgreSQL (knowledge DB) ────────────────────────────
     POSTGRES_HOST: str
     POSTGRES_PORT: int
     POSTGRES_DB: str
@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     POSTGRES_ADMIN_DB: str = "postgres"
     POSTGRES_AUTO_CREATE: bool = True
 
+    # ── Crawler PostgreSQL (separate DB) ──────────────────
+    CRAWLER_POSTGRES_HOST: str = ""
+    CRAWLER_POSTGRES_PORT: int = 0
+    CRAWLER_POSTGRES_DB: str = "telecom_crawler"
+    CRAWLER_POSTGRES_USER: str = ""
+    CRAWLER_POSTGRES_PASSWORD: str = ""
+    CRAWLER_POSTGRES_POOL_MIN: int = 1
+    CRAWLER_POSTGRES_POOL_MAX: int = 5
+    CRAWLER_POSTGRES_AUTO_CREATE: bool = True
+
     @computed_field
     @property
     def postgres_dsn(self) -> str:
@@ -29,6 +39,20 @@ class Settings(BaseSettings):
         return (
             f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{host}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @computed_field
+    @property
+    def crawler_postgres_dsn(self) -> str:
+        host = self.CRAWLER_POSTGRES_HOST or self.POSTGRES_HOST
+        if host == "localhost":
+            host = "127.0.0.1"
+        port = self.CRAWLER_POSTGRES_PORT or self.POSTGRES_PORT
+        user = self.CRAWLER_POSTGRES_USER or self.POSTGRES_USER
+        password = self.CRAWLER_POSTGRES_PASSWORD or self.POSTGRES_PASSWORD
+        return (
+            f"postgresql://{user}:{password}"
+            f"@{host}:{port}/{self.CRAWLER_POSTGRES_DB}"
         )
 
     # ── Neo4j ─────────────────────────────────────────────────

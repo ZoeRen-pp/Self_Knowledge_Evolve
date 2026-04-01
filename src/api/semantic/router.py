@@ -318,7 +318,7 @@ def semantic_search(body: SemanticSearchRequest, _app = Depends(get_app)):
 @router.post("/edu_search")
 def edu_search(body: EduSearchRequest, _app = Depends(get_app)):
     """
-    Dual-vector semantic search over t_edu_detail using title_vec + content_vec.
+    Dual-vector semantic search over segments using title_vec + content_vec.
 
     Combines title and content similarity with configurable weighting.
     Requires EMBEDDING_ENABLED=true and embeddings written by stage6.

@@ -20,23 +20,21 @@ class PipelineRunner:
     def __init__(self) -> None:
         self._app = get_app()
 
-    def run_document(self, crawl_task_id: int) -> dict:
-        """Run the full semcore pipeline for one crawl task."""
+    def run_document(self, source_doc_id: str) -> dict:
+        """Run the full semcore pipeline for one document."""
         from semcore.core.context import PipelineContext
-        summary: dict = {"crawl_task_id": crawl_task_id, "stages_completed": [], "stats": {}}
+        summary: dict = {"source_doc_id": source_doc_id, "stages_completed": [], "stats": {}}
         t0 = time.monotonic()
 
-        ctx = PipelineContext(source_doc_id="")
-        ctx.meta["crawl_task_id"] = crawl_task_id
+        ctx = PipelineContext(source_doc_id=source_doc_id)
 
         try:
             ctx = self._app.ingest_context(ctx)
-            summary["source_doc_id"] = ctx.source_doc_id
             summary["stages_completed"] = self._app.pipeline_stages()
             if ctx.has_errors():
                 summary["errors"] = ctx.errors
         except Exception as exc:
-            log.error("Pipeline failed for task %d: %s", crawl_task_id, exc, exc_info=True)
+            log.error("Pipeline failed for doc %s: %s", source_doc_id, exc, exc_info=True)
             summary["status"] = "failed"
             summary["error"] = str(exc)
             return summary
@@ -44,29 +42,22 @@ class PipelineRunner:
         summary["elapsed_s"] = round(time.monotonic() - t0, 2)
         summary["status"] = "done"
         log.info(
-            "Pipeline completed for task %d (doc %s) in %.2fs",
-            crawl_task_id, summary.get("source_doc_id", "?"), summary["elapsed_s"],
+            "Pipeline completed for doc %s in %.2fs",
+            source_doc_id, summary["elapsed_s"],
         )
         return summary
 
     def run_batch(self, limit: int = 10) -> list[dict]:
-        """Fetch pending tasks and run pipeline for each."""
+        """Fetch documents in 'raw' status and run pipeline for each."""
         store = self._app.store
-        tasks = store.fetchall(
-            """
-            SELECT ct.id FROM crawl_tasks ct
-            WHERE ct.status = 'done'
-              AND NOT EXISTS (
-                SELECT 1 FROM documents d WHERE d.crawl_task_id = ct.id AND d.status != 'raw'
-              )
-            ORDER BY ct.priority DESC, ct.id ASC
-            LIMIT %s
-            """,
+        rows = store.fetchall(
+            "SELECT source_doc_id FROM documents WHERE status = 'raw' "
+            "ORDER BY created_at ASC LIMIT %s",
             (limit,),
         )
         results = []
-        for task in tasks:
-            result = self.run_document(task["id"])
+        for row in rows:
+            result = self.run_document(str(row["source_doc_id"]))
             results.append(result)
         return results
 

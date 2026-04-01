@@ -17,11 +17,12 @@ def build_app() -> SemanticApp:
     from src.config.settings import settings
 
     # ── Providers ─────────────────────────────────────────────────────────────
-    from src.providers.postgres_store   import PostgresRelationalStore
-    from src.providers.neo4j_store      import Neo4jGraphStore
-    from src.providers.anthropic_llm    import ClaudeLLMProvider
-    from src.providers.bge_m3_embedding import BGEM3EmbeddingProvider
-    from src.providers.minio_store      import MinioObjectStore
+    from src.providers.postgres_store          import PostgresRelationalStore
+    from src.providers.neo4j_store             import Neo4jGraphStore
+    from src.providers.anthropic_llm           import ClaudeLLMProvider
+    from src.providers.bge_m3_embedding        import BGEM3EmbeddingProvider
+    from src.providers.minio_store             import MinioObjectStore
+    from src.providers.crawler_postgres_store  import CrawlerPostgresRelationalStore
 
     # ── Ontology ──────────────────────────────────────────────────────────────
     from src.ontology.registry    import OntologyRegistry
@@ -45,8 +46,9 @@ def build_app() -> SemanticApp:
         llm       = ClaudeLLMProvider(settings),
         embedding = BGEM3EmbeddingProvider(),
         graph     = Neo4jGraphStore(),
-        store     = PostgresRelationalStore(),
-        objects   = MinioObjectStore(settings),
+        store         = PostgresRelationalStore(),
+        crawler_store = CrawlerPostgresRelationalStore(),
+        objects       = MinioObjectStore(settings),
         ontology  = YAMLOntologyProvider(registry),
         confidence_scorer = TelecomConfidenceScorer(),
         conflict_detector = TelecomConflictDetector(),

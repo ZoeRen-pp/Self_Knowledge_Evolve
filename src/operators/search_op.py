@@ -74,18 +74,19 @@ class EduSearchOperator(SemanticOperator):
         min_sim = kw.get("min_similarity", 0.5)
 
         sql = """
-            SELECT e.edu_id, e.title, LEFT(e.content_text, 300) AS content_preview,
-                   e.content_source, e.status,
+            SELECT s.segment_id AS edu_id, s.title,
+                   LEFT(s.raw_text, 300) AS content_preview,
+                   s.content_source, s.lifecycle_state AS status,
                    CASE
-                     WHEN e.title_vec IS NOT NULL AND e.content_vec IS NOT NULL
-                     THEN %(tw)s * (1 - (e.title_vec   <=> %(vec)s::vector))
-                        + %(cw)s * (1 - (e.content_vec <=> %(vec)s::vector))
-                     WHEN e.content_vec IS NOT NULL
-                     THEN 1 - (e.content_vec <=> %(vec)s::vector)
+                     WHEN s.title_vec IS NOT NULL AND s.content_vec IS NOT NULL
+                     THEN %(tw)s * (1 - (s.title_vec   <=> %(vec)s::vector))
+                        + %(cw)s * (1 - (s.content_vec <=> %(vec)s::vector))
+                     WHEN s.content_vec IS NOT NULL
+                     THEN 1 - (s.content_vec <=> %(vec)s::vector)
                      ELSE NULL
                    END AS similarity
-            FROM t_edu_detail e
-            WHERE e.status = 'active' AND e.content_vec IS NOT NULL
+            FROM segments s
+            WHERE s.lifecycle_state = 'active' AND s.content_vec IS NOT NULL
             ORDER BY similarity DESC NULLS LAST
             LIMIT %(top_k)s
         """

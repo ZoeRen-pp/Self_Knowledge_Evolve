@@ -8,6 +8,8 @@
 
 # 一、数据库表结构（PostgreSQL）
 
+> **v0.3 变更**：以下 3 张表（source_registry、crawl_tasks、extraction_jobs）已迁入独立数据库 `telecom_crawler`。DDL 见 `scripts/init_crawler_postgres.sql`，配置项 `CRAWLER_POSTGRES_*`。`documents.crawl_task_id` 和 `documents.site_key` 的外键已降级为逻辑引用（跨库不支持物理 FK）。
+
 ## 1.1 来源注册表 source_registry
 
 ```sql
@@ -96,6 +98,8 @@ CREATE INDEX idx_documents_status         ON documents(status);
 
 ## 1.4 知识片段表 segments
 
+> **v0.3 变更**：原 `t_edu_detail` 表已合并入 `segments`，新增 `title`、`title_vec`、`content_vec`、`content_source` 四列，`embedding` 列保留为段落整体嵌入向量。迁移脚本：`scripts/migrations/002_merge_edu_into_segments.sql`。
+
 ```sql
 CREATE TABLE segments (
     id                  BIGSERIAL    PRIMARY KEY,
@@ -114,8 +118,13 @@ CREATE TABLE segments (
     dedup_signature     CHAR(64),                  -- SimHash 或 MinHash 签名
     simhash_value       BIGINT,                    -- 64-bit SimHash，用于汉明距离查询
     embedding_ref       TEXT,                      -- 向量索引中的 ID 或 URI
+    embedding           vector(1024),              -- BAAI/bge-m3 段落嵌入向量
+    title               VARCHAR(255),              -- EDU 标题（LLM 生成或 section_title 回退）
+    title_vec           vector(1024),              -- title 的 bge-m3 向量嵌入
+    content_vec         vector(1024),              -- raw_text 的 bge-m3 向量嵌入
+    content_source      VARCHAR(128),              -- 来源标识 '{site_key}:{canonical_url}'
     lifecycle_state     VARCHAR(32)  NOT NULL DEFAULT 'active',
-                        -- active | superseded | deprecated | conflicted
+                        -- active | superseded | deprecated | conflicted | pending_alignment
     created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -123,7 +132,22 @@ CREATE TABLE segments (
 CREATE INDEX idx_segments_source_doc_id   ON segments(source_doc_id);
 CREATE INDEX idx_segments_segment_type    ON segments(segment_type);
 CREATE INDEX idx_segments_simhash_value   ON segments(simhash_value);
+-- 向量 ANN 索引（数据批量加载后创建）：
+-- CREATE INDEX ON segments USING hnsw (embedding    vector_cosine_ops) WITH (m=16, ef_construction=64);
+-- CREATE INDEX ON segments USING hnsw (title_vec    vector_cosine_ops) WITH (m=16, ef_construction=64);
+-- CREATE INDEX ON segments USING hnsw (content_vec  vector_cosine_ops) WITH (m=16, ef_construction=64);
 ```
+
+**各字段写入时机**：
+
+| 字段 | 写入阶段 | 说明 |
+|------|----------|------|
+| segment_id ~ simhash_value | Stage 2 | 切段时写入 |
+| title, content_source | Stage 2 | 切段时同步写入（LLM 生成标题或 section_title 回退） |
+| segment_tags（关联表） | Stage 3 | 本体对齐 |
+| embedding | Stage 6 | 段落嵌入向量回填 |
+| title_vec, content_vec | Stage 6 | 标题/内容嵌入向量回填 |
+| lifecycle_state 变更 | Stage 3/5 | pending_alignment（Stage 3）、superseded（Stage 5 去重） |
 
 ## 1.5 片段标签表 segment_tags
 
@@ -195,8 +219,10 @@ CREATE INDEX idx_evidence_segment_id  ON evidence(segment_id);
 
 ## 1.8 冲突记录表 conflict_records
 
+> **v0.3 变更**：移入 `governance` schema。SQL 引用时需写 `governance.conflict_records`。迁移脚本：`scripts/migrations/003_governance_schema.sql`。
+
 ```sql
-CREATE TABLE conflict_records (
+CREATE TABLE governance.conflict_records (
     id              BIGSERIAL    PRIMARY KEY,
     conflict_id     UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     fact_id_a       UUID         NOT NULL REFERENCES facts(fact_id),
@@ -213,8 +239,10 @@ CREATE TABLE conflict_records (
 
 ## 1.9 本体版本表 ontology_versions
 
+> **v0.3 变更**：移入 `governance` schema。
+
 ```sql
-CREATE TABLE ontology_versions (
+CREATE TABLE governance.ontology_versions (
     id              SERIAL       PRIMARY KEY,
     version_tag     VARCHAR(32)  NOT NULL UNIQUE,  -- 如 'v0.1.0'
     description     TEXT,
@@ -230,8 +258,10 @@ CREATE TABLE ontology_versions (
 
 ## 1.10 候选概念表 evolution_candidates
 
+> **v0.3 变更**：移入 `governance` schema。
+
 ```sql
-CREATE TABLE evolution_candidates (
+CREATE TABLE governance.evolution_candidates (
     id                      BIGSERIAL    PRIMARY KEY,
     candidate_id            UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     surface_forms           TEXT[]       NOT NULL,       -- 各种原始词面形式
@@ -258,8 +288,10 @@ CREATE TABLE evolution_candidates (
 
 ## 1.11 审核记录表 review_records
 
+> **v0.3 变更**：移入 `governance` schema。
+
 ```sql
-CREATE TABLE review_records (
+CREATE TABLE governance.review_records (
     id              BIGSERIAL    PRIMARY KEY,
     review_id       UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
     object_type     VARCHAR(64)  NOT NULL,  -- candidate_concept | fact | conflict | ontology_change
@@ -2409,6 +2441,9 @@ extraction_method_score：manual=1.0, rule=0.85, llm=0.70
 | **内容寻址存储** | MinIO key = SHA-256(content)，重试不覆盖，幂等写入 |
 | **Worker 智能调度** | 失败重试（3 次渐进退避）+ 空转指数退避 |
 | **本地开发模式** | run_dev.py，SQLite + dict 替代真实数据库，零依赖启动 |
+| **数据库分库分 schema** | 爬虫表 → telecom_crawler 独立库；治理表 → governance schema；t_edu_detail 合并入 segments |
+| **RST 关系类型扩展** | 11 → 21 种通用 RST 类型，按 6 个逻辑类别组织，规则映射 13 → 37 条 |
+| **爬虫与 Pipeline 解耦** | Spider 移到 Pipeline 外部，Stage 1 纯清洗，extractor/normalizer 移到 pipeline/preprocessing |
 | **RFC 纯文本分段** | 自动检测 .txt 格式，按编号标题 / 全大写标题 / 分页符切分 |
 | **动态段落置信度** | 基于长度 / 语义角色 / 技术术语密度的启发式评分 |
 
@@ -2431,8 +2466,9 @@ Self_Knowledge_Evolve/
 │   ├── app_factory.py             组合根 build_app()
 │   ├── config/settings.py         Pydantic Settings（.env 驱动）
 │   │
-│   ├── providers/                 5 个 Provider 实现
-│   │   ├── postgres_store.py      RelationalStore → psycopg2
+│   ├── providers/                 6 个 Provider 实现
+│   │   ├── postgres_store.py      RelationalStore → psycopg2（知识库）
+│   │   ├── crawler_postgres_store.py  RelationalStore → psycopg2（爬虫库）
 │   │   ├── neo4j_store.py         GraphStore → neo4j driver
 │   │   ├── anthropic_llm.py       LLMProvider → OpenAI/Anthropic 兼容
 │   │   ├── bge_m3_embedding.py    EmbeddingProvider → SentenceTransformer
@@ -2450,9 +2486,12 @@ Self_Knowledge_Evolve/
 │   │
 │   ├── pipeline/
 │   │   ├── pipeline_factory.py    build_pipeline() → 7 阶段
-│   │   ├── runner.py              legacy 批量 runner（使用 app.store）
+│   │   ├── runner.py              批量 runner（使用 source_doc_id 驱动）
+│   │   ├── preprocessing/
+│   │   │   ├── extractor.py       HTML 正文提取（trafilatura/readability）
+│   │   │   └── normalizer.py      去噪归一化 + hash
 │   │   └── stages/
-│   │       ├── stage1_ingest.py   采集入库（C1-C5）
+│   │       ├── stage1_ingest.py   文档清洗（C3-C5，纯清洗，不感知数据来源）
 │   │       ├── stage2_segment.py  语义切分（S1-S4，RFC/Markdown/纯文本）
 │   │       ├── stage3_align.py    本体对齐（A1-A5，词边界匹配）
 │   │       ├── stage3b_evolve.py  本体自动学习（评分/门控/晋升）
@@ -2462,9 +2501,13 @@ Self_Knowledge_Evolve/
 │   │
 │   ├── operators/                 15 个 SemanticOperator（均通过 app.query() 分发）
 │   ├── api/semantic/              9 个算子业务逻辑 + router.py
-│   ├── crawler/                   Spider（curl_cffi + SSL 降级）+ Extractor + Normalizer
+│   ├── crawler/                   Spider（curl_cffi + SSL 降级），Pipeline 外部数据源
 │   ├── utils/                     hashing / confidence / embedding / llm_extract / normalize / text / health
-│   └── dev/                       fake_postgres（SQLite）+ fake_neo4j（dict）+ seed
+│   ├── db/
+│   │   ├── postgres.py            知识库连接池
+│   │   ├── crawler_postgres.py    爬虫库连接池
+│   │   └── neo4j_client.py        Neo4j driver
+│   └── dev/                       fake_postgres + fake_crawler_postgres + fake_neo4j + seed
 │
 ├── ontology/
 │   ├── domains/                   5 个 YAML（153 节点）
@@ -2473,10 +2516,14 @@ Self_Knowledge_Evolve/
 │   └── governance/evolution_policy.yaml  演化策略（门控阈值 + 权重 + 反漂移）
 │
 ├── scripts/
-│   ├── init_postgres.sql          DDL（13+ 张表 + pgvector）
+│   ├── init_postgres.sql          知识库 DDL（public + governance schema）
+│   ├── init_crawler_postgres.sql  爬虫库 DDL（source_registry / crawl_tasks / extraction_jobs）
 │   ├── init_neo4j.py              约束 + 索引
 │   ├── load_ontology.py           YAML → Neo4j + PG
-│   └── migrations/001_evolution_normalize.sql
+│   └── migrations/
+│       ├── 001_evolution_normalize.sql
+│       ├── 002_merge_edu_into_segments.sql
+│       └── 003_governance_schema.sql
 │
 ├── worker.py                      后台 Worker（爬取 + Pipeline + 重试 + 退避）
 ├── run_dev.py                     本地开发入口（SQLite + dict，零外部依赖）
@@ -2514,6 +2561,11 @@ Self_Knowledge_Evolve/
 | EMBEDDING_MODEL | BAAI/bge-m3 | 嵌入模型 |
 | EMBEDDING_DEVICE | cpu | cpu 或 cuda |
 | ONTOLOGY_VERSION | v0.2.0 | 本体版本标记 |
+| CRAWLER_POSTGRES_HOST | (同 POSTGRES_HOST) | 爬虫库主机 |
+| CRAWLER_POSTGRES_PORT | (同 POSTGRES_PORT) | 爬虫库端口 |
+| CRAWLER_POSTGRES_DB | telecom_crawler | 爬虫库名 |
+| CRAWLER_POSTGRES_USER | (同 POSTGRES_USER) | 爬虫库用户 |
+| CRAWLER_POSTGRES_PASSWORD | (同 POSTGRES_PASSWORD) | 爬虫库密码 |
 | STARTUP_HEALTH_REQUIRED | true | 启动时 PG+Neo4j 必须可用 |
 | LOG_LEVEL | INFO | 日志级别 |
 
@@ -2529,4 +2581,4 @@ Self_Knowledge_Evolve/
 | P2 | 候选概念积累 | 需要更多数据源和多轮爬取才能触发自动晋升 |
 | P2 | 质量监控仪表盘 | 基于 Grafana 或自建的 pipeline 可观测性 |
 
-*文档版本：v0.2 | 更新日期：2026-03-31*
+*文档版本：v0.3 | 更新日期：2026-04-01*

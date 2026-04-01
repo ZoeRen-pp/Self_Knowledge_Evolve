@@ -81,7 +81,7 @@ class EvolveStage(Stage):
         # Only score candidates touched by this doc (recently upserted)
         candidates = store.fetchall(
             """
-            SELECT * FROM evolution_candidates
+            SELECT * FROM governance.evolution_candidates
             WHERE %s::uuid = ANY(seen_source_doc_ids)
               AND review_status = 'discovered'
               AND source_count >= 2
@@ -156,7 +156,7 @@ class EvolveStage(Stage):
             # Persist scores
             store.execute(
                 """
-                UPDATE evolution_candidates SET
+                UPDATE governance.evolution_candidates SET
                     source_diversity_score = %s,
                     temporal_stability_score = %s,
                     structural_fit_score = %s,
@@ -245,7 +245,7 @@ class EvolveStage(Stage):
         """Run 6-gate evaluation; auto-accept high-confidence candidates."""
         candidates = store.fetchall(
             """
-            SELECT * FROM evolution_candidates
+            SELECT * FROM governance.evolution_candidates
             WHERE review_status = 'discovered'
               AND composite_score > 0
               AND source_count >= 2
@@ -299,7 +299,7 @@ class EvolveStage(Stage):
             if ec.composite_score >= auto_threshold and ec.candidate_parent_id:
                 self._auto_accept(cand, graph, ontology)
                 store.execute(
-                    "UPDATE evolution_candidates SET review_status='auto_accepted' "
+                    "UPDATE governance.evolution_candidates SET review_status='auto_accepted' "
                     "WHERE candidate_id=%s",
                     (cand["candidate_id"],),
                 )
@@ -310,7 +310,7 @@ class EvolveStage(Stage):
                 promoted += 1
             else:
                 store.execute(
-                    "UPDATE evolution_candidates SET review_status='pending_review' "
+                    "UPDATE governance.evolution_candidates SET review_status='pending_review' "
                     "WHERE candidate_id=%s",
                     (cand["candidate_id"],),
                 )

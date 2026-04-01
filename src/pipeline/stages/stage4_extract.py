@@ -45,6 +45,7 @@ class ExtractStage(Stage):
         self._ontology = app.ontology
         self._llm = app.llm
         self._store = app.store
+        self._crawler_store = getattr(app, "crawler_store", None) or app.store
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         facts = self._run(source_doc_id)
         self.set_output(ctx, {"facts": facts})
@@ -86,7 +87,7 @@ class ExtractStage(Stage):
             llm_count += len(llm_facts)
 
         self._save_facts(all_facts, source_doc_id)
-        store.execute(
+        self._crawler_store.execute(
             "INSERT INTO extraction_jobs (job_type, source_doc_id, status, pipeline_version) "
             "VALUES ('dedup',%s,'pending','0.2.0')",
             (source_doc_id,),
