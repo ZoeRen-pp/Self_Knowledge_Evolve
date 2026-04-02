@@ -82,6 +82,13 @@ class DedupStage(Stage):
         conflicted = 0
 
         for fact in new_facts:
+            # Skip facts already superseded by an earlier D3 merge in this loop
+            current = store.fetchone(
+                "SELECT lifecycle_state FROM facts WHERE fact_id=%s", (fact["fact_id"],)
+            )
+            if not current or current.get("lifecycle_state") != "active":
+                continue
+
             # Rule D3 condition A: exact (subject, predicate, object) match
             existing = store.fetchall(
                 """
@@ -94,17 +101,29 @@ class DedupStage(Stage):
             )
 
             if existing:
-                # Multi-source merge: assign same cluster_id
-                cluster_id = existing[0].get("merge_cluster_id") or str(uuid.uuid4())
-                store.execute(
-                    "UPDATE facts SET merge_cluster_id=%s WHERE fact_id=%s",
-                    (cluster_id, fact["fact_id"]),
+                # Multi-source merge: keep one canonical fact (highest confidence),
+                # supersede the rest so D4 sees only one active fact per (S,P,O).
+                all_dupes = [fact] + list(existing)
+                canonical_id = max(
+                    all_dupes, key=lambda f: f.get("confidence") or 0
+                )["fact_id"]
+                cluster_id = next(
+                    (f["merge_cluster_id"] for f in all_dupes if f.get("merge_cluster_id")),
+                    str(uuid.uuid4()),
                 )
-                for ex in existing:
-                    store.execute(
-                        "UPDATE facts SET merge_cluster_id=%s WHERE fact_id=%s",
-                        (cluster_id, ex["fact_id"]),
-                    )
+                for dup in all_dupes:
+                    if dup["fact_id"] == canonical_id:
+                        store.execute(
+                            "UPDATE facts SET merge_cluster_id=%s WHERE fact_id=%s",
+                            (cluster_id, dup["fact_id"]),
+                        )
+                    else:
+                        store.execute(
+                            "UPDATE facts SET merge_cluster_id=%s,"
+                            " lifecycle_state='superseded'"
+                            " WHERE fact_id=%s AND lifecycle_state='active'",
+                            (cluster_id, dup["fact_id"]),
+                        )
                 merged += 1
                 continue
 

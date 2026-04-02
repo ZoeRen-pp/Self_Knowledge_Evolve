@@ -53,13 +53,26 @@ class ContentExtractor:
         sample = content[:500]
         return "<" not in sample or not re.search(r"<\w+[\s>]", sample)
 
+    # Column-aligned metadata (e.g. RFC headers): 4+ consecutive internal spaces
+    _COLUMN_ALIGNED_RE = re.compile(r"\S.*\s{4,}.*\S")
+
     @staticmethod
     def _extract_title_from_text(text: str) -> str:
-        """Extract title from plain-text document (first non-empty line)."""
+        """Extract title from plain-text document.
+
+        Skips column-aligned metadata lines (RFC/IETF headers use internal
+        multi-space padding for column layout — a real title never has that).
+        Also skips lines that are too long to be a title.
+        """
         for line in text.split("\n"):
             line = line.strip().lstrip("#").strip()
-            if line and len(line) > 3:
-                return line[:255]
+            if not line or len(line) <= 3:
+                continue
+            if len(line) > 150:
+                continue
+            if ContentExtractor._COLUMN_ALIGNED_RE.search(line):
+                continue
+            return line[:255]
         return ""
 
     def detect_doc_type(self, url: str, title: str, text: str) -> str:
