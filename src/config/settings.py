@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     # ── LLM (relation extraction) ─────────────────────────────
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
-    LLM_MODEL: str = "gemini-2.0-flash"
+    LLM_MODEL: str = "gemini-2.5-flash"
     LLM_MAX_TOKENS: int = 1024
     LLM_ENABLED: bool = False   # set True to enable LLM extraction
 

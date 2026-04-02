@@ -54,7 +54,7 @@ class ContentExtractor:
     def _extract_title_from_text(text: str) -> str:
         """Extract title from plain-text document (first non-empty line)."""
         for line in text.split("\n"):
-            line = line.strip()
+            line = line.strip().lstrip("#").strip()
             if line and len(line) > 3:
                 return line[:255]
         return ""

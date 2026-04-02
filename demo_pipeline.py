@@ -121,26 +121,33 @@ from src.governance.evolution_gate        import TelecomEvolutionGate
 from src.pipeline.pipeline_factory        import build_pipeline
 from src.operators                        import ALL_OPERATORS
 
-# Stub LLM provider that does nothing (no key needed)
+# LLM provider: use real Gemini if LLM_ENABLED=true, else Noop
 from semcore.providers.base import LLMProvider, EmbeddingProvider
 
 class NoopLLM(LLMProvider):
     def complete(self, prompt, **kwargs): return ""
     def extract_structured(self, prompt, schema, **kwargs): return {}
-    def is_enabled(self): return False  # override ABC default (True) → disabled
+    def is_enabled(self): return False
     def ping(self): return True
-    # generate_title and extract_rst_relations use ABC defaults (None / ["Sequence"]*n)
 
 class NoopEmbedding(EmbeddingProvider):
     def encode(self, texts, **kwargs): return []
     def dimension(self): return 1024
     def ping(self): return True
 
+if settings.LLM_ENABLED:
+    from src.providers.anthropic_llm import ClaudeLLMProvider
+    llm_provider = ClaudeLLMProvider()
+    print(f"[LLM] Gemini enabled — model={settings.LLM_MODEL}")
+else:
+    llm_provider = NoopLLM()
+    print("[LLM] disabled (set LLM_ENABLED=true in .env to activate)")
+
 object_store = MemoryObjectStore()
 registry     = OntologyRegistry.from_default()
 
 config = AppConfig(
-    llm               = NoopLLM(),
+    llm               = llm_provider,
     embedding         = NoopEmbedding(),
     graph             = Neo4jGraphStore(),
     store             = PostgresRelationalStore(),
@@ -163,21 +170,21 @@ URL = sys.argv[1] if len(sys.argv) > 1 else "_builtin_"
 
 # Built-in BGP configuration guide sample (telecom domain, mix of conceptual /
 # procedural / constraint knowledge — representative of what the pipeline sees)
-_BUILTIN_TEXT = """BGP Configuration Guide
+_BUILTIN_TEXT = """# BGP Configuration Guide
 
 Border Gateway Protocol (BGP) is the routing protocol that manages how packets
 are routed across the internet between autonomous systems (AS). BGP is classified
 as a path-vector protocol and makes routing decisions based on paths, network
 policies, and rule-sets configured by network administrators.
 
-Prerequisites
+## Prerequisites
 
 Before configuring BGP, the following must be completed:
 1. IP addresses must be assigned to all interfaces.
 2. Static routes or IGP (OSPF/IS-IS) must be configured for loopback reachability.
 3. The router must have a unique AS number assigned by IANA or your service provider.
 
-Basic BGP Configuration Steps
+## Basic BGP Configuration Steps
 
 Step 1: Enable BGP and define the local AS number.
 
@@ -202,7 +209,7 @@ Step 4: Apply routing policies (route-map / route-policy).
   peer 10.0.0.2 route-policy EXPORT-TO-ISP export
   peer 10.0.0.2 route-policy IMPORT-FROM-ISP import
 
-BGP Attributes and Path Selection
+## BGP Attributes and Path Selection
 
 BGP selects the best path using attributes evaluated in this order:
 - Highest LOCAL_PREF (preferred within the AS)
@@ -213,7 +220,7 @@ BGP selects the best path using attributes evaluated in this order:
 - Lowest IGP cost to the next-hop
 - Lowest BGP router-ID as a tiebreaker
 
-Constraints and Limitations
+## Constraints and Limitations
 
 BGP is only applicable when connecting to external autonomous systems (EBGP)
 or when scaling internal routing across large networks (IBGP with route
@@ -226,7 +233,7 @@ consult your vendor's data sheet. Exceeding this limit causes session drops.
 BGP sessions require TCP port 179 to be open between peers. Firewall rules
 blocking this port will prevent session establishment.
 
-Route Reflector Configuration
+## Route Reflector Configuration
 
 In large IBGP deployments, a full mesh of IBGP sessions is impractical.
 Route reflectors (RR) solve this by allowing an RR to re-advertise IBGP routes
@@ -239,7 +246,7 @@ to its clients without requiring a full mesh.
 Clients do not need special configuration; they simply peer with the RR as
 a normal IBGP neighbor.
 
-Troubleshooting BGP
+## Troubleshooting BGP
 
 If BGP sessions do not establish, check the following:
 1. Verify TCP connectivity on port 179: telnet <peer-ip> 179
