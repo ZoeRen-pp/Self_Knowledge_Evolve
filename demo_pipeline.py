@@ -163,7 +163,41 @@ config = AppConfig(
 config.pipeline = build_pipeline()
 app = SemanticApp(config)
 
-# ── 7. Fetch webpage ──────────────────────────────────────────────────────────
+# ── 7. Source-rank inference (mirrors source_registry authority tiers) ────────
+def _infer_source_rank(url: str) -> str:
+    """Map URL hostname to source authority rank.
+
+    Tiers mirror the confidence formula's source_authority weights:
+      S (1.00) — IETF / 3GPP / ITU-T / IEEE standards bodies
+      A (0.85) — Major network equipment vendors
+      B (0.65) — Whitepapers, educational content (default)
+      C (0.40) — Blogs, forums, community content
+
+    Extend by appending hostnames to the appropriate suffix list.
+    """
+    from urllib.parse import urlparse
+    hostname = urlparse(url).hostname or ""
+    S_SUFFIXES = ("rfc-editor.org", "datatracker.ietf.org", "ietf.org",
+                  "3gpp.org", "ieee.org", "itu.int")
+    A_SUFFIXES = ("cisco.com", "huawei.com", "juniper.net", "nokia.com",
+                  "zte.com.cn", "arista.com", "paloaltonetworks.com", "h3c.com")
+    C_SUFFIXES = ("reddit.com", "stackoverflow.com", "zhihu.com", "csdn.net",
+                  "medium.com", "blogspot.com")
+    for s in S_SUFFIXES:
+        if hostname == s or hostname.endswith("." + s):
+            return "S"
+    for s in A_SUFFIXES:
+        if hostname == s or hostname.endswith("." + s):
+            return "A"
+    for s in C_SUFFIXES:
+        if hostname == s or hostname.endswith("." + s):
+            return "C"
+    return "B"
+
+_RANK_LABELS = {"S": "IETF/3GPP/IEEE standard", "A": "vendor documentation",
+                "B": "whitepaper/educational", "C": "blog/forum"}
+
+# ── 8. Fetch webpage ──────────────────────────────────────────────────────────
 import httpx
 
 URL = sys.argv[1] if len(sys.argv) > 1 else "_builtin_"
@@ -301,17 +335,18 @@ print(f"  size  = {len(html_bytes):,} bytes")
 
 # ── 9. Create document record in fake PG ─────────────────────────────────────
 source_doc_id = str(uuid.uuid4())
+source_rank   = _infer_source_rank(final_url) if URL != "_builtin_" else "B"
 fake_postgres.execute(
     """INSERT INTO documents (
         source_doc_id, site_key, source_url, canonical_url,
         source_rank, content_hash, raw_storage_uri, status
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, 'raw')""",
     (source_doc_id, "local", final_url, final_url,
-     "B", c_hash, raw_uri),
+     source_rank, c_hash, raw_uri),
 )
 print(f"\n[ PG/documents ] Created document record")
 print(f"  source_doc_id = {source_doc_id}")
-print(f"  source_rank   = B  (whitepaper/educational tier)")
+print(f"  source_rank   = {source_rank}  ({_RANK_LABELS.get(source_rank, '')})")
 print(f"  status        = raw")
 
 # ── 10. Run pipeline ──────────────────────────────────────────────────────────

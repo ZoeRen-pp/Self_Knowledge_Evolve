@@ -20,13 +20,16 @@ class ContentExtractor:
             quality = 0.9
             title = self._extract_title_from_text(text)
         else:
+            # Strip non-content tag blocks once, before all extraction backends.
+            # Title is extracted from original HTML (needs <title>/<h1> tags).
+            title = self._extract_title(html)
+            html = self._preprocess_html(html)
             text, quality = self._try_trafilatura(html, url)
             if not text or quality < 0.3:
                 text, quality = self._try_readability(html)
             if not text:
                 text = self._fallback_strip_tags(html)
                 quality = 0.1
-            title = self._extract_title(html)
 
         from src.utils.text import token_count
         tc = token_count(text)
@@ -87,6 +90,21 @@ class ContentExtractor:
         return "tech_article"
 
     # ── Private ───────────────────────────────────────────────────
+
+    @staticmethod
+    def _preprocess_html(html: str) -> str:
+        """Strip non-content tag blocks before text extraction.
+
+        Removes tags whose content is never body text regardless of site:
+        style, script, noscript, template. Applied once before all extraction
+        backends so every backend sees clean HTML.
+
+        Add new tag names here when new noise categories are encountered —
+        this is the single extension point for HTML pre-cleaning.
+        """
+        for tag in ("style", "script", "noscript", "template"):
+            html = re.sub(rf"<{tag}[^>]*>[\s\S]*?</{tag}>", "", html, flags=re.I)
+        return html
 
     def _try_trafilatura(self, html: str, url: str) -> tuple[str, float]:
         try:
