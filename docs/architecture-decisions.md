@@ -205,6 +205,36 @@ API 上传 → MinIO + documents(raw)        raw → extract → normalize → c
 
 ---
 
+## ADR-010 本体种子关系缺失（待解决）
+
+**问题**：当前本体 YAML 只定义了节点 + 层次关系（SUBCLASS_OF） + 关系类型词典（54 种），但没有声明节点之间的具体关系实例。所有 RELATED_TO 边完全依赖 Pipeline 从文档中抽取。
+
+**表现**：
+- 54 种定义的关系类型中，实际只用到 18 种（1/3）
+- 图中 RELATED_TO 边集中在 `uses_protocol` / `part_of` / `depends_on`
+- `configured_by`、`isolates`、`peers_with`、`mounted_on` 等关系类型从未出现
+- 一些公理级别的关系（如 "BGP is_a ROUTING_PROTOCOL"）不应该依赖文档发现
+
+**根因**：
+1. 本体 YAML 是框架（schema），不是实例（data）——缺少种子关系
+2. 当前语料以 RFC 规范为主，不涉及运维/配置类关系
+3. 抽取模式对部分关系类型的语言表述覆盖不足
+
+**计划修复（待本轮爬虫完成后）**：
+
+路 A — 本体加种子关系：
+- YAML 节点定义中新增 `seed_relations` 字段，声明确定性的核心关系
+- `load_ontology.py` 加载时直接在 Neo4j 中建边（作为 Fact with confidence=1.0）
+- 这些关系是公理，不需要从文档发现
+
+路 B — 扩大语料覆盖：
+- 增加配置指南、故障手册、最佳实践类文档源
+- 这类文档自然会触发 `configured_by`、`monitors`、`isolates` 等关系抽取
+
+两条路都需要走。
+
+---
+
 ## ADR-010 查询 API 尚未支持跨存储关联查询（遗留问题）
 
 **背景**：当前 15 个语义算子中，大多数只查单一存储：
