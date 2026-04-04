@@ -1,0 +1,25 @@
+# Classification corrections: fix misplaced nodes.
+# These override parent_id or add missing structural edges.
+# Applied during load_ontology.py.
+
+fixes:
+  # BFD belongs in OAM_MONITORING, not SECURITY_CTRL
+  - node_id: IP.BFD
+    action: reparent
+    old_parent: IP.SECURITY_CTRL
+    new_parent: IP.OAM_MONITORING
+    reason: BFD is a failure detection protocol, not a security mechanism
+
+  # DHCP is an infrastructure service, not security
+  - node_id: IP.DHCP
+    action: reparent
+    old_parent: IP.SECURITY_CTRL
+    new_parent: IP.TRANSPORT
+    reason: DHCP is a host configuration service
+
+  # DNS is an infrastructure service, not security
+  - node_id: IP.DNS
+    action: reparent
+    old_parent: IP.SECURITY_CTRL
+    new_parent: IP.APP_LAYER
+    reason: DNS is a name resolution service

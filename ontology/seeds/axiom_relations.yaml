@@ -1,0 +1,219 @@
+# Axiom (intra-layer) seed relations: definitional facts within each layer.
+# These are common knowledge — not extracted from documents.
+# confidence: 1.0 (axiom), source: ontology_seed
+
+relations:
+
+  # ══════════════════════════════════════════════════════════════
+  # Classification (is_a)
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.OSPF
+    predicate: is_a
+    object: IP.ROUTING_PROTOCOL
+
+  - subject: IP.IS_IS
+    predicate: is_a
+    object: IP.ROUTING_PROTOCOL
+
+  - subject: IP.BGP
+    predicate: is_a
+    object: IP.ROUTING_PROTOCOL
+
+  - subject: IP.RIP
+    predicate: is_a
+    object: IP.ROUTING_PROTOCOL
+
+  - subject: IP.STATIC_ROUTE
+    predicate: is_a
+    object: IP.ROUTING_PROTOCOL
+
+  # ══════════════════════════════════════════════════════════════
+  # Protocol dependencies (uses_protocol, depends_on)
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.BGP
+    predicate: uses_protocol
+    object: IP.TCP
+
+  - subject: IP.OSPF
+    predicate: depends_on
+    object: IP.IP
+
+  - subject: IP.IS_IS
+    predicate: depends_on
+    object: IP.ETHERNET
+    note: IS-IS runs directly on L2
+
+  - subject: IP.BGP
+    predicate: depends_on
+    object: IP.TCP
+
+  - subject: IP.LDP
+    predicate: uses_protocol
+    object: IP.TCP
+
+  - subject: IP.NETCONF
+    predicate: uses_protocol
+    object: IP.SSH
+
+  - subject: IP.HTTP
+    predicate: uses_protocol
+    object: IP.TCP
+
+  - subject: IP.DNS
+    predicate: uses_protocol
+    object: IP.UDP
+
+  - subject: IP.DHCP
+    predicate: uses_protocol
+    object: IP.UDP
+
+  - subject: IP.BFD
+    predicate: uses_protocol
+    object: IP.UDP
+
+  - subject: IP.SNMP
+    predicate: uses_protocol
+    object: IP.UDP
+
+  - subject: IP.VRRP
+    predicate: uses_protocol
+    object: IP.IP
+
+  # ══════════════════════════════════════════════════════════════
+  # Encapsulation relationships
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.EVPN
+    predicate: encapsulates
+    object: IP.VXLAN
+
+  - subject: IP.MPLS
+    predicate: encapsulates
+    object: IP.LABEL
+
+  - subject: IP.IPSEC
+    predicate: encapsulates
+    object: IP.IP
+
+  - subject: IP.GRE
+    predicate: encapsulates
+    object: IP.IP
+
+  - subject: IP.VXLAN
+    predicate: encapsulates
+    object: IP.ETHERNET
+    note: VXLAN carries L2 frames in UDP
+
+  # ══════════════════════════════════════════════════════════════
+  # Structural relationships (part_of, contains)
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.LABEL
+    predicate: part_of
+    object: IP.MPLS
+
+  - subject: IP.VTEP
+    predicate: part_of
+    object: IP.VXLAN
+
+  - subject: IP.COMMUNITY
+    predicate: part_of
+    object: IP.BGP
+
+  - subject: IP.PREFIX_LIST
+    predicate: part_of
+    object: IP.ROUTE_POLICY
+
+  - subject: IP.QOS_CLASSIFIER
+    predicate: part_of
+    object: IP.QOS
+
+  - subject: IP.QOS_QUEUE
+    predicate: part_of
+    object: IP.QOS
+
+  - subject: IP.QOS_SCHEDULER
+    predicate: part_of
+    object: IP.QOS
+
+  - subject: IP.QOS_POLICER
+    predicate: part_of
+    object: IP.QOS
+
+  - subject: IP.QOS_SHAPER
+    predicate: part_of
+    object: IP.QOS
+
+  - subject: IP.QOS_DROP_POLICY
+    predicate: part_of
+    object: IP.QOS
+
+  # ══════════════════════════════════════════════════════════════
+  # Operational / dependency
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.MPLS
+    predicate: depends_on
+    object: IP.LDP
+    note: MPLS needs a label distribution protocol
+
+  - subject: IP.L3VPN
+    predicate: depends_on
+    object: IP.MPLS
+
+  - subject: IP.L3VPN
+    predicate: depends_on
+    object: IP.BGP
+
+  - subject: IP.L3VPN
+    predicate: depends_on
+    object: IP.VRF
+
+  - subject: IP.EVPN
+    predicate: depends_on
+    object: IP.BGP
+
+  - subject: IP.EVPN_VXLAN
+    predicate: depends_on
+    object: IP.EVPN
+
+  - subject: IP.EVPN_VXLAN
+    predicate: depends_on
+    object: IP.VXLAN
+
+  - subject: IP.SR_MPLS
+    predicate: depends_on
+    object: IP.MPLS
+
+  - subject: IP.SRV6
+    predicate: depends_on
+    object: IP.IPV6
+
+  - subject: IP.RSVP_TE
+    predicate: depends_on
+    object: IP.MPLS
+
+  - subject: IP.TLS
+    predicate: protects
+    object: IP.HTTP
+
+  - subject: IP.IPSEC
+    predicate: protects
+    object: IP.IP
+
+  # ══════════════════════════════════════════════════════════════
+  # Monitoring / management
+  # ══════════════════════════════════════════════════════════════
+  - subject: IP.NETCONF
+    predicate: configured_by
+    object: IP.YANG
+    note: NETCONF uses YANG data models
+
+  - subject: IP.SNMP
+    predicate: monitored_by
+    object: IP.OAM_MONITORING
+
+  - subject: IP.TELEMETRY
+    predicate: monitored_by
+    object: IP.OAM_MONITORING
+
+  - subject: IP.SYSLOG
+    predicate: monitored_by
+    object: IP.OAM_MONITORING

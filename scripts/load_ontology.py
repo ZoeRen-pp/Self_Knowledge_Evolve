@@ -32,6 +32,7 @@ log = logging.getLogger(__name__)
 ONTOLOGY_ROOT = Path("ontology")
 DOMAIN_FILES  = list((ONTOLOGY_ROOT / "domains").glob("*.yaml"))
 ALIAS_FILE    = ONTOLOGY_ROOT / "lexicon" / "aliases.yaml"
+SEEDS_DIR     = ONTOLOGY_ROOT / "seeds"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,6 +164,90 @@ def load_aliases(path: Path, session, dry_run: bool) -> int:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Seed relations + classification fixes
+# ─────────────────────────────────────────────────────────────────────────────
+
+import re as _re
+
+
+def load_seed_relations(seeds_dir: Path, session, dry_run: bool) -> int:
+    """Load seed relations from ontology/seeds/*.yaml into Neo4j as fact-edges."""
+    if not seeds_dir.is_dir():
+        return 0
+
+    count = 0
+    for seed_file in sorted(seeds_dir.glob("*.yaml")):
+        data = yaml.safe_load(seed_file.read_text(encoding="utf-8")) or {}
+        for rel in data.get("relations", []):
+            subj = rel.get("subject", "")
+            pred = rel.get("predicate", "")
+            obj = rel.get("object", "")
+            if not subj or not pred or not obj:
+                continue
+
+            rel_type = _re.sub(r"[^a-zA-Z0-9_]", "_", pred).upper()
+            fact_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"seed:{subj}:{pred}:{obj}"))
+
+            if not dry_run:
+                session.run(
+                    f"""
+                    MERGE (f:Fact {{fact_id: $fact_id}})
+                    SET f.subject = $subj, f.predicate = $pred, f.object = $obj,
+                        f.confidence = 1.0, f.lifecycle_state = 'active',
+                        f.ontology_version = $version, f.source = 'ontology_seed'
+                    WITH f
+                    MATCH (a {{node_id: $subj}})
+                    MATCH (b {{node_id: $obj}})
+                    MERGE (a)-[r:{rel_type} {{fact_id: $fact_id}}]->(b)
+                    SET r.confidence = 1.0, r.predicate = $pred, r.source = 'ontology_seed'
+                    """,
+                    fact_id=fact_id, subj=subj, pred=pred, obj=obj,
+                    version=settings.ONTOLOGY_VERSION,
+                )
+            log.info("  Seed: (%s) -[%s]-> (%s)", subj, pred, obj)
+            count += 1
+    return count
+
+
+def apply_classification_fixes(seeds_dir: Path, session, dry_run: bool) -> int:
+    """Apply reparent fixes from classification_fixes.yaml."""
+    if not seeds_dir.is_dir():
+        return 0
+
+    count = 0
+    for seed_file in sorted(seeds_dir.glob("*.yaml")):
+        data = yaml.safe_load(seed_file.read_text(encoding="utf-8")) or {}
+        for fix in data.get("fixes", []):
+            if fix.get("action") != "reparent":
+                continue
+            node_id = fix["node_id"]
+            old_parent = fix.get("old_parent", "")
+            new_parent = fix["new_parent"]
+            if not dry_run:
+                # Remove old SUBCLASS_OF
+                if old_parent:
+                    session.run(
+                        """
+                        MATCH (child:OntologyNode {node_id: $child_id})-[r:SUBCLASS_OF]->(parent:OntologyNode {node_id: $old_parent})
+                        DELETE r
+                        """,
+                        child_id=node_id, old_parent=old_parent,
+                    )
+                # Create new SUBCLASS_OF
+                session.run(
+                    """
+                    MATCH (child:OntologyNode {node_id: $child_id})
+                    MATCH (parent:OntologyNode {node_id: $new_parent})
+                    MERGE (child)-[:SUBCLASS_OF]->(parent)
+                    """,
+                    child_id=node_id, new_parent=new_parent,
+                )
+            log.info("  Fix: %s reparented %s → %s (%s)", node_id, old_parent, new_parent, fix.get("reason", ""))
+            count += 1
+    return count
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -188,6 +273,8 @@ def main() -> None:
 
     total_nodes = 0
     total_aliases = 0
+    total_seeds = 0
+    total_fixes = 0
 
     with get_session() as session:
         for path in sorted(domain_files):
@@ -199,11 +286,16 @@ def main() -> None:
             with get_session() as alias_session:
                 total_aliases += load_aliases(ALIAS_FILE, alias_session, args.dry_run)
 
+        if SEEDS_DIR.is_dir():
+            log.info("Applying classification fixes...")
+            total_fixes = apply_classification_fixes(SEEDS_DIR, session, args.dry_run)
+            log.info("Loading seed relations...")
+            total_seeds = load_seed_relations(SEEDS_DIR, session, args.dry_run)
+
     log.info(
-        "Done%s — %d OntologyNodes, %d Aliases",
+        "Done%s — %d OntologyNodes, %d Aliases, %d seeds, %d fixes",
         " (dry-run)" if args.dry_run else "",
-        total_nodes,
-        total_aliases,
+        total_nodes, total_aliases, total_seeds, total_fixes,
     )
 
 

@@ -21,6 +21,10 @@ class OntologyRegistry:
         self.relation_ids: set[str] = set()        # valid relation type ids
         self._layer_index: dict[str, list[str]] = {}  # knowledge_layer → [node_id]
 
+        # Seed relations loaded from ontology/seeds/*.yaml
+        self.seed_relations: list[dict] = []             # [{subject, predicate, object, note?}]
+        self.classification_fixes: list[dict] = []       # [{node_id, action, new_parent, ...}]
+
         # Compiled pattern lists loaded from ontology/patterns/*.yaml
         self.semantic_role_patterns: list[tuple[re.Pattern, str]] = []
         self.context_signal_patterns: list[tuple[re.Pattern, str]] = []
@@ -34,6 +38,7 @@ class OntologyRegistry:
         if alias_file.exists():
             self._load_aliases(alias_file)
         self._load_patterns(ontology_root / "patterns")
+        self._load_seeds(ontology_root / "seeds")
 
         pattern_counts = {
             "semantic_roles": len(self.semantic_role_patterns),
@@ -43,10 +48,11 @@ class OntologyRegistry:
         }
         log.info(
             "OntologyRegistry loaded: %d nodes, %d aliases, %d relations, "
-            "layers=%s, patterns=%s",
+            "layers=%s, patterns=%s, seeds=%d, fixes=%d",
             len(self.nodes), len(self.alias_map), len(self.relation_ids),
             {k: len(v) for k, v in self._layer_index.items()},
             pattern_counts,
+            len(self.seed_relations), len(self.classification_fixes),
         )
 
     # ── Loaders ──────────────────────────────────────────────────
@@ -81,6 +87,34 @@ class OntologyRegistry:
         for entry in data.get("aliases", []):
             sf = entry["surface_form"].lower()
             self.alias_map[sf] = entry["canonical_node_id"]
+
+    def _load_seeds(self, seeds_dir: Path) -> None:
+        """Load seed relations and classification fixes from ontology/seeds/*.yaml."""
+        if not seeds_dir.is_dir():
+            log.debug("No seeds directory at %s", seeds_dir)
+            return
+
+        for seed_file in sorted(seeds_dir.glob("*.yaml")):
+            data = yaml.safe_load(seed_file.read_text(encoding="utf-8")) or {}
+
+            for rel in data.get("relations", []):
+                subj = rel.get("subject", "")
+                pred = rel.get("predicate", "")
+                obj = rel.get("object", "")
+                if subj and pred and obj:
+                    self.seed_relations.append({
+                        "subject": subj,
+                        "predicate": pred,
+                        "object": obj,
+                        "note": rel.get("note", ""),
+                        "source_file": seed_file.name,
+                    })
+
+            for fix in data.get("fixes", []):
+                self.classification_fixes.append(fix)
+
+        log.debug("Loaded %d seed relations, %d fixes from %s",
+                  len(self.seed_relations), len(self.classification_fixes), seeds_dir)
 
     def _load_patterns(self, patterns_dir: Path) -> None:
         """Load and compile regex patterns from ontology/patterns/*.yaml."""

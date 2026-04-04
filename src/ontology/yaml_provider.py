@@ -97,6 +97,14 @@ class YAMLOntologyProvider(OntologyProvider):
         return self._reg.nodes
 
     @property
+    def seed_relations(self):
+        return self._reg.seed_relations
+
+    @property
+    def classification_fixes(self):
+        return self._reg.classification_fixes
+
+    @property
     def semantic_role_patterns(self):
         return self._reg.semantic_role_patterns
 

@@ -1,0 +1,273 @@
+# Cross-layer seed relations: connect the five-layer knowledge model.
+# These are definitional — not extracted from documents.
+# confidence: 1.0 (axiom), source: ontology_seed
+
+# ══════════════════════════════════════════════════════════════
+# concept → mechanism (explains: mechanism explains how concept works)
+# ══════════════════════════════════════════════════════════════
+relations:
+
+  # ── Routing ──
+  - subject: IP.OSPF
+    predicate: explains
+    object: MECH.LinkStateFlooding
+    note: OSPF uses link-state flooding to distribute topology
+
+  - subject: IP.OSPF
+    predicate: explains
+    object: MECH.NeighborAdjacencyFormation
+    note: OSPF forms adjacencies with neighbors
+
+  - subject: IP.IS_IS
+    predicate: explains
+    object: MECH.LinkStateFlooding
+    note: IS-IS also uses link-state flooding
+
+  - subject: IP.BGP
+    predicate: explains
+    object: MECH.PathVectorPropagation
+    note: BGP propagates paths via AS-Path attribute
+
+  - subject: IP.BGP
+    predicate: explains
+    object: MECH.BestPathSelection
+    note: BGP selects best path from multiple candidates
+
+  - subject: IP.BGP
+    predicate: explains
+    object: MECH.RecursiveNextHopResolution
+    note: BGP resolves next-hop recursively via IGP
+
+  - subject: IP.ROUTE_REFLECTOR
+    predicate: explains
+    object: MECH.ReflectionAndReAdvertisement
+    note: Route reflectors re-advertise iBGP routes
+
+  - subject: IP.ROUTING_PROTOCOL
+    predicate: explains
+    object: MECH.ECMPSelection
+    note: Routing protocols enable ECMP load balancing
+
+  - subject: IP.ROUTING_PROTOCOL
+    predicate: explains
+    object: MECH.RouteRedistribution
+    note: Routes can be redistributed between protocols
+
+  # ── MPLS / SR ──
+  - subject: IP.MPLS
+    predicate: explains
+    object: MECH.LabelSwitching
+    note: MPLS forwards packets based on labels
+
+  - subject: IP.MPLS
+    predicate: explains
+    object: MECH.EncapsulationDecapsulation
+    note: MPLS pushes/pops label headers
+
+  - subject: IP.VXLAN
+    predicate: explains
+    object: MECH.VxlanOverlayForwarding
+    note: VXLAN encapsulates L2 frames in UDP
+
+  - subject: IP.VXLAN
+    predicate: explains
+    object: MECH.EncapsulationDecapsulation
+    note: VXLAN performs encap/decap at VTEP
+
+  # ── Redundancy / OAM ──
+  - subject: IP.VRRP
+    predicate: explains
+    object: MECH.FirstHopRedundancy
+    note: VRRP provides gateway redundancy
+
+  - subject: IP.BFD
+    predicate: explains
+    object: MECH.FastFailureDetection
+    note: BFD detects link/path failures sub-second
+
+  # ── VPN / Overlay ──
+  - subject: IP.VRF
+    predicate: explains
+    object: MECH.VRFIsolation
+    note: VRF isolates routing tables per tenant
+
+  - subject: IP.L3VPN
+    predicate: explains
+    object: MECH.RouteTargetBasedIsolation
+    note: L3VPN uses RT for VPN membership control
+
+  - subject: IP.EVPN
+    predicate: explains
+    object: MECH.OverlayTenantIsolation
+    note: EVPN isolates tenants via VNI/EVI
+
+  - subject: IP.EVPN
+    predicate: explains
+    object: MECH.RouteImportExport
+    note: EVPN imports/exports routes between VPN instances
+
+  # ── QoS ──
+  - subject: IP.QOS
+    predicate: explains
+    object: MECH.ClassificationMarking
+    note: QoS classifies and marks traffic flows
+
+  - subject: IP.QOS
+    predicate: explains
+    object: MECH.QueueScheduling
+    note: QoS schedules queues for bandwidth allocation
+
+  # ── Forwarding ──
+  - subject: IP.L3_ROUTING
+    predicate: explains
+    object: MECH.LongestPrefixMatch
+    note: IP routing uses longest prefix match for forwarding
+
+  - subject: IP.ACL
+    predicate: explains
+    object: MECH.PolicyBasedForwarding
+    note: ACLs enable policy-based routing/filtering
+
+  # ══════════════════════════════════════════════════════════════
+  # mechanism → method (implemented_by: method implements mechanism)
+  # ══════════════════════════════════════════════════════════════
+
+  - subject: MECH.PathVectorPropagation
+    predicate: implemented_by
+    object: METHOD.BGPPolicyConfigurationMethod
+
+  - subject: MECH.LinkStateFlooding
+    predicate: implemented_by
+    object: METHOD.OSPFAreaDeploymentMethod
+
+  - subject: MECH.VRFIsolation
+    predicate: implemented_by
+    object: METHOD.VRFProvisioningMethod
+
+  - subject: MECH.RouteTargetBasedIsolation
+    predicate: implemented_by
+    object: METHOD.MPLSL3VPNProvisioningMethod
+
+  - subject: MECH.OverlayTenantIsolation
+    predicate: implemented_by
+    object: METHOD.EVPNVXLANProvisioningMethod
+
+  - subject: MECH.ClassificationMarking
+    predicate: implemented_by
+    object: METHOD.QoSPolicyDeploymentMethod
+
+  - subject: MECH.NeighborAdjacencyFormation
+    predicate: implemented_by
+    object: METHOD.PECEPeeringConfigurationMethod
+
+  - subject: MECH.BestPathSelection
+    predicate: implemented_by
+    object: METHOD.BGPPolicyConfigurationMethod
+
+  - subject: MECH.FirstHopRedundancy
+    predicate: implemented_by
+    object: METHOD.DualExitConfigurationMethod
+
+  - subject: MECH.FastFailureDetection
+    predicate: implemented_by
+    object: METHOD.FailoverVerificationMethod
+
+  # ══════════════════════════════════════════════════════════════
+  # method → condition (applies_to: condition governs method applicability)
+  # ══════════════════════════════════════════════════════════════
+
+  - subject: METHOD.OSPFAreaDeploymentMethod
+    predicate: applies_to
+    object: COND.LargeScaleApplicability
+
+  - subject: METHOD.BGPPolicyConfigurationMethod
+    predicate: applies_to
+    object: COND.LargeScaleApplicability
+
+  - subject: METHOD.BGPPolicyConfigurationMethod
+    predicate: applies_to
+    object: COND.ControlPlaneScaleConstraint
+
+  - subject: METHOD.VRFProvisioningMethod
+    predicate: applies_to
+    object: COND.MultiTenantApplicability
+
+  - subject: METHOD.MPLSL3VPNProvisioningMethod
+    predicate: applies_to
+    object: COND.MultiTenantApplicability
+
+  - subject: METHOD.EVPNVXLANProvisioningMethod
+    predicate: applies_to
+    object: COND.MultiTenantApplicability
+
+  - subject: METHOD.DualExitConfigurationMethod
+    predicate: applies_to
+    object: COND.DualExitApplicability
+
+  - subject: METHOD.QoSPolicyDeploymentMethod
+    predicate: applies_to
+    object: COND.DeviceCapabilityConstraint
+
+  - subject: METHOD.IncrementalDeploymentMethod
+    predicate: applies_to
+    object: COND.InteroperabilityConstraint
+
+  # ══════════════════════════════════════════════════════════════
+  # condition/method → scenario (composed_of: scenario composed of methods + conditions)
+  # ══════════════════════════════════════════════════════════════
+
+  - subject: SCENE.DualExitCampusInternetScenario
+    predicate: composed_of
+    object: METHOD.DualExitConfigurationMethod
+
+  - subject: SCENE.DualExitCampusInternetScenario
+    predicate: composed_of
+    object: COND.DualExitApplicability
+
+  - subject: SCENE.MPLSL3VPNProvisioningScenario
+    predicate: composed_of
+    object: METHOD.MPLSL3VPNProvisioningMethod
+
+  - subject: SCENE.MPLSL3VPNProvisioningScenario
+    predicate: composed_of
+    object: METHOD.VRFProvisioningMethod
+
+  - subject: SCENE.EVPNVXLANFabricScenario
+    predicate: composed_of
+    object: METHOD.EVPNVXLANProvisioningMethod
+
+  - subject: SCENE.SpineLeafUnderlayOverlayScenario
+    predicate: composed_of
+    object: METHOD.OSPFAreaDeploymentMethod
+
+  - subject: SCENE.SpineLeafUnderlayOverlayScenario
+    predicate: composed_of
+    object: METHOD.BGPPolicyConfigurationMethod
+
+  - subject: SCENE.RRScaleOutScenario
+    predicate: composed_of
+    object: METHOD.BGPPolicyConfigurationMethod
+
+  - subject: SCENE.RRScaleOutScenario
+    predicate: composed_of
+    object: COND.ControlPlaneScaleConstraint
+
+  - subject: SCENE.OSPFToBGPBoundaryScenario
+    predicate: composed_of
+    object: METHOD.OSPFAreaDeploymentMethod
+
+  - subject: SCENE.OSPFToBGPBoundaryScenario
+    predicate: composed_of
+    object: METHOD.BGPPolicyConfigurationMethod
+
+  - subject: SCENE.FailoverDrillScenario
+    predicate: composed_of
+    object: METHOD.FailoverVerificationMethod
+
+  - subject: SCENE.IncrementalMigrationScenario
+    predicate: composed_of
+    object: METHOD.IncrementalDeploymentMethod
+
+  - subject: SCENE.IncrementalMigrationScenario
+    predicate: composed_of
+    object: METHOD.RollbackMethod
