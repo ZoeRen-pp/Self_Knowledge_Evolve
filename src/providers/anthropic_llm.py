@@ -77,3 +77,8 @@ class ClaudeLLMProvider(LLMProvider):
 
     def generate_title(self, text: str) -> str | None:
         return self._extractor.generate_title(text)
+
+    def extract_candidate_terms(
+        self, text: str, known_terms: list[str],
+    ) -> list[dict]:
+        return self._extractor.extract_candidate_terms(text, known_terms)
