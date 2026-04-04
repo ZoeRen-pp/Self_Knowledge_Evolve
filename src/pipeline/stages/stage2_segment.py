@@ -284,7 +284,13 @@ class SegmentStage(Stage):
         ]
 
     def _process_chunk(self, chunk: dict) -> list[dict]:
-        """Rule S2 (semantic role) + Rule S3 (length control)."""
+        """Rule S2 (semantic role) + Rule S3 (length control).
+
+        Split strategy for oversized chunks (>1024 tokens):
+          1. Paragraph boundaries (double newline)
+          2. Sentence boundaries (period + space)
+          3. Sliding window (last resort)
+        """
         text = chunk["raw_text"]
         tc = token_count(text)
         seg_type = self._classify_semantic_role(text)
@@ -294,15 +300,85 @@ class SegmentStage(Stage):
 
         conf = self._estimate_confidence(text, tc, seg_type)
 
-        if tc > 1024:
-            windows = sliding_window_split(text, window=512, overlap=64)
-            return [
-                {**chunk, "raw_text": w, "segment_type": seg_type,
-                 "token_count": token_count(w), "confidence": conf}
-                for w in windows
-            ]
+        if tc <= 1024:
+            return [{**chunk, "segment_type": seg_type, "token_count": tc, "confidence": conf}]
 
-        return [{**chunk, "segment_type": seg_type, "token_count": tc, "confidence": conf}]
+        # Oversized: try semantic-aware splitting
+        sub_texts = self._split_oversized(text)
+        results = []
+        for sub in sub_texts:
+            sub_tc = token_count(sub)
+            if sub_tc < 30:
+                continue
+            sub_type = self._classify_semantic_role(sub)
+            sub_conf = self._estimate_confidence(sub, sub_tc, sub_type)
+            results.append({
+                **chunk, "raw_text": sub, "segment_type": sub_type,
+                "token_count": sub_tc, "confidence": sub_conf,
+            })
+        return results
+
+    def _split_oversized(self, text: str) -> list[str]:
+        """Three-level split for text exceeding 1024 tokens.
+
+        Level 1: paragraph boundaries (\\n\\n)
+        Level 2: sentence boundaries (. + space), greedy merge to ~512 tokens
+        Level 3: sliding window fallback
+        """
+        max_tokens = 1024
+
+        # Level 1: split by paragraph boundaries
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+        if len(paragraphs) > 1 and all(token_count(p) <= max_tokens for p in paragraphs):
+            return paragraphs
+
+        # Some paragraphs still too long — try sentence splitting on those
+        result = []
+        for para in paragraphs:
+            if token_count(para) <= max_tokens:
+                result.append(para)
+            else:
+                # Level 2: split by sentence boundaries, greedy merge
+                result.extend(self._split_by_sentences(para, target_tokens=512))
+        return result
+
+    @staticmethod
+    def _split_by_sentences(text: str, target_tokens: int = 512) -> list[str]:
+        """Split text by sentence boundaries, greedy merge short sentences.
+
+        Falls back to sliding window if sentences are still too long.
+        """
+        # Split on sentence-ending punctuation followed by space or newline
+        sentences = re.split(r"(?<=[.!?])\s+", text)
+        if len(sentences) <= 1:
+            # No sentence boundaries — fall back to sliding window
+            return sliding_window_split(text, window=target_tokens, overlap=64)
+
+        chunks: list[str] = []
+        current: list[str] = []
+        current_tc = 0
+
+        for sent in sentences:
+            sent_tc = token_count(sent)
+            if sent_tc > target_tokens:
+                # Single sentence too long — flush current, then window-split this sentence
+                if current:
+                    chunks.append(" ".join(current))
+                    current, current_tc = [], 0
+                chunks.extend(sliding_window_split(sent, window=target_tokens, overlap=64))
+                continue
+
+            if current_tc + sent_tc > target_tokens and current:
+                chunks.append(" ".join(current))
+                current, current_tc = [], 0
+
+            current.append(sent)
+            current_tc += sent_tc
+
+        if current:
+            chunks.append(" ".join(current))
+
+        return chunks
 
     @staticmethod
     def _estimate_confidence(text: str, tc: int, seg_type: str) -> float:

@@ -113,9 +113,5 @@ class YAMLOntologyProvider(OntologyProvider):
         return self._reg.context_signal_patterns
 
     @property
-    def relation_extraction_patterns(self):
-        return self._reg.relation_extraction_patterns
-
-    @property
     def predicate_signal_patterns(self):
         return self._reg.predicate_signal_patterns

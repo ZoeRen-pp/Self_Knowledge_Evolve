@@ -28,7 +28,6 @@ class OntologyRegistry:
         # Compiled pattern lists loaded from ontology/patterns/*.yaml
         self.semantic_role_patterns: list[tuple[re.Pattern, str]] = []
         self.context_signal_patterns: list[tuple[re.Pattern, str]] = []
-        self.relation_extraction_patterns: list[tuple[re.Pattern, str]] = []
         self.predicate_signal_patterns: list[tuple[re.Pattern, str]] = []
 
         self._load_relations(ontology_root / "top" / "relations.yaml")
@@ -43,7 +42,6 @@ class OntologyRegistry:
         pattern_counts = {
             "semantic_roles": len(self.semantic_role_patterns),
             "context_signals": len(self.context_signal_patterns),
-            "relation_extraction": len(self.relation_extraction_patterns),
             "predicate_signals": len(self.predicate_signal_patterns),
         }
         log.info(
@@ -127,9 +125,6 @@ class OntologyRegistry:
         )
         self.context_signal_patterns = self._compile_signal_patterns(
             patterns_dir / "context_signals.yaml"
-        )
-        self.relation_extraction_patterns = self._compile_relation_patterns(
-            patterns_dir / "relation_extraction.yaml"
         )
         self.predicate_signal_patterns = self._compile_signal_patterns(
             patterns_dir / "predicate_signals.yaml"

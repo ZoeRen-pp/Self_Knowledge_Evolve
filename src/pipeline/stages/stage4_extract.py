@@ -14,9 +14,9 @@ from src.utils.confidence import score_fact
 
 log = logging.getLogger(__name__)
 
-# Relation extraction patterns loaded from ontology/patterns/relation_extraction.yaml
 # Predicate signal patterns loaded from ontology/patterns/predicate_signals.yaml
 # (no hardcoded patterns — loaded at runtime via OntologyRegistry)
+# NOTE: regex relation extraction removed — LLM-only with co-occurrence fallback
 
 
 class ExtractStage(Stage):
@@ -32,7 +32,6 @@ class ExtractStage(Stage):
         self._llm = app.llm
         self._store = app.store
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
-        self._relation_patterns = getattr(app.ontology, "relation_extraction_patterns", [])
         self._predicate_signals = getattr(app.ontology, "predicate_signal_patterns", [])
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         facts = self._run(source_doc_id)
@@ -70,7 +69,8 @@ class ExtractStage(Stage):
         rule_count = 0
 
         cooccurrence_count = 0
-        for seg in segments:
+        merged_count = 0
+        for i, seg in enumerate(segments):
             # Priority 1: LLM extraction (highest quality)
             llm_facts = self.extract_facts_llm(seg, source_rank)
             if llm_facts:
@@ -79,13 +79,17 @@ class ExtractStage(Stage):
                 log.debug("  seg=%s llm=%d", str(seg["segment_id"])[:12], len(llm_facts))
                 continue
 
-            # Priority 2: Regex pattern matching (medium quality)
-            regex_facts = self._extract_regex(seg, source_rank)
-            if regex_facts:
-                all_facts.extend(regex_facts)
-                rule_count += len(regex_facts)
-                log.debug("  seg=%s regex=%d", str(seg["segment_id"])[:12], len(regex_facts))
-                continue
+            # Priority 2: LLM with merged context — combine with previous segment
+            # if RST relation is continuative (Elaboration/Sequence/Restatement/Explanation)
+            if i > 0:
+                merged_facts = self._extract_merged_context(
+                    segments[i - 1], seg, source_rank, source_doc_id,
+                )
+                if merged_facts:
+                    all_facts.extend(merged_facts)
+                    merged_count += len(merged_facts)
+                    log.debug("  seg=%s merged=%d", str(seg["segment_id"])[:12], len(merged_facts))
+                    continue
 
             # Priority 3: Co-occurrence (last resort, low quality)
             cooc_facts = self._extract_cooccurrence(seg, source_rank)
@@ -103,40 +107,60 @@ class ExtractStage(Stage):
         fact_ids = [f["fact_id"] for f in all_facts]
         id_preview = self._preview_ids(fact_ids)
         log.info(
-            "Extracted facts doc=%s total=%d llm=%d regex=%d cooccurrence=%d fact_ids=%s",
+            "Extracted facts doc=%s total=%d llm=%d merged=%d cooccurrence=%d fact_ids=%s",
             source_doc_id,
             len(all_facts),
             llm_count,
-            rule_count,
+            merged_count,
             cooccurrence_count,
             id_preview,
         )
         return all_facts
 
-    def _extract_regex(self, segment: dict, source_rank: str) -> list[dict]:
-        """Priority 2: Regex capture groups — resolve subject/object to ontology nodes."""
-        text = segment.get("normalized_text") or segment.get("raw_text", "")
-        ontology = self._ontology
-        facts: list[dict] = []
-        seen: set[tuple[str, str, str]] = set()
+    def _extract_merged_context(
+        self, prev_seg: dict, curr_seg: dict, source_rank: str, source_doc_id: str,
+    ) -> list[dict]:
+        """Priority 2: Merge with previous segment and retry LLM.
 
-        for pattern, predicate in self._relation_patterns:
-            if not ontology.is_valid_relation(predicate):
-                continue
-            for m in pattern.finditer(text):
-                subj_raw = m.group(1).strip()
-                obj_raw = m.group(2).strip()
-                subj_id = self._resolve_term(subj_raw)
-                obj_id = self._resolve_term(obj_raw)
-                if not subj_id or not obj_id or subj_id == obj_id:
-                    continue
-                key = (subj_id, predicate, obj_id)
-                if key in seen:
-                    continue
-                seen.add(key)
-                facts.append(self._build_fact(
-                    subj_id, predicate, obj_id, segment, source_rank, "rule",
-                ))
+        Only triggers when the RST relation between prev and curr is continuative
+        (Elaboration, Sequence, Restatement, Explanation), meaning they form
+        a semantic unit that was split by segmentation.
+        """
+        store = self._store
+        continuative_types = {"Elaboration", "Sequence", "Restatement", "Explanation",
+                              "Background", "Evidence", "Means"}
+
+        # Check RST relation between prev and curr
+        rst_row = store.fetchone(
+            """SELECT relation_type FROM t_rst_relation
+               WHERE src_edu_id = %s AND dst_edu_id = %s LIMIT 1""",
+            (str(prev_seg["segment_id"]), str(curr_seg["segment_id"])),
+        )
+        if not rst_row or rst_row.get("relation_type") not in continuative_types:
+            return []
+
+        # Merge texts and retry LLM
+        merged_text = (
+            (prev_seg.get("raw_text") or "") + "\n" +
+            (curr_seg.get("raw_text") or "")
+        )
+        # Build merged segment dict for LLM
+        merged_seg = {
+            **curr_seg,
+            "raw_text": merged_text,
+            "normalized_text": merged_text.lower(),
+            "canonical_nodes": list(set(
+                (prev_seg.get("canonical_nodes") or []) +
+                (curr_seg.get("canonical_nodes") or [])
+            )),
+        }
+        facts = self.extract_facts_llm(merged_seg, source_rank)
+        if facts:
+            log.debug("  merged context (%s): %s + %s → %d facts",
+                      rst_row["relation_type"],
+                      str(prev_seg["segment_id"])[:8],
+                      str(curr_seg["segment_id"])[:8],
+                      len(facts))
         return facts
 
     def _extract_cooccurrence(self, segment: dict, source_rank: str) -> list[dict]:
