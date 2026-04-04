@@ -6,9 +6,11 @@ import logging
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from src.app_factory import get_app
 from src.stats.drilldown import drilldown as _drilldown, METRIC_TO_QUERY
+from src.api.system import review as _review
 
 log = logging.getLogger(__name__)
 
@@ -94,3 +96,65 @@ def drilldown_metric(
 def list_drilldown_metrics():
     """List all available drilldown metrics."""
     return {"metrics": sorted(METRIC_TO_QUERY.keys())}
+
+
+# ── Review endpoints ─────────────────────────────────────────────────────────
+
+class ApproveRequest(BaseModel):
+    reviewer: str
+    note: str = ""
+    parent_node_id: str | None = None
+    aliases: list[str] | None = None
+
+class RejectRequest(BaseModel):
+    reviewer: str
+    note: str = ""
+
+
+@router.get("/review")
+def list_review(
+    type: str = Query("all", description="concept|relation|all"),
+    status: str = Query("pending_review", description="pending_review|discovered|all"),
+    limit: int = Query(20),
+    _app=Depends(get_app),
+):
+    """List candidates for review."""
+    return _review.list_candidates(type, status, limit, store=_app.store)
+
+
+@router.get("/review/{candidate_id}")
+def get_review(candidate_id: str, _app=Depends(get_app)):
+    """Get single candidate details."""
+    return _review.get_candidate(candidate_id, store=_app.store)
+
+
+@router.post("/review/{candidate_id}/approve")
+def approve(candidate_id: str, body: ApproveRequest, _app=Depends(get_app)):
+    """Approve a candidate — writes to ontology, triggers backfill if concept."""
+    result = _review.approve_candidate(
+        candidate_id,
+        reviewer=body.reviewer,
+        note=body.note,
+        parent_node_id=body.parent_node_id,
+        aliases=body.aliases,
+        store=_app.store,
+        graph=_app.graph,
+        ontology=_app.ontology,
+    )
+
+    # If concept approved, trigger background backfill
+    if result.get("needs_backfill") and result.get("backfill_terms"):
+        from src.stats.backfill import BackfillWorker
+        worker = BackfillWorker(_app)
+        worker.backfill_concept(result["node_id"], result["backfill_terms"])
+        result["backfill"] = "started in background"
+
+    return result
+
+
+@router.post("/review/{candidate_id}/reject")
+def reject(candidate_id: str, body: RejectRequest, _app=Depends(get_app)):
+    """Reject a candidate."""
+    return _review.reject_candidate(
+        candidate_id, reviewer=body.reviewer, note=body.note, store=_app.store,
+    )

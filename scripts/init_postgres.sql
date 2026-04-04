@@ -224,7 +224,10 @@ CREATE TABLE IF NOT EXISTS governance.evolution_candidates (
     first_seen_at            TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     last_seen_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     accepted_at              TIMESTAMPTZ,
-    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    candidate_type           VARCHAR(32)  NOT NULL DEFAULT 'concept',
+                             -- concept | relation
+    examples                 JSONB        DEFAULT '[]'
 );
 
 -- =============================================================
@@ -276,25 +279,7 @@ INSERT INTO governance.ontology_versions (version_tag, description, status)
 VALUES ('v0.2.0', 'Five-layer semantic structure: Concept/Mechanism/Method/Condition/Scenario', 'active')
 ON CONFLICT (version_tag) DO NOTHING;
 
--- =============================================================
--- governance.relation_candidates
--- =============================================================
-CREATE TABLE IF NOT EXISTS governance.relation_candidates (
-    id                  BIGSERIAL PRIMARY KEY,
-    candidate_id        UUID         NOT NULL UNIQUE DEFAULT gen_random_uuid(),
-    predicate_name      VARCHAR(128) NOT NULL,
-    normalized_name     VARCHAR(128),
-    examples            JSONB        DEFAULT '[]',
-    source_count        INTEGER      NOT NULL DEFAULT 1,
-    source_diversity    NUMERIC(4,3) DEFAULT 0.0,
-    review_status       VARCHAR(32)  NOT NULL DEFAULT 'discovered',
-    reviewer            VARCHAR(128),
-    review_note         TEXT,
-    first_seen_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    last_seen_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    UNIQUE (normalized_name)
-);
+-- NOTE: relation_candidates merged into evolution_candidates (candidate_type='relation')
 
 -- =============================================================
 -- System monitoring: stats snapshots

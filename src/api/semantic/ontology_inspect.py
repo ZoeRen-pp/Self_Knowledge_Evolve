@@ -125,9 +125,10 @@ def _relation_candidates(*, store: RelationalStore | None, limit: int, **_kw) ->
     if store is None:
         return {"inspect_type": "relation_candidates", "count": 0, "candidates": []}
     rows = store.fetchall(
-        """SELECT predicate_name, normalized_name, source_count, review_status,
+        """SELECT normalized_form, surface_forms, source_count, review_status,
                   examples, first_seen_at, last_seen_at
-           FROM governance.relation_candidates
+           FROM governance.evolution_candidates
+           WHERE candidate_type = 'relation'
            ORDER BY source_count DESC
            LIMIT %s""",
         (limit,),

@@ -132,7 +132,9 @@ def _init_schema() -> None:
             temporal_stability_score REAL DEFAULT 0,
             structural_fit_score REAL DEFAULT 0,
             synonym_risk_score REAL DEFAULT 0,
-            composite_score REAL DEFAULT 0
+            composite_score REAL DEFAULT 0,
+            candidate_type TEXT DEFAULT 'concept',
+            examples TEXT DEFAULT '[]'
         );
         CREATE TABLE IF NOT EXISTS t_rst_relation (
             nn_relation_id  TEXT PRIMARY KEY,
@@ -141,17 +143,6 @@ def _init_schema() -> None:
             dst_edu_id      TEXT,
             meta_context    TEXT,
             relation_source TEXT
-        );
-        CREATE TABLE IF NOT EXISTS relation_candidates (
-            candidate_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-            predicate_name  TEXT NOT NULL,
-            normalized_name TEXT UNIQUE,
-            examples        TEXT DEFAULT '[]',
-            source_count    INTEGER DEFAULT 1,
-            source_diversity REAL DEFAULT 0,
-            review_status   TEXT DEFAULT 'discovered',
-            first_seen_at   TEXT,
-            last_seen_at    TEXT
         );
         CREATE TABLE IF NOT EXISTS system_stats_snapshots (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,

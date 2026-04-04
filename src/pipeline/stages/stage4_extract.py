@@ -293,7 +293,7 @@ class ExtractStage(Stage):
         self, predicate: str, subject: str, obj: str,
         segment: dict, source_doc_id: str,
     ) -> None:
-        """Store an unknown predicate returned by LLM into the candidate relation pool."""
+        """Store an unknown predicate into evolution_candidates (type='relation')."""
         import json
         from src.utils.normalize import normalize_term
         store = self._store
@@ -306,13 +306,14 @@ class ExtractStage(Stage):
         try:
             store.execute(
                 """
-                INSERT INTO governance.relation_candidates
-                    (predicate_name, normalized_name, examples, source_count, first_seen_at, last_seen_at)
-                VALUES (%s, %s, %s::jsonb, 1, NOW(), NOW())
-                ON CONFLICT (normalized_name) DO UPDATE SET
-                    source_count = governance.relation_candidates.source_count + 1,
+                INSERT INTO governance.evolution_candidates
+                    (surface_forms, normalized_form, candidate_type, examples,
+                     source_count, first_seen_at, last_seen_at, review_status)
+                VALUES (ARRAY[%s], %s, 'relation', %s::jsonb, 1, NOW(), NOW(), 'discovered')
+                ON CONFLICT (normalized_form) DO UPDATE SET
+                    source_count = governance.evolution_candidates.source_count + 1,
                     last_seen_at = NOW(),
-                    examples = governance.relation_candidates.examples || %s::jsonb
+                    examples = governance.evolution_candidates.examples || %s::jsonb
                 """,
                 (predicate, normalized, example, example),
             )
