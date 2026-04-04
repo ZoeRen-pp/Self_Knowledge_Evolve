@@ -98,7 +98,10 @@ class AlignStage(Stage):
 
     def align_segment(self, segment: dict) -> tuple[list[dict], int]:
         """Rules A1-A5: produce canonical + semantic_role + context tags."""
+        # Use normalized_text (lowercase) for alias matching
         text = segment.get("normalized_text") or segment.get("raw_text", "")
+        # Use raw_text (preserves case) for candidate term discovery
+        raw_text = segment.get("raw_text") or text
         tags: list[dict] = []
         ontology = self._ontology
 
@@ -119,7 +122,7 @@ class AlignStage(Stage):
                 "tagger":          "rule",
             })
 
-        candidate_terms = self._collect_candidates(text, matched_nodes, segment["source_doc_id"])
+        candidate_terms = self._collect_candidates(raw_text, matched_nodes, segment["source_doc_id"])
 
         seg_type = segment.get("segment_type", "unknown")
         if seg_type in _SEMANTIC_ROLE_TAGS:
