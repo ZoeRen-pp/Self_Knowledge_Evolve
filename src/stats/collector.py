@@ -44,7 +44,7 @@ class StatsCollector:
         facts = self._count_grouped(s, "facts", "lifecycle_state")
 
         neo4j_nodes = self._neo4j_count("MATCH (n) RETURN count(n) AS cnt")
-        neo4j_rels = self._neo4j_count("MATCH ()-[r]->() RETURN count(r_fact) AS cnt")
+        neo4j_rels = self._neo4j_count("MATCH ()-[r]->() RETURN count(r) AS cnt")
 
         return {
             "documents": docs,
