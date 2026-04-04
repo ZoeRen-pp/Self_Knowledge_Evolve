@@ -19,14 +19,8 @@ _SEMANTIC_ROLE_TAGS = {
     "comparison": "对比", "table": "表格", "code": "配置",
 }
 
-_CONTEXT_PATTERNS = [
-    (re.compile(r"\bdata center\b|\bdc fabric\b", re.I), "数据中心"),
-    (re.compile(r"\bcampus\b|\benterprise\b", re.I), "园区网"),
-    (re.compile(r"\bcarrier\b|\bservice provider\b|\bsp network\b", re.I), "承载网"),
-    (re.compile(r"\baccess network\b|\bpon\b|\bolt\b", re.I), "接入网"),
-    (re.compile(r"\b5gc\b|\b5g core\b|\bamf\b|\bsmf\b", re.I), "5GC"),
-    (re.compile(r"\bmulti.vendor\b|\binterop\b", re.I), "多厂商组网"),
-]
+# Context signal patterns loaded from ontology/patterns/context_signals.yaml
+# (no hardcoded patterns — loaded at runtime via OntologyRegistry)
 
 _LAYER_TAG_TYPE = {
     "concept":   "canonical",
@@ -49,6 +43,7 @@ class AlignStage(Stage):
         self._ontology = app.ontology
         self._store = app.store
         self._llm = getattr(app, "llm", None)
+        self._context_patterns = getattr(app.ontology, "context_signal_patterns", [])
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         self._run(source_doc_id)
@@ -136,7 +131,7 @@ class AlignStage(Stage):
                 "tagger":          "rule",
             })
 
-        for pattern, ctx in _CONTEXT_PATTERNS:
+        for pattern, ctx in self._context_patterns:
             if pattern.search(text[:1000]):
                 tags.append({
                     "tag_type":        "context",

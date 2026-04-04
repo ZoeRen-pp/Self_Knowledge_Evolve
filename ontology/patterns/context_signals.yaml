@@ -1,0 +1,28 @@
+# Context signal patterns for Stage 3 ontology alignment.
+# Detect which network scenario/context a segment belongs to.
+# All patterns are case-insensitive.
+
+signals:
+  - label: 数据中心
+    patterns:
+      - '\bdata center\b|\bdc fabric\b'
+
+  - label: 园区网
+    patterns:
+      - '\bcampus\b|\benterprise\b'
+
+  - label: 承载网
+    patterns:
+      - '\bcarrier\b|\bservice provider\b|\bsp network\b'
+
+  - label: 接入网
+    patterns:
+      - '\baccess network\b|\bpon\b|\bolt\b'
+
+  - label: 5GC
+    patterns:
+      - '\b5gc\b|\b5g core\b|\bamf\b|\bsmf\b'
+
+  - label: 多厂商组网
+    patterns:
+      - '\bmulti.vendor\b|\binterop\b'

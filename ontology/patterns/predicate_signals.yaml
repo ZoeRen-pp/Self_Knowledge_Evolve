@@ -1,0 +1,56 @@
+# Predicate signal patterns for Stage 4 co-occurrence strategy.
+# Detects which relation predicate is implied by keywords in text.
+# All patterns are case-insensitive.
+
+signals:
+  - predicate: uses_protocol
+    patterns:
+      - '\buses?\b|\busing\b|\butiliz'
+
+  - predicate: part_of
+    patterns:
+      - '\bpart of\b|\bcomponent\b|\bwithin\b'
+
+  - predicate: depends_on
+    patterns:
+      - '\bdepends?\s+on\b|\brequir'
+
+  - predicate: impacts
+    patterns:
+      - '\bimpact|affect'
+
+  - predicate: causes
+    patterns:
+      - '\bcaus(?:e[sd]?|ing)\b|\bresult(?:s|ing)?\s+in\b'
+
+  - predicate: encapsulates
+    patterns:
+      - '\bencapsulat'
+
+  - predicate: establishes
+    patterns:
+      - '\bestablish'
+
+  - predicate: advertises
+    patterns:
+      - '\badvertis'
+
+  - predicate: forwards_via
+    patterns:
+      - '\bforward'
+
+  - predicate: protects
+    patterns:
+      - '\bprotect'
+
+  - predicate: monitored_by
+    patterns:
+      - '\bmonitor'
+
+  - predicate: configured_by
+    patterns:
+      - '\bconfigur'
+
+  - predicate: implements
+    patterns:
+      - '\bimplement'

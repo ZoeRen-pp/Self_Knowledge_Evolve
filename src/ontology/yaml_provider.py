@@ -95,3 +95,19 @@ class YAMLOntologyProvider(OntologyProvider):
     def nodes(self) -> dict[str, dict]:
         """All ontology nodes keyed by node_id (raw dict form)."""
         return self._reg.nodes
+
+    @property
+    def semantic_role_patterns(self):
+        return self._reg.semantic_role_patterns
+
+    @property
+    def context_signal_patterns(self):
+        return self._reg.context_signal_patterns
+
+    @property
+    def relation_extraction_patterns(self):
+        return self._reg.relation_extraction_patterns
+
+    @property
+    def predicate_signal_patterns(self):
+        return self._reg.predicate_signal_patterns

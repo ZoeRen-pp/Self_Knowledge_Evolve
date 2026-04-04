@@ -70,31 +70,8 @@ _RULE_RST: dict[tuple[str, str], str] = {
     ("table",           "definition"):      "Evidence",
 }
 
-# Rule S2: semantic role keyword patterns
-_ROLE_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"\b(is defined as|refers to|is a type of|means that|definition of"
-                r"|header format|field.{0,20}(?:contain|indicate|specif)"
-                r"|data unit|segment format|datagram format|packet format)\b", re.I), "definition"),
-    (re.compile(r"\b(works by|mechanism|algorithm|process of|how it"
-                r"|state machine|handshake|retransmit|acknowledgment|three.way"
-                r"|sliding window|flow control|congestion|encapsulat|multiplexing"
-                r"|demultiplexing|reassembly|fragmentation)\b", re.I), "mechanism"),
-    (re.compile(r"\b(must|shall|required|mandatory|limitation|constraint|not allowed"
-                r"|must not|shall not)\b", re.I), "constraint"),
-    (re.compile(r"\b(configure|configuration|set the|enable|disable|command)\b", re.I), "config"),
-    (re.compile(r"\b(fault|failure|error|alarm|down state|outage|flap"
-                r"|reset|abort|refuse|reject|timeout)\b", re.I), "fault"),
-    (re.compile(r"\b(troubleshoot|debug|diagnose|verify|check the log)\b", re.I), "troubleshooting"),
-    (re.compile(r"\b(best practice|recommendation|suggested|advised|tip"
-                r"|security consideration)\b", re.I), "best_practice"),
-    (re.compile(r"\b(performance|throughput|latency|bandwidth|packet loss|delay"
-                r"|maximum segment size|MSS|window size|round.trip|RTT"
-                r"|retransmission timeout|RTO|timer)\b", re.I), "performance"),
-    (re.compile(r"\b(compared to|versus|vs\.|difference between|unlike)\b", re.I), "comparison"),
-    (re.compile(r"^(\s*\|.+\|)", re.M), "table"),
-    (re.compile(r"(```|^    \S)", re.M), "code"),
-    (re.compile(r"\+-+-\+-\+|[\+\-]{5,}\+", re.M), "definition"),  # ASCII diagrams in RFCs
-]
+# Rule S2: semantic role patterns loaded from ontology/patterns/semantic_roles.yaml
+# (no hardcoded patterns — loaded at runtime via OntologyRegistry)
 
 _HEADING_RE = re.compile(r"^(#{1,4})\s+(.+)", re.M)
 _RFC_SECTION_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s{2,}([A-Z].*)", re.M)
@@ -117,6 +94,7 @@ class SegmentStage(Stage):
         self._objects = getattr(app, "objects", None)
         self._store = app.store
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
+        self._role_patterns = getattr(app.ontology, "semantic_role_patterns", [])
         if hasattr(app, "llm"):
             self.llm = app.llm
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
@@ -355,7 +333,7 @@ class SegmentStage(Stage):
     def _classify_semantic_role(self, text: str) -> str:
         """Rule S2: match keyword patterns to assign segment type."""
         sample = text[:1500]
-        for pattern, role in _ROLE_PATTERNS:
+        for pattern, role in self._role_patterns:
             if pattern.search(sample):
                 return role
         return "unknown"

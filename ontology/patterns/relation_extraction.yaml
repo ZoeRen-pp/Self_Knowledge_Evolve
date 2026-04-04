@@ -1,0 +1,49 @@
+# Relation extraction patterns for Stage 4.
+# Each pattern has two capture groups: group(1)=subject, group(2)=object.
+# All patterns are case-insensitive.
+
+relations:
+  - predicate: uses_protocol
+    pattern: '(\b[\w\-]+)\s+uses?\s+(?:the\s+)?(\b[\w\-]+)\s+protocol'
+
+  - predicate: is_a
+    pattern: '(\b[\w\-]+)\s+is\s+(?:a\s+type\s+of|a\s+kind\s+of|an?\s+)(\b[\w\-]+)'
+
+  - predicate: part_of
+    pattern: '(\b[\w\-]+)\s+(?:is\s+)?part\s+of\s+(\b[\w\-]+)'
+
+  - predicate: depends_on
+    pattern: '(\b[\w\-]+)\s+depends?\s+on\s+(\b[\w\-]+)'
+
+  - predicate: requires
+    pattern: '(\b[\w\-]+)\s+requires?\s+(\b[\w\-]+)'
+
+  - predicate: encapsulates
+    pattern: '(\b[\w\-]+)\s+encapsulates?\s+(\b[\w\-]+)'
+
+  - predicate: establishes
+    pattern: '(\b[\w\-]+)\s+establishes?\s+(?:a\s+)?(\b[\w\-]+)'
+
+  - predicate: advertises
+    pattern: '(\b[\w\-]+)\s+advertises?\s+(\b[\w\-]+)'
+
+  - predicate: impacts
+    pattern: '(\b[\w\-]+)\s+impacts?\s+(\b[\w\-]+)'
+
+  - predicate: causes
+    pattern: '(\b[\w\-]+)\s+causes?\s+(\b[\w\-]+)'
+
+  - predicate: implements
+    pattern: '(\b[\w\-]+)\s+(?:is\s+)?implemented\s+(?:by|on)\s+(\b[\w\-]+)'
+
+  - predicate: forwards_via
+    pattern: '(\b[\w\-]+)\s+forwards?\s+(?:traffic\s+)?(?:via|through)\s+(\b[\w\-]+)'
+
+  - predicate: protects
+    pattern: '(\b[\w\-]+)\s+protects?\s+(\b[\w\-]+)'
+
+  - predicate: monitored_by
+    pattern: '(\b[\w\-]+)\s+monitors?\s+(\b[\w\-]+)'
+
+  - predicate: configured_by
+    pattern: '(\b[\w\-]+)\s+(?:is\s+)?configured\s+(?:by|via|using)\s+(\b[\w\-]+)'

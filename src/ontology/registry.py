@@ -6,6 +6,7 @@ Loads all YAML files at startup; provides fast lookup for pipeline alignment.
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 import yaml
@@ -20,17 +21,32 @@ class OntologyRegistry:
         self.relation_ids: set[str] = set()        # valid relation type ids
         self._layer_index: dict[str, list[str]] = {}  # knowledge_layer → [node_id]
 
+        # Compiled pattern lists loaded from ontology/patterns/*.yaml
+        self.semantic_role_patterns: list[tuple[re.Pattern, str]] = []
+        self.context_signal_patterns: list[tuple[re.Pattern, str]] = []
+        self.relation_extraction_patterns: list[tuple[re.Pattern, str]] = []
+        self.predicate_signal_patterns: list[tuple[re.Pattern, str]] = []
+
         self._load_relations(ontology_root / "top" / "relations.yaml")
         for domain_file in sorted((ontology_root / "domains").glob("*.yaml")):
             self._load_domain(domain_file)
         alias_file = ontology_root / "lexicon" / "aliases.yaml"
         if alias_file.exists():
             self._load_aliases(alias_file)
+        self._load_patterns(ontology_root / "patterns")
 
+        pattern_counts = {
+            "semantic_roles": len(self.semantic_role_patterns),
+            "context_signals": len(self.context_signal_patterns),
+            "relation_extraction": len(self.relation_extraction_patterns),
+            "predicate_signals": len(self.predicate_signal_patterns),
+        }
         log.info(
-            "OntologyRegistry loaded: %d nodes, %d aliases, %d relations, layers=%s",
+            "OntologyRegistry loaded: %d nodes, %d aliases, %d relations, "
+            "layers=%s, patterns=%s",
             len(self.nodes), len(self.alias_map), len(self.relation_ids),
             {k: len(v) for k, v in self._layer_index.items()},
+            pattern_counts,
         )
 
     # ── Loaders ──────────────────────────────────────────────────
@@ -65,6 +81,83 @@ class OntologyRegistry:
         for entry in data.get("aliases", []):
             sf = entry["surface_form"].lower()
             self.alias_map[sf] = entry["canonical_node_id"]
+
+    def _load_patterns(self, patterns_dir: Path) -> None:
+        """Load and compile regex patterns from ontology/patterns/*.yaml."""
+        if not patterns_dir.is_dir():
+            log.debug("No patterns directory at %s, using empty pattern sets", patterns_dir)
+            return
+
+        self.semantic_role_patterns = self._compile_role_patterns(
+            patterns_dir / "semantic_roles.yaml"
+        )
+        self.context_signal_patterns = self._compile_signal_patterns(
+            patterns_dir / "context_signals.yaml"
+        )
+        self.relation_extraction_patterns = self._compile_relation_patterns(
+            patterns_dir / "relation_extraction.yaml"
+        )
+        self.predicate_signal_patterns = self._compile_signal_patterns(
+            patterns_dir / "predicate_signals.yaml"
+        )
+
+    def _compile_role_patterns(self, path: Path) -> list[tuple[re.Pattern, str]]:
+        """Load semantic_roles.yaml → [(compiled_regex, role_type)]."""
+        if not path.exists():
+            return []
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        result = []
+        for role in data.get("roles", []):
+            role_type = role["type"]
+            flags = self._parse_flags(role.get("flags", ""))
+            for pattern_str in role.get("patterns", []):
+                try:
+                    result.append((re.compile(pattern_str, flags), role_type))
+                except re.error as exc:
+                    log.warning("Invalid regex in %s type=%s: %s", path.name, role_type, exc)
+        return result
+
+    def _compile_signal_patterns(self, path: Path) -> list[tuple[re.Pattern, str]]:
+        """Load signal YAML (context_signals or predicate_signals) → [(compiled_regex, label/predicate)]."""
+        if not path.exists():
+            return []
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        result = []
+        for entry in data.get("signals", []):
+            label = entry.get("label") or entry.get("predicate", "")
+            flags = self._parse_flags(entry.get("flags", ""))
+            for pattern_str in entry.get("patterns", []):
+                try:
+                    result.append((re.compile(pattern_str, flags), label))
+                except re.error as exc:
+                    log.warning("Invalid regex in %s label=%s: %s", path.name, label, exc)
+        return result
+
+    def _compile_relation_patterns(self, path: Path) -> list[tuple[re.Pattern, str]]:
+        """Load relation_extraction.yaml → [(compiled_regex, predicate)]."""
+        if not path.exists():
+            return []
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        result = []
+        for entry in data.get("relations", []):
+            predicate = entry["predicate"]
+            flags = self._parse_flags(entry.get("flags", ""))
+            try:
+                result.append((re.compile(entry["pattern"], flags), predicate))
+            except re.error as exc:
+                log.warning("Invalid regex in %s predicate=%s: %s", path.name, predicate, exc)
+        return result
+
+    @staticmethod
+    def _parse_flags(flags_str: str) -> int:
+        """Parse flag string like 'IGNORECASE|MULTILINE' into re flags."""
+        if not flags_str:
+            return re.IGNORECASE
+        flag_map = {"IGNORECASE": re.I, "MULTILINE": re.M, "DOTALL": re.S}
+        result = 0
+        for name in flags_str.split("|"):
+            result |= flag_map.get(name.strip().upper(), 0)
+        return result or re.IGNORECASE
 
     # ── Public API ────────────────────────────────────────────────
 

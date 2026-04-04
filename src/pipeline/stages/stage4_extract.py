@@ -14,23 +14,9 @@ from src.utils.confidence import score_fact
 
 log = logging.getLogger(__name__)
 
-RELATION_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"(\b[\w\-]+)\s+uses?\s+(?:the\s+)?(\b[\w\-]+)\s+protocol", re.I), "uses_protocol"),
-    (re.compile(r"(\b[\w\-]+)\s+is\s+(?:a\s+type\s+of|a\s+kind\s+of|an?\s+)(\b[\w\-]+)", re.I), "is_a"),
-    (re.compile(r"(\b[\w\-]+)\s+(?:is\s+)?part\s+of\s+(\b[\w\-]+)", re.I), "part_of"),
-    (re.compile(r"(\b[\w\-]+)\s+depends?\s+on\s+(\b[\w\-]+)", re.I), "depends_on"),
-    (re.compile(r"(\b[\w\-]+)\s+requires?\s+(\b[\w\-]+)", re.I), "requires"),
-    (re.compile(r"(\b[\w\-]+)\s+encapsulates?\s+(\b[\w\-]+)", re.I), "encapsulates"),
-    (re.compile(r"(\b[\w\-]+)\s+establishes?\s+(?:a\s+)?(\b[\w\-]+)", re.I), "establishes"),
-    (re.compile(r"(\b[\w\-]+)\s+advertises?\s+(\b[\w\-]+)", re.I), "advertises"),
-    (re.compile(r"(\b[\w\-]+)\s+impacts?\s+(\b[\w\-]+)", re.I), "impacts"),
-    (re.compile(r"(\b[\w\-]+)\s+causes?\s+(\b[\w\-]+)", re.I), "causes"),
-    (re.compile(r"(\b[\w\-]+)\s+(?:is\s+)?implemented\s+(?:by|on)\s+(\b[\w\-]+)", re.I), "implements"),
-    (re.compile(r"(\b[\w\-]+)\s+forwards?\s+(?:traffic\s+)?(?:via|through)\s+(\b[\w\-]+)", re.I), "forwards_via"),
-    (re.compile(r"(\b[\w\-]+)\s+protects?\s+(\b[\w\-]+)", re.I), "protects"),
-    (re.compile(r"(\b[\w\-]+)\s+monitors?\s+(\b[\w\-]+)", re.I), "monitored_by"),
-    (re.compile(r"(\b[\w\-]+)\s+(?:is\s+)?configured\s+(?:by|via|using)\s+(\b[\w\-]+)", re.I), "configured_by"),
-]
+# Relation extraction patterns loaded from ontology/patterns/relation_extraction.yaml
+# Predicate signal patterns loaded from ontology/patterns/predicate_signals.yaml
+# (no hardcoded patterns — loaded at runtime via OntologyRegistry)
 
 
 class ExtractStage(Stage):
@@ -46,6 +32,8 @@ class ExtractStage(Stage):
         self._llm = app.llm
         self._store = app.store
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
+        self._relation_patterns = getattr(app.ontology, "relation_extraction_patterns", [])
+        self._predicate_signals = getattr(app.ontology, "predicate_signal_patterns", [])
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         facts = self._run(source_doc_id)
         self.set_output(ctx, {"facts": facts})
@@ -132,7 +120,7 @@ class ExtractStage(Stage):
         facts: list[dict] = []
         seen: set[tuple[str, str, str]] = set()
 
-        for pattern, predicate in RELATION_PATTERNS:
+        for pattern, predicate in self._relation_patterns:
             if not ontology.is_valid_relation(predicate):
                 continue
             for m in pattern.finditer(text):
@@ -207,29 +195,12 @@ class ExtractStage(Stage):
             "ontology_version":  "v0.2.0",
         }
 
-    @staticmethod
-    def _detect_predicates(text: str) -> list[str]:
+    def _detect_predicates(self, text: str) -> list[str]:
         """Detect which relation predicates are signaled by keywords in text."""
         predicates = []
-        text_lower = text[:3000]
-        # Map keywords to relation predicates (broader than regex capture)
-        _PREDICATE_SIGNALS: list[tuple[re.Pattern, str]] = [
-            (re.compile(r"\buses?\b|\busing\b|\butiliz", re.I), "uses_protocol"),
-            (re.compile(r"\bpart of\b|\bcomponent\b|\bwithin\b", re.I), "part_of"),
-            (re.compile(r"\bdepends?\s+on\b|\brequir", re.I), "depends_on"),
-            (re.compile(r"\bimpact|affect", re.I), "impacts"),
-            (re.compile(r"\bcaus(?:e[sd]?|ing)\b|\bresult(?:s|ing)?\s+in\b", re.I), "causes"),
-            (re.compile(r"\bencapsulat", re.I), "encapsulates"),
-            (re.compile(r"\bestablish", re.I), "establishes"),
-            (re.compile(r"\badvertis", re.I), "advertises"),
-            (re.compile(r"\bforward", re.I), "forwards_via"),
-            (re.compile(r"\bprotect", re.I), "protects"),
-            (re.compile(r"\bmonitor", re.I), "monitored_by"),
-            (re.compile(r"\bconfigur", re.I), "configured_by"),
-            (re.compile(r"\bimplement", re.I), "implements"),
-        ]
-        for pattern, predicate in _PREDICATE_SIGNALS:
-            if pattern.search(text_lower):
+        text_sample = text[:3000]
+        for pattern, predicate in self._predicate_signals:
+            if pattern.search(text_sample):
                 predicates.append(predicate)
         return predicates
 
