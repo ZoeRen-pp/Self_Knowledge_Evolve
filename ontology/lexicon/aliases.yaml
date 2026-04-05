@@ -739,3 +739,9 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.24
+- surface_form: hello protocol
+  canonical_node_id: IP.HELLO_PROTOCOL
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.25

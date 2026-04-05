@@ -126,3 +126,16 @@ nodes:
   aliases:
   - transit network
   allowed_relations: []
+- id: IP.HELLO_PROTOCOL
+  canonical_name: hello protocol
+  display_name_zh: ''
+  parent_id: IP.ROUTING_PROTOCOL
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.25
+  description: OSPF's Hello protocol establishes and maintains neighbor relationships
+    by exchanging periodic messages to discover adjacent routers.
+  aliases:
+  - hello protocol
+  allowed_relations: []
