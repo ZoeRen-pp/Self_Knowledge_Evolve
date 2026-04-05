@@ -85,3 +85,17 @@ nodes:
   - network layer reachability information (nlri)
   - network layer reachability information
   allowed_relations: []
+- id: IP.BROADCAST_NETWORKS
+  canonical_name: broadcast networks
+  display_name_zh: ''
+  parent_id: IP.BRIDGE_DOMAIN
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.22
+  description: Broadcast networks are multi-access networks where a single packet
+    can be delivered to all attached routers simultaneously, requiring a designated
+    router for efficient operation.
+  aliases:
+  - broadcast networks
+  allowed_relations: []
