@@ -309,12 +309,21 @@ class Spider:
             return self._robots_cache[site_key]
         parsed = urlparse(url)
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-        rp = urllib.robotparser.RobotFileParser(robots_url)
+
+        # Fetch robots.txt with SSL tolerance (some sites have cert issues)
         try:
-            rp.read()
-            self._robots_cache[site_key] = rp
-            return rp
-        except Exception:
+            resp = self._client.get(robots_url, follow_redirects=True)
+            if resp.status_code == 200:
+                rp = urllib.robotparser.RobotFileParser(robots_url)
+                rp.parse(resp.text.splitlines())
+                self._robots_cache[site_key] = rp
+                return rp
+            # Non-200 (403, 404, etc.) → assume no restrictions
+            log.debug("robots.txt returned %d for %s, assuming allowed", resp.status_code, robots_url)
+            self._robots_cache[site_key] = None
+            return None
+        except Exception as exc:
+            log.debug("robots.txt fetch failed for %s: %s, assuming allowed", robots_url, exc)
             self._robots_cache[site_key] = None
             return None
 
