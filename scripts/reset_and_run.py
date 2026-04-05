@@ -41,22 +41,42 @@ def kill_processes() -> None:
     step("Killing worker and API processes")
 
     if sys.platform == "win32":
-        # Windows: find python processes with worker.py or uvicorn in command line
-        result = subprocess.run(
-            ["wmic", "process", "where", "name='python.exe'", "get", "processid,commandline"],
-            capture_output=True, text=True,
-        )
-        for line in result.stdout.splitlines():
-            line_lower = line.lower()
-            if "worker.py" in line_lower or "uvicorn" in line_lower or "8000" in line_lower:
-                parts = line.strip().split()
-                if parts:
-                    pid = parts[-1]
-                    try:
-                        subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
-                        log(f"  Killed PID {pid}")
-                    except Exception:
-                        pass
+        # Windows: use netstat to find port 8000, taskkill by PID
+        # Kill API on port 8000
+        try:
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if ":8000" in line and "LISTENING" in line:
+                    pid = line.strip().split()[-1]
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+                    log(f"  Killed API PID {pid}")
+        except Exception:
+            pass
+
+        # Kill all python.exe except ourselves
+        my_pid = os.getpid()
+        try:
+            result = subprocess.run(
+                ["powershell", "-Command",
+                 "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+                 "Select-Object ProcessId, CommandLine | Format-List"],
+                capture_output=True, text=True, timeout=10,
+            )
+            current_pid = None
+            current_cmd = ""
+            for line in result.stdout.splitlines():
+                if line.startswith("ProcessId"):
+                    current_pid = line.split(":")[-1].strip()
+                elif line.startswith("CommandLine"):
+                    current_cmd = line.split(":", 1)[-1].strip().lower()
+                    if current_pid and current_pid != str(my_pid):
+                        if "worker.py" in current_cmd or "uvicorn" in current_cmd:
+                            subprocess.run(["taskkill", "/F", "/PID", current_pid], capture_output=True)
+                            log(f"  Killed PID {current_pid}")
+                    current_pid = None
+                    current_cmd = ""
+        except Exception:
+            pass
     else:
         # Unix
         for pattern in ["python worker.py", "uvicorn.*8000"]:
@@ -207,10 +227,10 @@ def verify_clean() -> None:
     if errors:
         log("  VERIFICATION FAILED:")
         for e in errors:
-            log(f"    ✗ {e}")
+            log(f"    FAIL: {e}")
         sys.exit(1)
 
-    log("  ✓ All stores empty")
+    log("  OK: All stores empty")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -275,11 +295,11 @@ def start_worker() -> None:
     # Check log for signs of life
     log_content = log_path.read_text(encoding="utf-8", errors="replace")
     if "Worker started" in log_content:
-        log("  ✓ Worker running")
+        log("  OK: Worker running")
     elif "error" in log_content.lower():
         log(f"  WARNING: errors in startup log")
     else:
-        log("  ✓ Worker process alive (waiting for first cycle)")
+        log("  OK: Worker process alive (waiting for first cycle)")
 
 
 # ═══════════════════════════════════════════════════════════════
