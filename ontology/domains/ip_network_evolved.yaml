@@ -290,3 +290,16 @@ nodes:
   - router-id
   - router id
   allowed_relations: []
+- id: IP.LINK_STATE_DATABASE
+  canonical_name: link-state database
+  display_name_zh: ''
+  parent_id: IP.TELEMETRY
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.40
+  description: ''
+  aliases:
+  - link state database
+  - link-state database
+  allowed_relations: []
