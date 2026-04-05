@@ -474,7 +474,7 @@ async function loadReviewList() {
           ${examples}
           <div class="review-actions">
             <button class="btn" style="background:#2196f3;color:#fff;" onclick="showCandidateContext('${c.candidate_id}')">View Sources</button>
-            <button class="btn btn-approve" onclick="approveCandidate('${c.candidate_id}', '${c.candidate_type}')">Approve</button>
+            <button class="btn btn-approve" onclick="approveCandidate('${c.candidate_id}', '${c.candidate_type}', '${c.candidate_parent_id || ''}')">Approve</button>
             <button class="btn btn-reject" onclick="rejectCandidate('${c.candidate_id}')">Reject</button>
           </div>
           <div id="ctx-${c.candidate_id}" style="display:none;margin-top:10px;"></div>
@@ -523,12 +523,15 @@ async function showCandidateContext(id) {
   }
 }
 
-async function approveCandidate(id, type) {
+async function approveCandidate(id, type, suggestedParent) {
   const reviewer = prompt('Reviewer name:');
   if (!reviewer) return;
   let parentId = null;
   if (type === 'concept') {
-    parentId = prompt('Parent node ID (e.g. IP.ROUTING):') || null;
+    const defaultParent = suggestedParent || '';
+    parentId = prompt(`Parent node ID:`, defaultParent);
+    if (parentId === null) return; // cancelled
+    parentId = parentId || null;
   }
 
   const card = document.getElementById(`card-${id}`);
