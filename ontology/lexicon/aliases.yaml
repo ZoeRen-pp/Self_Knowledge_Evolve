@@ -691,3 +691,9 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.9
+- surface_form: autonomous systems (ASes)
+  canonical_node_id: IP.AUTONOMOUS_SYSTEMS_ASES
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.10

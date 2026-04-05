@@ -44,3 +44,17 @@ nodes:
   - loc-rib
   - LOC-RIB
   allowed_relations: []
+- id: IP.AUTONOMOUS_SYSTEMS_ASES
+  canonical_name: autonomous systems (ASes)
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.10
+  description: Autonomous Systems (ASes) are distinct networks, each under a single
+    administrative entity, that exchange routing information using the Border Gateway
+    Protocol (BGP).
+  aliases:
+  - autonomous systems (ASes)
+  allowed_relations: []
