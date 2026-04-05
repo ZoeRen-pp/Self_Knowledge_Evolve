@@ -410,3 +410,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.15
+- id: established_by
+  category: evolved
+  description: 'Discovered relation: established_by'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.16
