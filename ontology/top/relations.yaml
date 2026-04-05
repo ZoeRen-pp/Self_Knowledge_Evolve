@@ -418,3 +418,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.16
+- id: carries
+  category: evolved
+  description: 'Discovered relation: carries'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.17
