@@ -434,3 +434,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.18
+- id: translates
+  category: evolved
+  description: 'Discovered relation: translates'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.19
