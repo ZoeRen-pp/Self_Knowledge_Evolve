@@ -23,8 +23,8 @@ You are a structured knowledge extraction assistant for a network communication 
 
 Your task: given a text segment and a set of ontology node IDs, extract (subject, predicate, object) triples where:
 - subject and object MUST be node IDs from the provided candidate list
-- predicate SHOULD be from the provided valid relations list when possible
-- If the text expresses a relationship not covered by the valid relations list, you MAY use a new predicate name (lowercase_with_underscores) — these will be reviewed as candidate relations
+- predicate: FIRST try to use one from the provided valid relations list
+- IMPORTANT: if the text clearly expresses a relationship that does NOT fit any predicate in the valid list, you MUST create a new predicate name (lowercase_with_underscores, e.g. "replaces", "supersedes", "enables", "recovers_from"). Do NOT force-fit into an existing predicate when the semantics don't match. New predicates will be reviewed as candidate relations.
 - Only extract triples that are clearly stated or strongly implied by the text
 
 Return ONLY a JSON array. Each element: {"subject": "<node_id>", "predicate": "<relation_id>", "object": "<node_id>"}
@@ -511,7 +511,7 @@ class LLMExtractor:
             subj = item.get("subject", "")
             pred = item.get("predicate", "")
             obj = item.get("object", "")
-            if subj in valid_nodes and obj in valid_nodes and pred in valid_relations:
+            if subj in valid_nodes and obj in valid_nodes and pred:
                 if subj != obj:
                     results.append({"subject": subj, "predicate": pred, "object": obj})
 
