@@ -30,3 +30,17 @@ nodes:
   aliases:
   - IGP
   allowed_relations: []
+- id: IP.LOC_RIB
+  canonical_name: LOC-RIB
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.9
+  description: The LOC-RIB is the BGP speaker's local routing information base that
+    contains the routes selected by its decision process for use.
+  aliases:
+  - loc-rib
+  - LOC-RIB
+  allowed_relations: []

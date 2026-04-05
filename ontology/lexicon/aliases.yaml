@@ -679,3 +679,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.8
+- surface_form: loc-rib
+  canonical_node_id: IP.LOC_RIB
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.9
+- surface_form: LOC-RIB
+  canonical_node_id: IP.LOC_RIB
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.9
