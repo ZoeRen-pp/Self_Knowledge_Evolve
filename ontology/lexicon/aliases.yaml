@@ -823,3 +823,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.34
+- surface_form: network-lsa
+  canonical_node_id: IP.NETWORK_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.35
+- surface_form: network-LSA
+  canonical_node_id: IP.NETWORK_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.35

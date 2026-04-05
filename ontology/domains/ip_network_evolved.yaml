@@ -220,3 +220,16 @@ nodes:
   - nbma network
   - NBMA network
   allowed_relations: []
+- id: IP.NETWORK_LSA
+  canonical_name: network-lsa
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.35
+  description: ''
+  aliases:
+  - network-lsa
+  - network-LSA
+  allowed_relations: []
