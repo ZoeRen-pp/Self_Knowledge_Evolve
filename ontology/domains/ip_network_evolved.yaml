@@ -58,3 +58,16 @@ nodes:
   aliases:
   - autonomous systems (ASes)
   allowed_relations: []
+- id: IP.EXTERNAL_PEER
+  canonical_name: external peer
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.11
+  description: A BGP peer located in a different autonomous system, requiring AS_PATH
+    attribute modification when advertising routes.
+  aliases:
+  - external peer
+  allowed_relations: []
