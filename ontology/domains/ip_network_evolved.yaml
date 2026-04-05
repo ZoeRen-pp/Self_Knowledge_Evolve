@@ -179,3 +179,18 @@ nodes:
   - Designated Router
   - designated-router
   allowed_relations: []
+- id: IP.ROUTER_LSA
+  canonical_name: router-lsa
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.32
+  description: ''
+  aliases:
+  - router-lsa
+  - router LSA
+  - router lsa
+  - router-LSA
+  allowed_relations: []

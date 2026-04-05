@@ -775,3 +775,27 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.31
+- surface_form: router-lsa
+  canonical_node_id: IP.ROUTER_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.32
+- surface_form: router LSA
+  canonical_node_id: IP.ROUTER_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.32
+- surface_form: router lsa
+  canonical_node_id: IP.ROUTER_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.32
+- surface_form: router-LSA
+  canonical_node_id: IP.ROUTER_LSA
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.32
