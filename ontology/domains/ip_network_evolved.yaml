@@ -1,0 +1,16 @@
+version: v0.1.4
+domain: IP / Data Communication Network (Evolved)
+domain_id: IP
+nodes:
+- id: IP.INTERIOR_GATEWAY_PROTOCOL
+  canonical_name: interior gateway protocol
+  display_name_zh: ''
+  parent_id: IP.VRRP
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.4
+  description: ''
+  aliases:
+  - interior gateway protocol
+  allowed_relations: []
