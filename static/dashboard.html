@@ -465,7 +465,7 @@ async function loadReviewList() {
         : '';
       return `
         <div class="review-card" id="card-${c.candidate_id}">
-          <div class="term">${c.normalized_form || '?'}${typeBadge}</div>
+          <div class="term">${(c.surface_forms && c.surface_forms[0]) || c.normalized_form || '?'}${typeBadge}</div>
           <div class="meta">
             Sources: ${c.source_count || 0} · Score: ${(c.composite_score || 0).toFixed(2)}
             · Status: ${c.review_status} · Since: ${(c.first_seen_at || '').substring(0, 10)}
