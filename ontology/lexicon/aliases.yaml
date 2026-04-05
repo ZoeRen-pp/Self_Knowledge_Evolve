@@ -673,3 +673,9 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.6
+- surface_form: IGP
+  canonical_node_id: IP.IGP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.8

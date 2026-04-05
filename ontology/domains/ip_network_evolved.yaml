@@ -17,3 +17,16 @@ nodes:
   - SD-WAN
   - sd-wan
   allowed_relations: []
+- id: IP.IGP
+  canonical_name: IGP
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.8
+  description: An Interior Gateway Protocol (IGP) is a routing protocol used within
+    an autonomous system to exchange network reachability information.
+  aliases:
+  - IGP
+  allowed_relations: []
