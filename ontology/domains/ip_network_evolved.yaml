@@ -207,3 +207,16 @@ nodes:
   - link state id
   - link-state id
   allowed_relations: []
+- id: IP.NBMA_NETWORK
+  canonical_name: NBMA network
+  display_name_zh: ''
+  parent_id: IP.VPN_OVERLAY
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.34
+  description: ''
+  aliases:
+  - nbma network
+  - NBMA network
+  allowed_relations: []

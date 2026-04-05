@@ -811,3 +811,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.33
+- surface_form: nbma network
+  canonical_node_id: IP.NBMA_NETWORK
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.34
+- surface_form: NBMA network
+  canonical_node_id: IP.NBMA_NETWORK
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.34
