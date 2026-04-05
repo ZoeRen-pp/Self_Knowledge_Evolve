@@ -165,8 +165,12 @@ def _approve_concept(
     store: RelationalStore, graph: GraphStore, ontology,
 ) -> dict:
     """Write new concept to Neo4j + OntologyRegistry + lexicon_aliases."""
-    node_id = "EVOLVED." + re.sub(r"[^a-z0-9]", "_", normalized).upper()
-    display_name = surface_forms[0] if surface_forms else normalized
+    # Generate node_id following ontology naming convention:
+    # Concept layer: IP.UPPER_SNAKE (e.g. IP.SD_WAN)
+    # Use surface_form to derive a readable ID
+    raw_name = surface_forms[0] if surface_forms else normalized
+    node_id = "IP." + re.sub(r"[^A-Za-z0-9]+", "_", raw_name).upper().strip("_")
+    display_name = raw_name
 
     # Neo4j node
     graph.write(
