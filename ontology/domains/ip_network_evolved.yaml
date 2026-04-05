@@ -139,3 +139,16 @@ nodes:
   aliases:
   - hello protocol
   allowed_relations: []
+- id: IP.POINT_TO_POINT_NETWORK
+  canonical_name: point-to-point network
+  display_name_zh: ''
+  parent_id: IP.VPN_OVERLAY
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.26
+  description: A direct connection between two nodes, often used in OSPF where neighbor
+    IP addresses are derived from received packets.
+  aliases:
+  - point-to-point network
+  allowed_relations: []
