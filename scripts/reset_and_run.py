@@ -303,6 +303,60 @@ def start_worker() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════
+# Step 7: Start API + Dashboard
+# ═══════════════════════════════════════════════════════════════
+
+def start_api() -> None:
+    step("Starting API + Dashboard")
+
+    api_log = PROJECT_ROOT / "logs" / "api.log"
+    api_log.write_text("", encoding="utf-8")
+
+    # Start uvicorn as subprocess
+    api_script = (
+        f"import sys; sys.path.insert(0, {str(PROJECT_ROOT / 'semcore')!r}); "
+        f"import uvicorn; from src.app import app; "
+        f"uvicorn.run(app, host='0.0.0.0', port=8000)"
+    )
+
+    if sys.platform == "win32":
+        proc = subprocess.Popen(
+            [sys.executable, "-c", api_script],
+            cwd=str(PROJECT_ROOT),
+            stdout=open(api_log, "w"),
+            stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
+    else:
+        proc = subprocess.Popen(
+            [sys.executable, "-c", api_script],
+            cwd=str(PROJECT_ROOT),
+            stdout=open(api_log, "w"),
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+    log(f"  API PID: {proc.pid}")
+
+    # Wait for health check
+    import urllib.request
+    for attempt in range(10):
+        time.sleep(2)
+        try:
+            resp = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
+            if resp.status == 200:
+                log("  OK: API healthy, dashboard at http://localhost:8000/dashboard")
+                return
+        except Exception:
+            pass
+
+    if proc.poll() is not None:
+        log(f"  API DIED (exit code {proc.returncode})")
+        sys.exit(1)
+    log("  WARNING: API started but health check not responding yet")
+
+
+# ═══════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════
 
@@ -317,11 +371,13 @@ def main() -> None:
     verify_clean()
     load_ontology()
     start_worker()
+    start_api()
 
     log("=" * 50)
-    log("DONE — worker running, all stores fresh")
-    log("Monitor: tail -f logs/worker.log")
-    log("Dashboard: http://localhost:8000/dashboard")
+    log("DONE — all services running, all stores fresh")
+    log("  Worker:    tail -f logs/worker.log")
+    log("  API:       tail -f logs/api.log")
+    log("  Dashboard: http://localhost:8000/dashboard")
     log("=" * 50)
 
 
