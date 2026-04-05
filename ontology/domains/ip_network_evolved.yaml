@@ -1,0 +1,17 @@
+version: v0.1.2
+domain: IP / Data Communication Network (Evolved)
+domain_id: IP
+nodes:
+- id: IP.CE
+  canonical_name: ce
+  display_name_zh: ''
+  parent_id: null
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.2
+  description: ''
+  aliases:
+  - ce
+  - CE
+  allowed_relations: []
