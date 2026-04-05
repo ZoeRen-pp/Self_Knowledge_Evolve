@@ -895,3 +895,21 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.38
+- surface_form: Router ID
+  canonical_node_id: IP.ROUTER_ID
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.39
+- surface_form: router-id
+  canonical_node_id: IP.ROUTER_ID
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.39
+- surface_form: router id
+  canonical_node_id: IP.ROUTER_ID
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.39

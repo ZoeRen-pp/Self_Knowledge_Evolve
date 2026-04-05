@@ -276,3 +276,17 @@ nodes:
   - PE
   - pe router
   allowed_relations: []
+- id: IP.ROUTER_ID
+  canonical_name: router id
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.39
+  description: ''
+  aliases:
+  - Router ID
+  - router-id
+  - router id
+  allowed_relations: []
