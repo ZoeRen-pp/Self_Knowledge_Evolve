@@ -853,3 +853,9 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.36
+- surface_form: advertising router
+  canonical_node_id: IP.ADVERTISING_ROUTER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.37

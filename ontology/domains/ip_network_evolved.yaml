@@ -247,3 +247,15 @@ nodes:
   - AS-external-LSAs
   - as-external-lsas
   allowed_relations: []
+- id: IP.ADVERTISING_ROUTER
+  canonical_name: advertising router
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.37
+  description: ''
+  aliases:
+  - advertising router
+  allowed_relations: []
