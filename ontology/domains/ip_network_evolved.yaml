@@ -165,3 +165,17 @@ nodes:
   aliases:
   - forwarding table
   allowed_relations: []
+- id: IP.DESIGNATED_ROUTER
+  canonical_name: designated router
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.31
+  description: ''
+  aliases:
+  - designated router
+  - Designated Router
+  - designated-router
+  allowed_relations: []

@@ -757,3 +757,21 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.27
+- surface_form: designated router
+  canonical_node_id: IP.DESIGNATED_ROUTER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.31
+- surface_form: Designated Router
+  canonical_node_id: IP.DESIGNATED_ROUTER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.31
+- surface_form: designated-router
+  canonical_node_id: IP.DESIGNATED_ROUTER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.31
