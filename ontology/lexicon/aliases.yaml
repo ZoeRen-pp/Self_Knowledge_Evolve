@@ -703,3 +703,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.11
+- surface_form: network layer reachability information (nlri)
+  canonical_node_id: IP.NETWORK_LAYER_REACHABILITY_INFORMATION
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.12
+- surface_form: network layer reachability information
+  canonical_node_id: IP.NETWORK_LAYER_REACHABILITY_INFORMATION
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.12

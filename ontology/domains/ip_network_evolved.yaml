@@ -71,3 +71,17 @@ nodes:
   aliases:
   - external peer
   allowed_relations: []
+- id: IP.NETWORK_LAYER_REACHABILITY_INFORMATION
+  canonical_name: network layer reachability information
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.12
+  description: Network layer reachability information (NLRI) is the routing data,
+    such as IP prefixes, exchanged in BGP UPDATE messages to advertise network destinations.
+  aliases:
+  - network layer reachability information (nlri)
+  - network layer reachability information
+  allowed_relations: []
