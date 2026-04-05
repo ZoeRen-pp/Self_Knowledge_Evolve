@@ -528,10 +528,10 @@ async function approveCandidate(id, type, suggestedParent) {
   if (!reviewer) return;
   let parentId = null;
   if (type === 'concept') {
-    const defaultParent = suggestedParent || '';
-    parentId = prompt(`Parent node ID:`, defaultParent);
+    const defaultParent = suggestedParent || 'IP.L3_ROUTING';
+    parentId = prompt(`Parent node ID (suggested: ${defaultParent}):`, defaultParent);
     if (parentId === null) return; // cancelled
-    parentId = parentId || null;
+    parentId = parentId.trim() || null;
   }
 
   const card = document.getElementById(`card-${id}`);
