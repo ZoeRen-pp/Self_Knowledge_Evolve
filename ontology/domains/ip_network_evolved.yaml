@@ -113,3 +113,16 @@ nodes:
   - virtual links
   - virtual link
   allowed_relations: []
+- id: IP.TRANSIT_NETWORK
+  canonical_name: transit network
+  display_name_zh: ''
+  parent_id: IP.VPN_OVERLAY
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.24
+  description: A transit network is a multi-access network that interconnects routers
+    and forwards traffic between them, as opposed to a stub network.
+  aliases:
+  - transit network
+  allowed_relations: []

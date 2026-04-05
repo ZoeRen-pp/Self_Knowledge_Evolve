@@ -733,3 +733,9 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.23
+- surface_form: transit network
+  canonical_node_id: IP.TRANSIT_NETWORK
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.24
