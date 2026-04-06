@@ -600,3 +600,25 @@ nodes:
   - bgp-ls
   - BGP-LS
   allowed_relations: []
+- id: IP.INTER_AREA_MULTICAST_FORWARDER
+  canonical_name: inter-area multicast forwarder
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.62
+  description: A router that forwards multicast traffic between different OSPF areas
+    or autonomous systems.
+  aliases:
+  - inter-area multicasting
+  - intra-area multicast
+  - inter-area multicast
+  - inter-as multicasting
+  - inter-as multicast forwarders
+  - intra-area multicast forwarders
+  - inter-AS multicast forwarders
+  - inter-as multicast forwarder
+  - inter-area multicast forwarder
+  - inter-area multicast forwarders
+  allowed_relations: []

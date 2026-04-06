@@ -1477,3 +1477,63 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.61
+- surface_form: inter-area multicasting
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: intra-area multicast
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-area multicast
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-as multicasting
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-as multicast forwarders
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: intra-area multicast forwarders
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-AS multicast forwarders
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-as multicast forwarder
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-area multicast forwarder
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
+- surface_form: inter-area multicast forwarders
+  canonical_node_id: IP.INTER_AREA_MULTICAST_FORWARDER
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.62
