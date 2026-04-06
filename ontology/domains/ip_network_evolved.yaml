@@ -330,3 +330,16 @@ nodes:
   - router-lsas
   - router-LSAs
   allowed_relations: []
+- id: IP.SRH
+  canonical_name: srh
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.43
+  description: ''
+  aliases:
+  - srh
+  - SRH
+  allowed_relations: []
