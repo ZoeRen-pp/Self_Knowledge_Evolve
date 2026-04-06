@@ -1417,3 +1417,21 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.58
+- surface_form: TCP-AO algorithms
+  canonical_node_id: IP.TCP_AO
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.59
+- surface_form: TCP-AO
+  canonical_node_id: IP.TCP_AO
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.59
+- surface_form: tcp-ao
+  canonical_node_id: IP.TCP_AO
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.59

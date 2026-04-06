@@ -554,3 +554,18 @@ nodes:
   - route-distinguisher (RD)
   - route distinguishers
   allowed_relations: []
+- id: IP.TCP_AO
+  canonical_name: TCP-AO
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.59
+  description: TCP-AO is a TCP extension that provides stronger authentication and
+    replay protection for long-lived connections, replacing the older TCP MD5 option.
+  aliases:
+  - TCP-AO algorithms
+  - TCP-AO
+  - tcp-ao
+  allowed_relations: []
