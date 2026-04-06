@@ -258,7 +258,7 @@ def load_ontology() -> None:
 # ═══════════════════════════════════════════════════════════════
 
 def start_worker() -> None:
-    step("Starting worker")
+    step("Starting worker (3 threads: crawler, pipeline, stats)")
 
     log_path = PROJECT_ROOT / "logs" / "worker.log"
     log_path.parent.mkdir(exist_ok=True)

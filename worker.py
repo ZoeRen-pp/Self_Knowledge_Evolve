@@ -1,10 +1,11 @@
-"""Background worker to run crawler and pipeline."""
+"""Background worker — crawler, pipeline, and stats as independent threads."""
 
 from __future__ import annotations
 
 import json
 import logging
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -23,19 +24,15 @@ from src.utils.logging import setup_logging
 
 log = logging.getLogger(__name__)
 
-# Consecutive idle cycles before switching to exponential backoff
+# ── Configuration ────────────────────────────────────────────────────────────
+
 _IDLE_BACKOFF_START = 3
-_IDLE_BACKOFF_MAX = 300  # cap at 5 minutes
-
-# Retry policy for failed crawl tasks
+_IDLE_BACKOFF_MAX = 300
 _MAX_RETRIES = 3
-_RETRY_BACKOFF_MINUTES = [5, 30, 120]  # delay before 1st, 2nd, 3rd retry
-
+_RETRY_BACKOFF_MINUTES = [5, 30, 120]
 
 _SEED_SOURCES: list[dict] = [
-    # ══════════════════════════════════════════════════════════════
     # S-rank: Authoritative standards bodies
-    # ══════════════════════════════════════════════════════════════
     {
         "site_key": "ietf-datatracker",
         "site_name": "IETF Datatracker",
@@ -43,76 +40,65 @@ _SEED_SOURCES: list[dict] = [
         "source_rank": "S",
         "rate_limit_rps": 0.5,
         "seed_urls": [
-            # ── Core routing ──
-            "https://datatracker.ietf.org/doc/html/rfc4271",   # BGP-4
-            "https://datatracker.ietf.org/doc/html/rfc4456",   # BGP Route Reflection
-            "https://datatracker.ietf.org/doc/html/rfc4760",   # MP-BGP
-            "https://datatracker.ietf.org/doc/html/rfc7938",   # BGP in Large-Scale DC
-            "https://datatracker.ietf.org/doc/html/rfc4364",   # BGP/MPLS IP VPN
-            "https://datatracker.ietf.org/doc/html/rfc4684",   # Constrained Route Distribution
-            "https://datatracker.ietf.org/doc/html/rfc5065",   # BGP Confederations
-            "https://datatracker.ietf.org/doc/html/rfc6811",   # BGP RPKI Validation
-            "https://datatracker.ietf.org/doc/html/rfc2328",   # OSPF v2
-            "https://datatracker.ietf.org/doc/html/rfc5340",   # OSPF v3
-            "https://datatracker.ietf.org/doc/html/rfc3630",   # OSPF-TE
-            "https://datatracker.ietf.org/doc/html/rfc5308",   # IS-IS for IPv4/IPv6
-            "https://datatracker.ietf.org/doc/html/rfc5305",   # IS-IS TE Extensions
-            # ── MPLS / SR ──
-            "https://datatracker.ietf.org/doc/html/rfc3031",   # MPLS Architecture
-            "https://datatracker.ietf.org/doc/html/rfc3032",   # MPLS Label Stack
-            "https://datatracker.ietf.org/doc/html/rfc3209",   # RSVP-TE
-            "https://datatracker.ietf.org/doc/html/rfc5036",   # LDP
-            "https://datatracker.ietf.org/doc/html/rfc8402",   # Segment Routing Architecture
-            "https://datatracker.ietf.org/doc/html/rfc8986",   # SRv6 Network Programming
-            "https://datatracker.ietf.org/doc/html/rfc9252",   # BGP Overlay SR
-            # ── EVPN / VXLAN / Overlay ──
-            "https://datatracker.ietf.org/doc/html/rfc7432",   # BGP MPLS EVPN
-            "https://datatracker.ietf.org/doc/html/rfc7348",   # VXLAN
-            "https://datatracker.ietf.org/doc/html/rfc8365",   # EVPN Overlay Framework
-            "https://datatracker.ietf.org/doc/html/rfc9136",   # IP Prefix EVPN
-            # ── L2 / Switching ──
-            "https://datatracker.ietf.org/doc/html/rfc5765",   # STP MIB
-            "https://datatracker.ietf.org/doc/html/rfc7130",   # BFD on LAG
-            "https://datatracker.ietf.org/doc/html/rfc8668",   # LLDP YANG
-            # ── IP fundamentals ──
-            "https://datatracker.ietf.org/doc/html/rfc791",    # IPv4
-            "https://datatracker.ietf.org/doc/html/rfc8200",   # IPv6
-            "https://datatracker.ietf.org/doc/html/rfc793",    # TCP
-            "https://datatracker.ietf.org/doc/html/rfc768",    # UDP
-            "https://datatracker.ietf.org/doc/html/rfc2131",   # DHCP
-            "https://datatracker.ietf.org/doc/html/rfc1034",   # DNS Concepts
-            "https://datatracker.ietf.org/doc/html/rfc792",    # ICMP
-            "https://datatracker.ietf.org/doc/html/rfc4443",   # ICMPv6
-            # ── Redundancy / HA ──
-            "https://datatracker.ietf.org/doc/html/rfc3768",   # VRRP
-            "https://datatracker.ietf.org/doc/html/rfc5798",   # VRRPv3
-            "https://datatracker.ietf.org/doc/html/rfc5880",   # BFD
-            "https://datatracker.ietf.org/doc/html/rfc5881",   # BFD for IPv4/IPv6
-            # ── QoS / Security ──
-            "https://datatracker.ietf.org/doc/html/rfc2474",   # DiffServ
-            "https://datatracker.ietf.org/doc/html/rfc2475",   # DiffServ Architecture
-            "https://datatracker.ietf.org/doc/html/rfc2697",   # srTCM
-            "https://datatracker.ietf.org/doc/html/rfc2698",   # trTCM
-            "https://datatracker.ietf.org/doc/html/rfc2544",   # Benchmarking
-            "https://datatracker.ietf.org/doc/html/rfc4303",   # IPsec ESP
-            "https://datatracker.ietf.org/doc/html/rfc7296",   # IKEv2
-            # ── Network management ──
-            "https://datatracker.ietf.org/doc/html/rfc6241",   # NETCONF
-            "https://datatracker.ietf.org/doc/html/rfc8040",   # RESTCONF
-            "https://datatracker.ietf.org/doc/html/rfc7950",   # YANG
-            "https://datatracker.ietf.org/doc/html/rfc8345",   # Network Topology YANG
-            # ── NAT / Multicast ──
-            "https://datatracker.ietf.org/doc/html/rfc3022",   # Traditional NAT
-            "https://datatracker.ietf.org/doc/html/rfc6146",   # NAT64
-            "https://datatracker.ietf.org/doc/html/rfc4601",   # PIM-SM
-            "https://datatracker.ietf.org/doc/html/rfc3376",   # IGMPv3
+            "https://datatracker.ietf.org/doc/html/rfc4271",
+            "https://datatracker.ietf.org/doc/html/rfc4456",
+            "https://datatracker.ietf.org/doc/html/rfc4760",
+            "https://datatracker.ietf.org/doc/html/rfc7938",
+            "https://datatracker.ietf.org/doc/html/rfc4364",
+            "https://datatracker.ietf.org/doc/html/rfc4684",
+            "https://datatracker.ietf.org/doc/html/rfc5065",
+            "https://datatracker.ietf.org/doc/html/rfc6811",
+            "https://datatracker.ietf.org/doc/html/rfc2328",
+            "https://datatracker.ietf.org/doc/html/rfc5340",
+            "https://datatracker.ietf.org/doc/html/rfc3630",
+            "https://datatracker.ietf.org/doc/html/rfc5308",
+            "https://datatracker.ietf.org/doc/html/rfc5305",
+            "https://datatracker.ietf.org/doc/html/rfc3031",
+            "https://datatracker.ietf.org/doc/html/rfc3032",
+            "https://datatracker.ietf.org/doc/html/rfc3209",
+            "https://datatracker.ietf.org/doc/html/rfc5036",
+            "https://datatracker.ietf.org/doc/html/rfc8402",
+            "https://datatracker.ietf.org/doc/html/rfc8986",
+            "https://datatracker.ietf.org/doc/html/rfc9252",
+            "https://datatracker.ietf.org/doc/html/rfc7432",
+            "https://datatracker.ietf.org/doc/html/rfc7348",
+            "https://datatracker.ietf.org/doc/html/rfc8365",
+            "https://datatracker.ietf.org/doc/html/rfc9136",
+            "https://datatracker.ietf.org/doc/html/rfc5765",
+            "https://datatracker.ietf.org/doc/html/rfc7130",
+            "https://datatracker.ietf.org/doc/html/rfc8668",
+            "https://datatracker.ietf.org/doc/html/rfc791",
+            "https://datatracker.ietf.org/doc/html/rfc8200",
+            "https://datatracker.ietf.org/doc/html/rfc793",
+            "https://datatracker.ietf.org/doc/html/rfc768",
+            "https://datatracker.ietf.org/doc/html/rfc2131",
+            "https://datatracker.ietf.org/doc/html/rfc1034",
+            "https://datatracker.ietf.org/doc/html/rfc792",
+            "https://datatracker.ietf.org/doc/html/rfc4443",
+            "https://datatracker.ietf.org/doc/html/rfc3768",
+            "https://datatracker.ietf.org/doc/html/rfc5798",
+            "https://datatracker.ietf.org/doc/html/rfc5880",
+            "https://datatracker.ietf.org/doc/html/rfc5881",
+            "https://datatracker.ietf.org/doc/html/rfc2474",
+            "https://datatracker.ietf.org/doc/html/rfc2475",
+            "https://datatracker.ietf.org/doc/html/rfc2697",
+            "https://datatracker.ietf.org/doc/html/rfc2698",
+            "https://datatracker.ietf.org/doc/html/rfc2544",
+            "https://datatracker.ietf.org/doc/html/rfc4303",
+            "https://datatracker.ietf.org/doc/html/rfc7296",
+            "https://datatracker.ietf.org/doc/html/rfc6241",
+            "https://datatracker.ietf.org/doc/html/rfc8040",
+            "https://datatracker.ietf.org/doc/html/rfc7950",
+            "https://datatracker.ietf.org/doc/html/rfc8345",
+            "https://datatracker.ietf.org/doc/html/rfc3022",
+            "https://datatracker.ietf.org/doc/html/rfc6146",
+            "https://datatracker.ietf.org/doc/html/rfc4601",
+            "https://datatracker.ietf.org/doc/html/rfc3376",
         ],
         "scope_rules": None,
         "extra_headers": None,
     },
-    # ══════════════════════════════════════════════════════════════
     # A-rank: Major vendor documentation
-    # ══════════════════════════════════════════════════════════════
     {
         "site_key": "huawei-info",
         "site_name": "Huawei Info Center",
@@ -180,9 +166,7 @@ _SEED_SOURCES: list[dict] = [
         "scope_rules": None,
         "extra_headers": None,
     },
-    # ══════════════════════════════════════════════════════════════
     # B-rank: Technical learning / whitepapers
-    # ══════════════════════════════════════════════════════════════
     {
         "site_key": "networklessons",
         "site_name": "NetworkLessons",
@@ -255,6 +239,8 @@ _SEED_SOURCES: list[dict] = [
     },
 ]
 
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _jsonb(value: object | None) -> str | None:
     if value is None:
@@ -332,7 +318,6 @@ def _auto_enqueue_seeds(store) -> None:
 
 
 def _retry_failed_tasks(store) -> int:
-    """Re-queue failed tasks that haven't exceeded max retries and whose backoff has elapsed."""
     retried = 0
     for attempt, delay_min in enumerate(_RETRY_BACKOFF_MINUTES):
         rows = store.fetchall(
@@ -369,29 +354,157 @@ def _retry_failed_tasks(store) -> int:
     return retried
 
 
-def _fetch_pipeline_tasks(knowledge_store, limit: int) -> list[str]:
-    """Find documents in 'raw' status ready for pipeline processing."""
-    rows = knowledge_store.fetchall(
-        """
-        SELECT source_doc_id FROM documents
-        WHERE status = 'raw'
-        ORDER BY created_at ASC
-        LIMIT %s
-        """,
-        (limit,),
-    )
-    return [str(row["source_doc_id"]) for row in rows]
+# ── Thread: Crawler ──────────────────────────────────────────────────────────
+
+def _crawler_thread(app, stop_event: threading.Event) -> None:
+    """Continuously crawl pending tasks."""
+    thread_name = "crawler"
+    log.info("[%s] Thread started", thread_name)
+    crawler_store = app.crawler_store or app.store
+    spider = Spider(object_store=app.objects, store=crawler_store, knowledge_store=app.store)
+
+    idle_count = 0
+    try:
+        while not stop_event.is_set():
+            try:
+                retried = _retry_failed_tasks(crawler_store)
+                crawl_results = spider.run_pending_tasks(limit=settings.WORKER_CRAWL_LIMIT)
+                has_work = len(crawl_results) > 0 or retried > 0
+
+                if has_work:
+                    idle_count = 0
+                    log.info("[%s] Cycle: crawled=%d retried=%d",
+                             thread_name, len(crawl_results), retried)
+                else:
+                    idle_count += 1
+                    if idle_count <= _IDLE_BACKOFF_START:
+                        log.debug("[%s] Idle cycle", thread_name)
+            except Exception as exc:
+                log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
+                idle_count = 0
+
+            if idle_count > _IDLE_BACKOFF_START:
+                backoff = min(
+                    settings.WORKER_SLEEP_SECS * (2 ** (idle_count - _IDLE_BACKOFF_START)),
+                    _IDLE_BACKOFF_MAX,
+                )
+                stop_event.wait(backoff)
+            else:
+                stop_event.wait(settings.WORKER_SLEEP_SECS)
+    finally:
+        spider.close()
+        log.info("[%s] Thread stopped", thread_name)
 
 
-def _run_pipeline(app, doc_ids: list[str]) -> None:
-    for doc_id in doc_ids:
-        ctx = PipelineContext(source_doc_id=doc_id)
-        try:
-            app.ingest_context(ctx)
-            log.info("Pipeline completed for doc=%s errors=%d", doc_id, len(ctx.errors))
-        except Exception as exc:
-            log.error("Pipeline failed for doc=%s err=%s", doc_id, exc, exc_info=True)
+# ── Thread: Pipeline ─────────────────────────────────────────────────────────
 
+def _pipeline_thread(app, stop_event: threading.Event) -> None:
+    """Continuously process raw documents through the pipeline."""
+    thread_name = "pipeline"
+    log.info("[%s] Thread started", thread_name)
+
+    idle_count = 0
+    try:
+        while not stop_event.is_set():
+            try:
+                rows = app.store.fetchall(
+                    """SELECT source_doc_id FROM documents
+                       WHERE status = 'raw'
+                       ORDER BY created_at ASC
+                       LIMIT %s""",
+                    (settings.WORKER_PIPELINE_LIMIT,),
+                )
+                doc_ids = [str(r["source_doc_id"]) for r in rows]
+
+                if doc_ids:
+                    idle_count = 0
+                    for doc_id in doc_ids:
+                        if stop_event.is_set():
+                            break
+                        ctx = PipelineContext(source_doc_id=doc_id)
+                        try:
+                            app.ingest_context(ctx)
+                            log.info("[%s] Completed doc=%s errors=%d",
+                                     thread_name, doc_id, len(ctx.errors))
+                        except Exception as exc:
+                            log.error("[%s] Failed doc=%s err=%s",
+                                      thread_name, doc_id, exc, exc_info=True)
+                else:
+                    idle_count += 1
+            except Exception as exc:
+                log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
+                idle_count = 0
+
+            # Pipeline checks less frequently — docs arrive via crawler
+            sleep_secs = settings.WORKER_SLEEP_SECS * 2
+            if idle_count > _IDLE_BACKOFF_START:
+                backoff = min(
+                    sleep_secs * (2 ** (idle_count - _IDLE_BACKOFF_START)),
+                    _IDLE_BACKOFF_MAX,
+                )
+                stop_event.wait(backoff)
+            else:
+                stop_event.wait(sleep_secs)
+    finally:
+        log.info("[%s] Thread stopped", thread_name)
+
+
+# ── Thread: Stats / Monitoring ───────────────────────────────────────────────
+
+def _maintenance_thread(app, stop_event: threading.Event) -> None:
+    """Periodic ontology maintenance: embedding dedup, LLM classification, cleanup."""
+    thread_name = "maintenance"
+    log.info("[%s] Thread started", thread_name)
+
+    interval_hours = getattr(settings, "ONTOLOGY_MAINTENANCE_INTERVAL_HOURS", 24)
+    interval_secs = interval_hours * 3600
+
+    # Wait 5 minutes after startup before first run (let pipeline populate data first)
+    stop_event.wait(300)
+
+    try:
+        while not stop_event.is_set():
+            try:
+                from src.governance.maintenance import OntologyMaintenance
+                maint = OntologyMaintenance(
+                    store=app.store, graph=app.graph, ontology=app.ontology,
+                )
+                stats = maint.run()
+                log.info("[%s] Cycle complete: %s", thread_name, stats.get("final", {}))
+            except Exception as exc:
+                log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
+
+            stop_event.wait(interval_secs)
+    finally:
+        log.info("[%s] Thread stopped", thread_name)
+
+
+def _stats_thread(app, stop_event: threading.Event) -> None:
+    """Periodically collect system stats."""
+    thread_name = "stats"
+    log.info("[%s] Thread started", thread_name)
+
+    try:
+        from src.stats.collector import StatsCollector
+        from src.stats.scheduler import StatsScheduler
+        collector = StatsCollector(
+            store=app.store, graph=app.graph, crawler_store=app.crawler_store,
+        )
+        scheduler = StatsScheduler(collector, store=app.store)
+        scheduler.start()
+        log.info("[%s] Stats scheduler running (5 min interval)", thread_name)
+
+        # Block until stop event — scheduler has its own internal timer
+        stop_event.wait()
+
+        scheduler.stop()
+    except Exception as exc:
+        log.error("[%s] Failed to start: %s", thread_name, exc, exc_info=True)
+    finally:
+        log.info("[%s] Thread stopped", thread_name)
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     setup_logging(settings.LOG_LEVEL)
@@ -401,58 +514,38 @@ def main() -> None:
     app = get_app()
     crawler_store = app.crawler_store or app.store
     _auto_enqueue_seeds(crawler_store)
-    spider = Spider(object_store=app.objects, store=crawler_store, knowledge_store=app.store)
-    log.info(
-        "Worker started: crawl_limit=%d pipeline_limit=%d sleep=%ds",
-        settings.WORKER_CRAWL_LIMIT,
-        settings.WORKER_PIPELINE_LIMIT,
-        settings.WORKER_SLEEP_SECS,
-    )
 
-    idle_count = 0
+    log.info("Worker starting: 4 threads (crawler, pipeline, stats, maintenance)")
+
+    stop_event = threading.Event()
+
+    threads = [
+        threading.Thread(target=_crawler_thread, args=(app, stop_event),
+                         name="crawler", daemon=True),
+        threading.Thread(target=_pipeline_thread, args=(app, stop_event),
+                         name="pipeline", daemon=True),
+        threading.Thread(target=_stats_thread, args=(app, stop_event),
+                         name="stats", daemon=True),
+        threading.Thread(target=_maintenance_thread, args=(app, stop_event),
+                         name="maintenance", daemon=True),
+    ]
+
+    for t in threads:
+        t.start()
+        log.info("  Started thread: %s", t.name)
+
+    log.info("Worker started: all 3 threads running")
+
     try:
+        # Main thread waits for KeyboardInterrupt
         while True:
-            try:
-                # Retry failed tasks that are ready for another attempt
-                retried = _retry_failed_tasks(crawler_store)
-
-                crawl_results = spider.run_pending_tasks(limit=settings.WORKER_CRAWL_LIMIT)
-
-                # Pipeline picks up all documents in 'raw' status (from any source)
-                doc_ids = _fetch_pipeline_tasks(app.store, settings.WORKER_PIPELINE_LIMIT)
-                if doc_ids:
-                    _run_pipeline(app, doc_ids)
-
-                has_work = len(crawl_results) > 0 or len(doc_ids) > 0 or retried > 0
-                if has_work:
-                    idle_count = 0
-                    log.info(
-                        "Worker cycle done: crawled=%d pipeline_docs=%d retried=%d",
-                        len(crawl_results),
-                        len(doc_ids),
-                        retried,
-                    )
-                else:
-                    idle_count += 1
-                    if idle_count <= _IDLE_BACKOFF_START:
-                        log.info("Worker cycle done: crawled=0 pipeline_tasks=0")
-                    else:
-                        log.debug("Worker idle (cycle %d)", idle_count)
-            except Exception as exc:
-                log.error("Worker cycle error: %s", exc, exc_info=True)
-                idle_count = 0  # reset on error so next cycle logs at INFO
-
-            # Exponential backoff when idle
-            if idle_count > _IDLE_BACKOFF_START:
-                backoff = min(
-                    settings.WORKER_SLEEP_SECS * (2 ** (idle_count - _IDLE_BACKOFF_START)),
-                    _IDLE_BACKOFF_MAX,
-                )
-                time.sleep(backoff)
-            else:
-                time.sleep(settings.WORKER_SLEEP_SECS)
-    finally:
-        spider.close()
+            time.sleep(1)
+    except KeyboardInterrupt:
+        log.info("Shutdown requested...")
+        stop_event.set()
+        for t in threads:
+            t.join(timeout=10)
+        log.info("Worker stopped")
 
 
 if __name__ == "__main__":

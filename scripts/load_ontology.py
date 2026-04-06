@@ -292,6 +292,22 @@ def main() -> None:
             log.info("Loading seed relations...")
             total_seeds = load_seed_relations(SEEDS_DIR, session, args.dry_run)
 
+        # Add multi-labels based on node_id prefix (MECH.→MechanismNode, etc.)
+        if not args.dry_run:
+            log.info("Adding multi-labels for five-layer model...")
+            label_map = {
+                'MECH.': 'MechanismNode',
+                'METHOD.': 'MethodNode',
+                'COND.': 'ConditionRuleNode',
+                'SCENE.': 'ScenarioPatternNode',
+            }
+            for prefix, label in label_map.items():
+                r = session.run(
+                    f"MATCH (n:OntologyNode) WHERE n.node_id STARTS WITH '{prefix}' "
+                    f"SET n:{label} RETURN count(n) AS cnt"
+                ).single()
+                log.info("  %s: %d nodes", label, r["cnt"])
+
     log.info(
         "Done%s — %d OntologyNodes, %d Aliases, %d seeds, %d fixes",
         " (dry-run)" if args.dry_run else "",

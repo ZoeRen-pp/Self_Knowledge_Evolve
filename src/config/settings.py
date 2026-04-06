@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     EMBEDDING_DIM: int = 1024
     EMBEDDING_ENABLED: bool = False  # set True after model is available
 
+    # ── Ollama (preferred embedding backend) ─────────────────
+    OLLAMA_URL: str = "http://localhost:11434"
+    OLLAMA_EMBED_MODEL: str = "bge-m3"
+
+    # ── Ontology Maintenance ─────────────────────────────────
+    ONTOLOGY_MAINTENANCE_INTERVAL_HOURS: int = 24
+    ONTOLOGY_MAINTENANCE_ENABLED: bool = True
+
     # ── Pipeline ──────────────────────────────────────────────
     ONTOLOGY_VERSION: str = "v0.2.0"
     LOG_LEVEL: str = "INFO"

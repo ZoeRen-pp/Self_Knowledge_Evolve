@@ -380,14 +380,21 @@ class LLMExtractor:
         text: str,
         known_terms: list[str],
     ) -> list[dict]:
-        """Extract domain terms from text that are NOT in the known ontology.
+        """Extract and classify domain terms from text.
+
+        LLM classifies each term as:
+        - new_concept: genuinely new, standalone concept → enters candidate pool
+        - variant: qualified form of a known concept → discarded
+        - noise: generic/non-domain word → discarded
 
         Args:
             text: Raw segment text (preserving original case).
             known_terms: List of known ontology canonical names / aliases.
 
         Returns:
-            List of dicts: [{"term": "...", "reason": "..."}]
+            List of dicts with classification:
+            [{"term": "...", "classification": "new_concept|variant|noise",
+              "parent_concept": "...", "reason": "..."}]
             Empty list if LLM disabled or no candidates found.
         """
         if not self.is_enabled() or not text.strip():
@@ -395,33 +402,46 @@ class LLMExtractor:
 
         known_sample = ", ".join(known_terms[:80])
         system = (
-            "You are a network engineering terminology extractor.\n"
+            "You are a network engineering terminology extractor and classifier.\n"
             "Given a text segment and a list of known ontology concepts, "
-            "identify NEW technical terms that are NOT in the known list "
-            "but SHOULD be added to a networking knowledge base.\n\n"
+            "identify technical terms and CLASSIFY each one.\n\n"
             "Return ONLY a JSON array. Each element:\n"
-            '{"term": "<exact surface form>", "reason": "<why this is a domain concept>"}\n\n'
+            '{"term": "<exact surface form>", '
+            '"classification": "new_concept|variant|noise", '
+            '"parent_concept": "<known concept if variant, else null>", '
+            '"reason": "<brief explanation>"}\n\n'
+            "Classifications:\n"
+            "- new_concept: a standalone networking/telecom concept that deserves "
+            "its own ontology entry (protocol, mechanism, configuration object, network function)\n"
+            "- variant: a qualified/contextual form of a KNOWN concept. "
+            'e.g. if "router ID" is known, then "OSPF router ID", "BGP router-ID", '
+            '"neighbor router ID" are all variants — they reference the same concept '
+            "in a specific context. Set parent_concept to the known concept name.\n"
+            "- noise: generic English words, document structure words (section, figure, table, "
+            "note, example), author names, dates, common verbs/adjectives, plural forms "
+            "of known concepts\n\n"
             "Rules:\n"
-            "- Only return networking/telecom domain-specific terms\n"
-            "- Skip generic words, document structure words, author names, dates\n"
-            "- Include: protocol names, mechanisms, configuration objects, network functions\n"
-            "- Include multi-word terms (e.g. 'route reflector', 'forwarding equivalence class')\n"
-            "- Return [] if no new terms found"
+            "- Precision over recall: when in doubt, classify as variant or noise\n"
+            "- Multi-word terms like 'route reflector' or 'forwarding equivalence class' "
+            "CAN be new_concept if they are standalone domain concepts\n"
+            "- Do NOT classify as new_concept if the term is just [known concept] + "
+            "[context modifier] (e.g. 'OSPF area' when 'area' is known)\n"
+            "- Return [] if no terms found at all"
         )
         prompt = (
             f"Known concepts: {known_sample}\n\n"
             f"Text:\n{text[:2000]}\n\n"
-            "Extract new domain terms as JSON array:"
+            "Extract and classify terms as JSON array:"
         )
 
-        raw = self._call_llm(system, prompt, 512)
+        raw = self._call_llm(system, prompt, 768)
         if raw is None:
             return []
 
         return self._parse_candidate_terms(raw)
 
     def _parse_candidate_terms(self, raw: str) -> list[dict]:
-        """Parse LLM response for candidate terms."""
+        """Parse LLM response for candidate terms with classification."""
         raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
         raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE).strip()
         try:
@@ -438,16 +458,23 @@ class LLMExtractor:
         if not isinstance(data, list):
             return []
 
+        valid_classifications = {"new_concept", "variant", "noise"}
         results = []
         for item in data:
             if not isinstance(item, dict):
                 continue
             term = item.get("term", "").strip()
-            if term and len(term) >= 2:
-                results.append({
-                    "term": term,
-                    "reason": item.get("reason", ""),
-                })
+            if not term or len(term) < 2:
+                continue
+            classification = item.get("classification", "new_concept")
+            if classification not in valid_classifications:
+                classification = "new_concept"  # fallback: let downstream filter decide
+            results.append({
+                "term": term,
+                "classification": classification,
+                "parent_concept": item.get("parent_concept"),
+                "reason": item.get("reason", ""),
+            })
         return results
 
     def ping(self, timeout: float = 15.0) -> bool:

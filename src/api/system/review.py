@@ -234,7 +234,7 @@ def check_synonyms(
     *,
     store: RelationalStore,
 ) -> dict:
-    """Ask LLM whether candidates are synonyms."""
+    """Check if candidates are synonyms. Embedding pre-filter → LLM for borderline cases."""
     candidates = []
     for cid in candidate_ids:
         row = store.fetchone(
@@ -249,6 +249,14 @@ def check_synonyms(
 
     terms = [c.get("surface_forms", [c.get("normalized_form")])[0] for c in candidates]
 
+    # Embedding pre-filter: high similarity → synonym, low → not, middle → ask LLM
+    emb_result = _embedding_synonym_check(terms)
+    if emb_result is not None:
+        log.info("Synonym check via embedding: %s → cosine=%.3f is_synonym=%s",
+                 terms, emb_result["cosine"], emb_result["is_synonym"])
+        return emb_result
+
+    # Borderline or no embedding → fall through to LLM
     try:
         from src.utils.llm_extract import LLMExtractor
         llm = LLMExtractor()
@@ -268,6 +276,7 @@ def check_synonyms(
             try:
                 result = _json.loads(raw)
                 result["terms"] = terms
+                result["method"] = "llm"
                 return result
             except Exception:
                 return {"terms": terms, "raw_response": raw}
@@ -275,6 +284,47 @@ def check_synonyms(
         return {"error": str(exc)}
 
     return {"terms": terms, "error": "LLM call failed"}
+
+
+def _embedding_synonym_check(terms: list[str]) -> dict | None:
+    """Fast synonym check using embedding cosine similarity.
+
+    Returns result dict if confident (cosine > 0.90 or < 0.60), None if borderline.
+    """
+    from src.config.settings import settings
+    if not getattr(settings, "EMBEDDING_ENABLED", False):
+        return None
+    try:
+        from src.utils.embedding import get_embeddings
+        import numpy as np
+        vecs = get_embeddings([t.lower() for t in terms])
+        if vecs is None or len(vecs) < 2:
+            return None
+
+        emb = np.array(vecs)
+        # Compute min pairwise cosine (all pairs must be similar for synonym)
+        min_cos = 1.0
+        for i in range(len(emb)):
+            for j in range(i + 1, len(emb)):
+                cos = float(np.dot(emb[i], emb[j]))
+                min_cos = min(min_cos, cos)
+
+        if min_cos >= 0.90:
+            return {
+                "terms": terms, "is_synonym": True, "cosine": round(min_cos, 4),
+                "suggested_canonical": terms[0], "method": "embedding",
+                "reason": f"High embedding similarity ({min_cos:.3f})",
+            }
+        elif min_cos < 0.60:
+            return {
+                "terms": terms, "is_synonym": False, "cosine": round(min_cos, 4),
+                "suggested_canonical": None, "method": "embedding",
+                "reason": f"Low embedding similarity ({min_cos:.3f})",
+            }
+        # Borderline → return None, let LLM decide
+        return None
+    except Exception:
+        return None
 
 
 # ── Internal ─────────────────────────────────────────────────────────────────

@@ -3,790 +3,1094 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Semantic KB Dashboard</title>
+<title>电信语义知识操作系统</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 20px; }
-h1 { font-size: 1.4rem; margin-bottom: 16px; color: #fff; }
-h2 { font-size: 1.1rem; margin: 16px 0 8px; color: #8b95a5; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
 
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.card { background: #1a1d27; border-radius: 8px; padding: 16px; text-align: center; }
-.card .value { font-size: 2rem; font-weight: 700; color: #4fc3f7; }
-.card .label { font-size: 0.8rem; color: #8b95a5; margin-top: 4px; }
+/* ── Layout ── */
+.header { background: #1a1d27; padding: 16px 24px; border-bottom: 1px solid #2a2d37; display: flex; align-items: center; gap: 16px; }
+.header h1 { font-size: 1.2rem; color: #fff; }
+.header .subtitle { font-size: 0.8rem; color: #8b95a5; }
+.main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
 
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-.panel { background: #1a1d27; border-radius: 8px; padding: 16px; }
-.panel canvas { max-height: 250px; }
-
-.gauge { display: flex; align-items: center; gap: 12px; margin: 8px 0; }
-.gauge-bar { flex: 1; height: 8px; background: #2a2d37; border-radius: 4px; overflow: hidden; }
-.gauge-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-.gauge-label { min-width: 140px; font-size: 0.85rem; }
-.gauge-value { min-width: 50px; text-align: right; font-size: 0.85rem; font-weight: 600; }
-
-.green { background: #4caf50; } .yellow { background: #ff9800; } .red { background: #f44336; }
-
-.alert-list { max-height: 200px; overflow-y: auto; font-size: 0.82rem; }
-.alert-item { padding: 6px 8px; border-bottom: 1px solid #2a2d37; cursor: pointer; }
-.alert-item:hover { background: #252830; }
-.alert-item .warn { color: #ff9800; }
-
-.drilldown-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7); z-index: 100; justify-content: center; align-items: center; }
-.drilldown-modal.active { display: flex; }
-.drilldown-content { background: #1a1d27; border-radius: 12px; padding: 24px; max-width: 800px;
-  width: 90%; max-height: 80vh; overflow-y: auto; }
-.drilldown-content h3 { margin-bottom: 12px; }
-.drilldown-content table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.drilldown-content th, .drilldown-content td { padding: 6px 8px; border-bottom: 1px solid #2a2d37; text-align: left; }
-.drilldown-content th { color: #8b95a5; }
-.close-btn { float: right; cursor: pointer; font-size: 1.2rem; color: #8b95a5; }
-.close-btn:hover { color: #fff; }
-
-.timestamp { font-size: 0.75rem; color: #555; margin-top: 8px; }
-.loading { color: #555; font-style: italic; }
-
-.tabs { display: flex; gap: 0; margin-bottom: 16px; }
-.tab { padding: 8px 20px; cursor: pointer; background: #1a1d27; border: 1px solid #2a2d37;
-  color: #8b95a5; font-size: 0.9rem; }
+.tabs { display: flex; gap: 0; margin-bottom: 20px; flex-wrap: wrap; }
+.tab { padding: 10px 20px; cursor: pointer; background: #1a1d27; border: 1px solid #2a2d37;
+  color: #8b95a5; font-size: 0.85rem; transition: all 0.2s; }
 .tab:first-child { border-radius: 6px 0 0 6px; }
 .tab:last-child { border-radius: 0 6px 6px 0; }
 .tab.active { background: #252830; color: #4fc3f7; border-color: #4fc3f7; }
+.tab:hover:not(.active) { background: #1e2130; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
-.review-card { background: #1a1d27; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-.review-card .meta { font-size: 0.8rem; color: #8b95a5; margin-bottom: 8px; }
-.review-card .term { font-size: 1.1rem; font-weight: 600; color: #4fc3f7; }
-.review-card .type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px;
-  font-size: 0.7rem; margin-left: 8px; }
-.type-concept { background: #1b5e20; color: #a5d6a7; }
-.type-relation { background: #e65100; color: #ffcc80; }
-.review-actions { margin-top: 10px; display: flex; gap: 8px; }
-.btn { padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.82rem; }
-.btn-approve { background: #4caf50; color: #fff; }
-.btn-reject { background: #f44336; color: #fff; }
-.btn-approve:hover { background: #388e3c; }
-.btn-reject:hover { background: #c62828; }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ── Components ── */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.card { background: #1a1d27; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; transition: transform 0.15s, border-color 0.2s; border: 1px solid transparent; }
+.card:hover { transform: translateY(-2px); border-color: #4fc3f7; }
+.card .value { font-size: 1.8rem; font-weight: 700; color: #4fc3f7; }
+.card .label { font-size: 0.75rem; color: #8b95a5; margin-top: 4px; }
+
+.panel { background: #1a1d27; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.panel h3 { font-size: 0.95rem; color: #fff; margin-bottom: 4px; }
+.panel .desc { font-size: 0.78rem; color: #666; margin-bottom: 12px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+/* ── Flow diagram ── */
+.flow { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 16px 0; }
+.flow-step { background: #252830; border-radius: 8px; padding: 12px 16px; min-width: 100px; text-align: center; position: relative; }
+.flow-step .f-value { font-size: 1.4rem; font-weight: 700; color: #4fc3f7; }
+.flow-step .f-label { font-size: 0.7rem; color: #8b95a5; }
+.flow-arrow { color: #4fc3f7; font-size: 1.2rem; padding: 0 6px; flex-shrink: 0; }
+
+/* ── Indicators ── */
+.indicator { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.82rem; border-bottom: 1px solid #1e2130; cursor: pointer; }
+.indicator:hover { background: #1e2130; margin: 0 -8px; padding: 6px 8px; border-radius: 4px; }
+.indicator .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+.indicator .val { color: #4fc3f7; font-weight: 600; }
+.dot-green { background: #4caf50; } .dot-yellow { background: #ff9800; } .dot-red { background: #f44336; }
+
+/* ── Modal ── */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.75); z-index: 100; justify-content: center; align-items: center; }
+.modal.active { display: flex; }
+.modal-inner { background: #1a1d27; border-radius: 12px; padding: 24px; max-width: 900px;
+  width: 92%; max-height: 85vh; overflow-y: auto; border: 1px solid #2a2d37; }
+.modal-inner h3 { margin-bottom: 6px; color: #fff; }
+.modal-inner .mdesc { font-size: 0.8rem; color: #666; margin-bottom: 14px; }
+.close-btn { float: right; cursor: pointer; font-size: 1.3rem; color: #8b95a5; background: none; border: none; }
+.close-btn:hover { color: #fff; }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+table.data th { color: #8b95a5; text-align: left; padding: 6px 8px; border-bottom: 2px solid #2a2d37; }
+table.data td { padding: 6px 8px; border-bottom: 1px solid #1e2130; }
+table.data tr:hover { background: #1e2130; }
+
+/* ── Search ── */
+.search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.search-bar input { flex: 1; background: #252830; border: 1px solid #2a2d37; color: #e0e0e0;
+  padding: 10px 14px; border-radius: 6px; font-size: 0.9rem; }
+.search-bar input:focus { outline: none; border-color: #4fc3f7; }
+.search-bar button, .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.82rem; }
+.btn-primary { background: #4fc3f7; color: #000; font-weight: 600; }
+.btn-primary:hover { background: #29b6f6; }
+.btn-sm { padding: 4px 12px; font-size: 0.75rem; border-radius: 4px; }
+.btn-green { background: #4caf50; color: #fff; } .btn-green:hover { background: #388e3c; }
+.btn-red { background: #f44336; color: #fff; } .btn-red:hover { background: #c62828; }
+.btn-orange { background: #ff9800; color: #fff; }
+.btn-blue { background: #2196f3; color: #fff; }
+
+.quick-btns { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.quick-btns button { background: #252830; color: #8b95a5; border: 1px solid #2a2d37; padding: 6px 14px;
+  border-radius: 16px; cursor: pointer; font-size: 0.8rem; }
+.quick-btns button:hover { border-color: #4fc3f7; color: #4fc3f7; }
+
+.segment-box { font-size: 0.78rem; padding: 8px 10px; margin: 6px 0; background: #151820;
+  border-radius: 4px; border-left: 3px solid #2196f3; }
+.segment-box .seg-meta { color: #666; margin-bottom: 4px; }
+.segment-box .seg-text { color: #ccc; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+
+.fact-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 0.82rem; }
+.fact-s { color: #4fc3f7; } .fact-p { color: #ff9800; } .fact-o { color: #81c784; }
+.fact-conf { color: #666; font-size: 0.7rem; }
+
+.timeline-item { padding: 10px 0; border-bottom: 1px solid #1e2130; font-size: 0.82rem; }
+.timeline-item .t-time { color: #666; font-size: 0.7rem; }
+.timeline-item .t-action { font-weight: 600; }
+.t-approve { color: #4caf50; } .t-reject { color: #f44336; }
+
+/* Review */
+.review-card { background: #1a1d27; border-radius: 8px; padding: 14px; margin-bottom: 10px; border: 1px solid #2a2d37; }
+.review-card .term { font-size: 1rem; font-weight: 600; color: #4fc3f7; }
+.review-card .meta { font-size: 0.78rem; color: #666; margin: 4px 0 8px; }
+.type-badge { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 0.68rem; margin-left: 6px; }
+.type-concept { background: #1b5e20; color: #a5d6a7; } .type-relation { background: #e65100; color: #ffcc80; }
+
+.loading { color: #555; font-style: italic; }
+.empty { color: #555; text-align: center; padding: 20px; }
+.timestamp { font-size: 0.72rem; color: #444; }
 </style>
 </head>
 <body>
 
-<h1>Semantic Knowledge Base — System Dashboard</h1>
+<div class="header">
+  <div>
+    <h1>电信语义知识操作系统</h1>
+    <div class="subtitle">治理驱动、持续演化、来源可溯的知识基础设施</div>
+  </div>
+  <div style="margin-left:auto;" class="timestamp" id="global-ts"></div>
+</div>
 
+<div class="main">
 <div class="tabs">
-  <div class="tab active" onclick="switchTab('monitor')">Monitor</div>
-  <div class="tab" onclick="switchTab('quality')">Ontology Quality</div>
-  <div class="tab" onclick="switchTab('review')">Review Candidates</div>
+  <div class="tab active" onclick="switchTab('overview')">系统总览</div>
+  <div class="tab" onclick="switchTab('explorer')">知识探索</div>
+  <div class="tab" onclick="switchTab('quality')">质量评估</div>
+  <div class="tab" onclick="switchTab('evolution')">知识演化</div>
+  <div class="tab" onclick="switchTab('monitoring')">运行监控</div>
 </div>
 
-<div id="tab-monitor" class="tab-content active">
-
-<div class="cards" id="top-cards"></div>
-
-<div class="grid2">
-  <div class="panel">
-    <h2>Knowledge Quality</h2>
-    <div id="quality-gauges"></div>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 1: Overview -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-overview" class="tab-content active">
+  <div class="panel" style="text-align:center;padding:20px;">
+    <p style="font-size:0.9rem;color:#8b95a5;max-width:700px;margin:0 auto;">
+      面向网络/电信领域的跨厂商语义知识系统。自动爬取标准文档（IETF RFC）和厂商文档，
+      提取结构化知识、归一化术语，维护五层本体模型，所有知识条目均可追溯至原始来源。
+    </p>
   </div>
+
   <div class="panel">
-    <h2>Source Distribution</h2>
-    <canvas id="source-chart"></canvas>
+    <h3>知识处理流水线</h3>
+    <div class="desc">文档经过爬取、清洗、切分、本体对齐、关系抽取、去重后，最终写入图数据库和向量索引。</div>
+    <div class="flow" id="pipeline-flow"></div>
   </div>
-</div>
 
-<div class="grid3">
-  <div class="panel">
-    <h2>Graph Health</h2>
-    <div id="graph-health"></div>
-  </div>
-  <div class="panel">
-    <h2>Ontology Health</h2>
-    <div id="ontology-health"></div>
-  </div>
-  <div class="panel">
-    <h2>Pipeline & Evolution</h2>
-    <div id="pipeline-info"></div>
-  </div>
-</div>
-
-<div class="panel" style="margin-bottom: 20px;">
-  <h2>Trend (last 24h)</h2>
-  <canvas id="trend-chart" height="80"></canvas>
-</div>
-
-<div class="timestamp" id="ts"></div>
-
-</div><!-- end tab-monitor -->
-
-<div id="tab-quality" class="tab-content">
-  <h2>Ontology Quality Assessment <span id="quality-ts" style="font-size:0.7rem;color:#555;margin-left:12px;"></span></h2>
-
-  <!-- Top: radar + overall -->
   <div class="grid2">
     <div class="panel">
-      <h2>Dimension Scores</h2>
-      <canvas id="radar-chart" height="250"></canvas>
+      <h3>来源分布</h3>
+      <div class="desc">知识来自哪里？按来源权威等级分布（S=标准组织, A=厂商, B=技术文章, C=博客论坛）</div>
+      <canvas id="source-chart" height="200"></canvas>
     </div>
     <div class="panel">
-      <h2>Overall Score</h2>
-      <div id="overall-score" style="text-align:center;padding:30px 0;">
-        <div style="font-size:4rem;font-weight:700;color:#4fc3f7;">—</div>
-        <div style="color:#8b95a5;">Auto-refreshing every 5 min...</div>
+      <h3>最近处理的文档</h3>
+      <div class="desc">最新入库的文档列表</div>
+      <div id="recent-docs" style="max-height:250px;overflow-y:auto;"><p class="loading">加载中...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 2: Knowledge Explorer -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-explorer" class="tab-content">
+  <div class="panel">
+    <h3>知识探索</h3>
+    <div class="desc">搜索任意网络术语，查看其本体节点信息、关联知识条目、五层推理链和原始来源文本。</div>
+    <div class="search-bar">
+      <input id="search-input" placeholder="输入术语（如 BGP、OSPF、VXLAN）..." onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="btn btn-primary" onclick="doSearch()">搜索</button>
+    </div>
+    <div class="quick-btns">
+      <span style="color:#666;font-size:0.8rem;line-height:2;">快速体验:</span>
+      <button onclick="searchTerm('BGP')">BGP</button>
+      <button onclick="searchTerm('OSPF')">OSPF</button>
+      <button onclick="searchTerm('VXLAN')">VXLAN</button>
+      <button onclick="searchTerm('MPLS')">MPLS</button>
+      <button onclick="searchTerm('SRv6')">SRv6</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>深度案例 — 传统系统做不到的查询</h3>
+    <div class="desc">图数据库 + 关系数据库联合检索，展示结构化知识的独特价值</div>
+    <div class="quick-btns">
+      <button onclick="loadShowcase('fault_impact')" style="background:#f44336;color:#fff;border-color:#f44336;">故障全链路推演</button>
+      <button onclick="loadShowcase('multi_source')" style="background:#ff9800;color:#fff;border-color:#ff9800;">多源矛盾裁决</button>
+      <button onclick="loadShowcase('dependency_closure')" style="background:#2196f3;color:#fff;border-color:#2196f3;">变更影响面评估</button>
+      <button onclick="loadShowcase('cross_layer_reasoning')" style="background:#4caf50;color:#fff;border-color:#4caf50;">五层推理链还原</button>
+      <button onclick="loadShowcase('knowledge_gap')" style="background:#9c27b0;color:#fff;border-color:#9c27b0;">知识空白发现</button>
+    </div>
+  </div>
+
+  <div id="search-results"></div>
+  <div id="showcase-results"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 3: Quality -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-quality" class="tab-content">
+  <div class="grid2">
+    <div class="panel" style="text-align:center;">
+      <h3>综合质量得分</h3>
+      <div class="desc">5个维度、20+指标的综合评估</div>
+      <div id="overall-score" style="padding:20px 0;">
+        <div style="font-size:3.5rem;font-weight:700;color:#4fc3f7;">--</div>
       </div>
     </div>
-  </div>
-
-  <!-- 5 dimension detail panels -->
-  <div class="grid2" style="margin-top:16px;">
-    <!-- G: Granularity -->
     <div class="panel">
-      <h2>G: Granularity (粒度合理性)</h2>
-      <div id="q-granularity" class="alert-list"><p class="loading">—</p></div>
-    </div>
-    <!-- O: Orthogonality -->
-    <div class="panel">
-      <h2>O: Orthogonality (正交性)</h2>
-      <div id="q-orthogonality" class="alert-list"><p class="loading">—</p></div>
-    </div>
-  </div>
-  <div class="grid3" style="margin-top:12px;">
-    <!-- L: Cross-layer -->
-    <div class="panel">
-      <h2>L: Cross-Layer (层间连通)</h2>
-      <div id="q-cross-layer" class="alert-list"><p class="loading">—</p></div>
-    </div>
-    <!-- D: Discoverability -->
-    <div class="panel">
-      <h2>D: Discoverability (可发现性)</h2>
-      <div id="q-discoverability" class="alert-list"><p class="loading">—</p></div>
-    </div>
-    <!-- S: Structural -->
-    <div class="panel">
-      <h2>S: Structural (结构健康)</h2>
-      <div id="q-structural" class="alert-list"><p class="loading">—</p></div>
+      <h3>维度雷达图</h3>
+      <canvas id="radar-chart" height="220"></canvas>
     </div>
   </div>
 
-  <!-- Issues -->
-  <div class="panel" style="margin-top:12px;">
-    <h2>All Issues (<span id="issue-count">0</span>)</h2>
-    <div id="quality-issues" class="alert-list"><p class="loading">—</p></div>
+  <div class="grid2" id="quality-dims"></div>
+
+  <div class="panel" id="quality-similar-panel">
+    <h3>O5: 语义相似节点对</h3>
+    <div class="desc">可能存在冗余的节点对 — 邻居重合度高、标签共现率高或向量语义相近，建议考虑合并。</div>
+    <div id="q-similar-pairs"><p class="loading">--</p></div>
+  </div>
+
+  <div class="panel">
+    <h3>所有问题 (<span id="issue-count">0</span>)</h3>
+    <div class="desc">本体中检测到的可操作质量问题</div>
+    <div id="quality-issues"><p class="loading">--</p></div>
   </div>
 </div>
 
-<div id="tab-review" class="tab-content">
-  <h2>Candidate Review</h2>
-  <div style="margin-bottom: 12px;">
-    <select id="review-type" onchange="loadReviewList()" style="background:#1a1d27;color:#e0e0e0;border:1px solid #2a2d37;padding:6px;border-radius:4px;">
-      <option value="all">All types</option>
-      <option value="concept">Concepts</option>
-      <option value="relation">Relations</option>
-    </select>
-    <select id="review-status" onchange="loadReviewList()" style="background:#1a1d27;color:#e0e0e0;border:1px solid #2a2d37;padding:6px;border-radius:4px;">
-      <option value="pending_review">Pending Review</option>
-      <option value="discovered">Discovered</option>
-      <option value="all">All Status</option>
-    </select>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 4: Evolution -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-evolution" class="tab-content">
+  <div class="cards" id="evo-cards"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3>候选词来源次数分布</h3>
+      <div class="desc">每个候选词在文档中被发现的次数。只出现 1-2 次的很可能是噪声。</div>
+      <canvas id="cand-dist-chart" height="200"></canvas>
+    </div>
+    <div class="panel">
+      <h3>最近审核记录</h3>
+      <div class="desc">最新的审批/拒绝/合并操作</div>
+      <div id="review-timeline" style="max-height:260px;overflow-y:auto;"><p class="loading">加载中...</p></div>
+    </div>
   </div>
-  <div id="merge-bar" style="display:none;margin-bottom:10px;padding:8px;background:#252830;border-radius:6px;">
-    <span id="merge-count">0</span> selected —
-    <button class="btn" style="background:#ff9800;color:#fff;" onclick="checkSynonymsSelected()">Ask LLM</button>
-    <button class="btn btn-approve" onclick="mergeSelected()">Merge</button>
-    <span id="merge-result" style="margin-left:10px;font-size:0.8rem;color:#8b95a5;"></span>
+
+  <div class="panel">
+    <h3>候选词审核</h3>
+    <div class="desc">将新概念/关系审批入库，拒绝噪声，或合并重复项。</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+      <select id="review-type" onchange="reviewPage=0;loadReviewList()" style="background:#252830;color:#e0e0e0;border:1px solid #2a2d37;padding:6px;border-radius:4px;">
+        <option value="all">全部类型</option><option value="concept">概念</option><option value="relation">关系</option>
+      </select>
+      <select id="review-status" onchange="reviewPage=0;loadReviewList()" style="background:#252830;color:#e0e0e0;border:1px solid #2a2d37;padding:6px;border-radius:4px;">
+        <option value="discovered">已发现</option><option value="pending_review">待审核</option><option value="accepted">已审批</option><option value="rejected">已拒绝</option><option value="all">全部状态</option>
+      </select>
+      <div id="merge-bar" style="display:none;padding:4px 8px;background:#252830;border-radius:6px;align-items:center;gap:6px;">
+        <span id="merge-count">0</span> 已选
+        <button class="btn btn-sm btn-orange" onclick="checkSynonymsSelected()">LLM判断</button>
+        <button class="btn btn-sm btn-green" onclick="mergeSelected()">合并</button>
+        <span id="merge-result" style="font-size:0.75rem;color:#666;"></span>
+      </div>
+    </div>
+    <div id="review-list"><p class="loading">加载中...</p></div>
   </div>
-  <div id="review-list"><p class="loading">Loading...</p></div>
 </div>
 
-<!-- Drilldown modal -->
-<div class="drilldown-modal" id="modal">
-  <div class="drilldown-content">
-    <span class="close-btn" onclick="closeModal()">&times;</span>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 5: Monitoring -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-monitoring" class="tab-content">
+  <div class="cards" id="mon-cards"></div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>知识质量指标</h3>
+      <div id="quality-gauges"></div>
+    </div>
+    <div class="panel">
+      <h3>图数据库健康度</h3>
+      <div id="graph-health"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>趋势（最近24小时）</h3>
+    <canvas id="trend-chart" height="80"></canvas>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Modal -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <button class="close-btn" onclick="closeModal()">&times;</button>
     <h3 id="modal-title"></h3>
+    <div class="mdesc" id="modal-desc"></div>
     <div id="modal-body"></div>
   </div>
 </div>
 
+</div><!-- end main -->
+
 <script>
 const API = '/api/v1/system';
 const SEM = '/api/v1/semantic';
+let sourceChart, trendChart, radarChart, candDistChart;
 
-let currentSnapshot = null;
-let sourceChart = null;
-let trendChart = null;
-
-async function fetchStats() {
-  try {
-    const res = await fetch(`${API}/stats`);
-    const data = await res.json();
-    currentSnapshot = data.snapshot || data;
-    render(currentSnapshot);
-    document.getElementById('ts').textContent = `Last collected: ${data.collected_at || currentSnapshot.timestamp || 'unknown'}`;
-  } catch (e) {
-    document.getElementById('ts').textContent = `Error: ${e.message}`;
-  }
-}
-
-async function fetchHistory() {
-  try {
-    const res = await fetch(`${API}/stats/history?hours=24`);
-    const data = await res.json();
-    renderTrend(data.snapshots || []);
-  } catch (e) { /* ignore */ }
-}
-
-function render(s) {
-  const k = s.knowledge || {};
-  const q = s.quality || {};
-  const gh = s.graph_health || {};
-  const oh = s.ontology_health || {};
-  const pl = s.pipeline || {};
-  const ev = s.evolution || {};
-  const src = s.sources || {};
-
-  // Top cards
-  const docs = k.documents || {};
-  const totalDocs = Object.values(docs).reduce((a, b) => a + b, 0);
-  const facts = k.facts || {};
-  const totalFacts = Object.values(facts).reduce((a, b) => a + b, 0);
-  const segs = k.segments || {};
-  const totalSegs = Object.values(segs).reduce((a, b) => a + b, 0);
-
-  document.getElementById('top-cards').innerHTML = [
-    card(docs.indexed || 0, 'Documents Indexed'),
-    card(totalSegs, 'Segments'),
-    card(totalFacts, 'Facts'),
-    card(k.evidence_total || 0, 'Evidence'),
-    card(k.rst_relations_total || 0, 'RST Relations'),
-    card(k.neo4j_nodes || 0, 'Neo4j Nodes'),
-    card(k.neo4j_relationships || 0, 'Neo4j Rels'),
-  ].join('');
-
-  // Quality gauges
-  document.getElementById('quality-gauges').innerHTML = [
-    gauge('Ontology Coverage', q.ontology_coverage, 'cross_layer_gaps'),
-    gauge('Avg Confidence', q.avg_fact_confidence),
-    gauge('Low Confidence', q.low_confidence_ratio, 'low_confidence_facts', true),
-    gauge('Conflict Ratio', q.conflict_ratio, null, true),
-    gauge('Weak Evidence', q.single_evidence_weak_ratio, 'single_evidence_weak', true),
-    gauge('Dedup Ratio', q.segment_dedup_ratio),
-  ].join('');
-
-  // Graph health
-  document.getElementById('graph-health').innerHTML = `
-    <div class="alert-list">
-      ${alertItem('Isolated Nodes', gh.isolated_node_count, 'isolated_nodes')}
-      ${alertItem('Avg Degree', gh.avg_degree)}
-      ${alertItem('Max Degree', gh.max_degree, 'super_nodes')}
-      ${alertItem('Predicate Usage', `${gh.predicates_used}/${gh.predicates_defined}`, 'unused_predicates')}
-    </div>`;
-
-  // Ontology health
-  document.getElementById('ontology-health').innerHTML = `
-    <div class="alert-list">
-      ${alertItem('Max Inheritance Depth', oh.max_inheritance_depth, 'inheritance_stats')}
-      ${alertItem('Avg Branch Factor', oh.avg_branch_factor)}
-      ${alertItem('Single Child Ratio', pct(oh.single_child_ratio), 'single_child_nodes')}
-      ${alertItem('No-Alias Nodes', oh.no_alias_node_count, 'no_alias_nodes')}
-    </div>`;
-
-  // Pipeline & Evolution
-  const candStatus = (ev.candidates_by_status || {});
-  document.getElementById('pipeline-info').innerHTML = `
-    <div class="alert-list">
-      ${alertItem('Backlog (raw)', pl.backlog, 'backlog_docs')}
-      ${alertItem('Failed', pl.failed_count, 'failed_docs')}
-      ${alertItem('Processed 24h', pl.processed_24h)}
-      ${alertItem('Candidates', Object.values(candStatus).reduce((a,b)=>a+b, 0), 'pending_candidates')}
-    </div>`;
-
-  // Source chart
-  renderSourceChart(src);
-}
-
-function card(value, label) {
-  return `<div class="card"><div class="value">${fmt(value)}</div><div class="label">${label}</div></div>`;
-}
-
-function gauge(label, value, metric, invert) {
-  const v = value || 0;
-  const pctVal = Math.round(v * 100);
-  const color = invert
-    ? (v > 0.15 ? 'red' : v > 0.05 ? 'yellow' : 'green')
-    : (v > 0.6 ? 'green' : v > 0.3 ? 'yellow' : 'red');
-  const click = metric ? `onclick="openDrilldown('${metric}')"` : '';
-  const cursor = metric ? 'style="cursor:pointer"' : '';
-  return `<div class="gauge" ${cursor} ${click}>
-    <span class="gauge-label">${label}</span>
-    <div class="gauge-bar"><div class="gauge-fill ${color}" style="width:${Math.min(pctVal, 100)}%"></div></div>
-    <span class="gauge-value">${pctVal}%</span>
-  </div>`;
-}
-
-function alertItem(label, value, metric) {
-  const click = metric ? `onclick="openDrilldown('${metric}')"` : '';
-  const cls = metric ? 'alert-item' : 'alert-item';
-  const warn = metric ? '<span class="warn"> ▸</span>' : '';
-  return `<div class="${cls}" ${click}>${label}: <strong>${fmt(value)}</strong>${warn}</div>`;
-}
-
-function fmt(v) {
-  if (v === null || v === undefined) return '-';
-  if (typeof v === 'number') return v.toLocaleString();
-  return v;
-}
-function pct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '-'; }
-
-// ── Source chart ──
-function renderSourceChart(src) {
-  const byMethod = src.by_method || {};
-  const ctx = document.getElementById('source-chart');
-  if (sourceChart) sourceChart.destroy();
-  sourceChart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: Object.keys(byMethod),
-      datasets: [{ data: Object.values(byMethod), backgroundColor: ['#4fc3f7', '#ff9800', '#4caf50', '#f44336'] }],
-    },
-    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#aaa' } } } },
-  });
-}
-
-// ── Trend chart ──
-function renderTrend(snapshots) {
-  if (!snapshots.length) return;
-  const labels = snapshots.map(s => {
-    const t = s.collected_at || '';
-    return t.substring(11, 16);
-  });
-  const facts = snapshots.map(s => {
-    const k = (s.snapshot || s).knowledge || {};
-    const f = k.facts || {};
-    return Object.values(f).reduce((a, b) => a + b, 0);
-  });
-  const docs = snapshots.map(s => {
-    const k = (s.snapshot || s).knowledge || {};
-    const d = k.documents || {};
-    return d.indexed || 0;
-  });
-
-  const ctx = document.getElementById('trend-chart');
-  if (trendChart) trendChart.destroy();
-  trendChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'Facts', data: facts, borderColor: '#4fc3f7', tension: 0.3, pointRadius: 1 },
-        { label: 'Docs Indexed', data: docs, borderColor: '#4caf50', tension: 0.3, pointRadius: 1 },
-      ],
-    },
-    options: {
-      responsive: true,
-      scales: { x: { ticks: { color: '#666' } }, y: { ticks: { color: '#666' } } },
-      plugins: { legend: { labels: { color: '#aaa' } } },
-    },
-  });
-}
-
-// ── Drilldown modal ──
-async function openDrilldown(metric) {
-  document.getElementById('modal-title').textContent = metric.replace(/_/g, ' ');
-  document.getElementById('modal-body').innerHTML = '<p class="loading">Loading...</p>';
-  document.getElementById('modal').classList.add('active');
-
-  try {
-    const res = await fetch(`${API}/drilldown/${metric}?limit=30`);
-    const data = await res.json();
-    const result = data.result || data;
-    document.getElementById('modal-body').innerHTML = renderDrilldownResult(result);
-  } catch (e) {
-    document.getElementById('modal-body').innerHTML = `<p>Error: ${e.message}</p>`;
-  }
-}
-
-function closeModal() {
-  document.getElementById('modal').classList.remove('active');
-}
-
-function renderDrilldownResult(result) {
-  if (result.error) return `<p>${result.error}</p>`;
-
-  // Try to find an array to render as table
-  const arrayKey = Object.keys(result).find(k => Array.isArray(result[k]) && result[k].length > 0);
-  if (!arrayKey) return `<pre>${JSON.stringify(result, null, 2)}</pre>`;
-
-  const items = result[arrayKey];
-  const cols = Object.keys(items[0]);
-  const header = cols.map(c => `<th>${c}</th>`).join('');
-  const rows = items.map(item =>
-    '<tr>' + cols.map(c => `<td>${fmt(item[c])}</td>`).join('') + '</tr>'
-  ).join('');
-
-  return `<table><thead><tr>${header}</tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-// Close modal on outside click
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === document.getElementById('modal')) closeModal();
-});
-
-// ── Tabs ──
+/* ── Tabs ── */
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
   document.getElementById(`tab-${name}`).classList.add('active');
-  if (name === 'quality') loadQuality(); // refresh on tab switch
-  if (name === 'review') loadReviewList();
+  if (name === 'quality') loadQuality();
+  if (name === 'evolution') { loadEvoStats(); loadReviewList(); }
+  if (name === 'monitoring') { loadMonitoring(); loadHistory(); }
+  if (name === 'overview') loadOverview();
 }
 
-// ── Review ──
-async function loadReviewList() {
-  const type = document.getElementById('review-type').value;
-  const status = document.getElementById('review-status').value;
-  const container = document.getElementById('review-list');
-  container.innerHTML = '<p class="loading">Loading...</p>';
+/* ── Helpers ── */
+function fmt(v) { if (v==null) return '-'; return typeof v==='number' ? v.toLocaleString() : v; }
+function pct(v) { return v!=null ? (v*100).toFixed(1)+'%' : '-'; }
 
-  try {
-    const res = await fetch(`${API}/review?type=${type}&status=${status}&limit=100`);
-    const data = await res.json();
-    const candidates = data.candidates || [];
+function openModal(title, desc, bodyHtml) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-desc').textContent = desc || '';
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal').classList.add('active');
+}
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id==='modal') closeModal(); });
 
-    if (!candidates.length) {
-      container.innerHTML = '<p style="color:#8b95a5">No candidates found.</p>';
-      return;
-    }
-
-    container.innerHTML = candidates.map(c => {
-      const typeBadge = c.candidate_type === 'relation'
-        ? '<span class="type-badge type-relation">relation</span>'
-        : '<span class="type-badge type-concept">concept</span>';
-      const examples = (c.examples && c.examples.length)
-        ? `<div style="font-size:0.75rem;color:#666;margin-top:4px;">Examples: ${JSON.stringify(c.examples).substring(0, 200)}</div>`
-        : '';
-      return `
-        <div class="review-card" id="card-${c.candidate_id}">
-          <label style="float:right;cursor:pointer;"><input type="checkbox" class="merge-check" value="${c.candidate_id}" onchange="updateMergeBar()"> select</label>
-          <div class="term">${(c.surface_forms && c.surface_forms[0]) || c.normalized_form || '?'}${typeBadge}</div>
-          <div class="meta">
-            Sources: ${c.source_count || 0} · Score: ${(c.composite_score || 0).toFixed(2)}
-            · Status: ${c.review_status} · Since: ${(c.first_seen_at || '').substring(0, 10)}
-          </div>
-          <div class="meta">Surface forms: ${(c.surface_forms || []).join(', ')}</div>
-          ${examples}
-          <div class="review-actions">
-            <button class="btn" style="background:#2196f3;color:#fff;" onclick="showCandidateContext('${c.candidate_id}')">View Sources</button>
-            <button class="btn btn-approve" onclick="approveCandidate('${c.candidate_id}', '${c.candidate_type}', '${c.candidate_parent_id || ''}')">Approve</button>
-            <button class="btn btn-reject" onclick="rejectCandidate('${c.candidate_id}')">Reject</button>
-          </div>
-          <div id="ctx-${c.candidate_id}" style="display:none;margin-top:10px;"></div>
-        </div>`;
-    }).join('');
-  } catch (e) {
-    container.innerHTML = `<p>Error: ${e.message}</p>`;
-  }
+function tableHtml(rows, cols) {
+  if (!rows || !rows.length) return '<p class="empty">暂无数据</p>';
+  if (!cols) cols = Object.keys(rows[0]);
+  let h = '<table class="data"><thead><tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+  h += rows.map(r => '<tr>' + cols.map(c => `<td>${fmt(r[c])}</td>`).join('') + '</tr>').join('');
+  return h + '</tbody></table>';
 }
 
-async function showCandidateContext(id) {
-  const container = document.getElementById(`ctx-${id}`);
-  if (container.style.display === 'block') {
-    container.style.display = 'none';
-    return;
-  }
-  container.innerHTML = '<p class="loading">Loading related documents...</p>';
-  container.style.display = 'block';
-
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 1: Overview                                                        */
+/* ════════════════════════════════════════════════════════════════════════ */
+async function loadOverview() {
+  // Pipeline flow
   try {
-    const res = await fetch(`${API}/review/${id}`);
+    const res = await fetch(`${API}/pipeline_flow`);
+    const d = await res.json();
+    const steps = [
+      { label: '已爬取', value: d.crawled },
+      { label: '文档', value: d.documents },
+      { label: '语义段落', value: d.segments },
+      { label: '标签', value: d.tags },
+      { label: '知识条目', value: d.facts },
+      { label: '证据链', value: d.evidence },
+      { label: '图节点', value: d.neo4j_nodes },
+      { label: '图关系', value: d.neo4j_relationships },
+    ];
+    document.getElementById('pipeline-flow').innerHTML = steps.map((s, i) =>
+      (i > 0 ? '<span class="flow-arrow">&rarr;</span>' : '') +
+      `<div class="flow-step"><div class="f-value">${fmt(s.value)}</div><div class="f-label">${s.label}</div></div>`
+    ).join('');
+  } catch(e) {}
+
+  // Source distribution
+  try {
+    const res = await fetch(`${API}/stats`);
     const data = await res.json();
-    const segments = data.related_segments || [];
-    const totalSegs = data.segment_count || 0;
+    const s = (data.snapshot || data).sources || {};
+    const byRank = s.by_rank || {};
+    const ctx = document.getElementById('source-chart');
+    if (sourceChart) sourceChart.destroy();
+    sourceChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels: Object.keys(byRank), datasets: [{ data: Object.values(byRank),
+        backgroundColor: ['#4caf50','#4fc3f7','#ff9800','#f44336','#9c27b0'] }] },
+      options: { responsive: true, plugins: { legend: { position:'bottom', labels:{color:'#aaa'} } } },
+    });
+    document.getElementById('global-ts').textContent = 'Last: ' + (data.collected_at || '');
+  } catch(e) {}
 
-    if (!segments.length) {
-      container.innerHTML = `<p style="color:#8b95a5;font-size:0.8rem;">No recorded source segments (${totalSegs} total references). Re-run pipeline to populate.</p>`;
-      return;
-    }
-
-    let html = `<div style="font-size:0.8rem;color:#8b95a5;margin-bottom:6px;font-weight:600;">
-      Source segments (${segments.length}/${totalSegs}):</div>`;
-    html += segments.map(s =>
-      `<div style="font-size:0.78rem;padding:6px;margin-bottom:6px;background:#151820;border-radius:4px;border-left:3px solid #2196f3;">
-        <div style="color:#8b95a5;margin-bottom:3px;">[${s.segment_type || '?'}] ${s.section_title || ''} <span style="color:#555;">tokens=${s.token_count || '?'}</span></div>
-        <div style="color:#ccc;white-space:pre-wrap;max-height:250px;overflow-y:auto;">${(s.raw_text || '').substring(0, 800)}${(s.raw_text || '').length > 800 ? '...' : ''}</div>
+  // Recent docs
+  try {
+    const res = await fetch(`${API}/recent_activity?limit=15`);
+    const data = await res.json();
+    const docs = data.documents || [];
+    if (!docs.length) { document.getElementById('recent-docs').innerHTML = '<p class="empty">暂无文档</p>'; return; }
+    document.getElementById('recent-docs').innerHTML = docs.map(d =>
+      `<div style="padding:5px 0;border-bottom:1px solid #1e2130;font-size:0.8rem;">
+        <span style="color:#4fc3f7;">[${d.status}]</span>
+        ${d.title || d.source_doc_id?.substring(0,12) || '?'}
+        <span style="color:#555;font-size:0.7rem;float:right;">${(d.created_at||'').substring(0,16)}</span>
       </div>`
     ).join('');
-    if (totalSegs > segments.length) {
-      html += `<div style="font-size:0.75rem;color:#666;">... and ${totalSegs - segments.length} more segments</div>`;
+  } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 2: Knowledge Explorer                                              */
+/* ════════════════════════════════════════════════════════════════════════ */
+function searchTerm(term) { document.getElementById('search-input').value = term; doSearch(); }
+
+async function doSearch() {
+  const term = document.getElementById('search-input').value.trim();
+  if (!term) return;
+  const container = document.getElementById('search-results');
+  container.innerHTML = '<p class="loading">搜索中...</p>';
+
+  try {
+    // Lookup
+    const lookupRes = await fetch(`${SEM}/lookup?term=${encodeURIComponent(term)}`);
+    const lookupData = await lookupRes.json();
+    const result = lookupData.result || lookupData;
+    const node = result.matched_node || result.node || {};
+    const nodeId = node.node_id || result.node_id;
+
+    let html = '';
+
+    // Node info
+    if (nodeId) {
+      html += `<div class="panel">
+        <h3>本体节点: ${node.canonical_name || nodeId}</h3>
+        <div class="desc">${node.description || '暂无描述'}</div>
+        <div style="font-size:0.8rem;">
+          <strong>节点ID:</strong> ${nodeId} &nbsp;
+          <strong>知识层:</strong> ${node.knowledge_layer || 'concept'} &nbsp;
+          <strong>生命周期:</strong> ${node.lifecycle_state || '?'}
+        </div>
+        ${(result.aliases||[]).length ? `<div style="font-size:0.8rem;margin-top:4px;"><strong>别名:</strong> ${result.aliases.map(a=>typeof a==='string'?a:a.surface_form||a).join(', ')}</div>` : ''}
+      </div>`;
+
+      // Context assemble for rich data
+      try {
+        const ctxRes = await fetch(`${SEM}/context_assemble`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({node_ids: [nodeId], max_segments: 5, max_hops: 2}),
+        });
+        const ctxData = await ctxRes.json();
+        const ctx = ctxData.result || ctxData;
+
+        // Facts
+        const facts = ctx.facts || [];
+        if (facts.length) {
+          html += `<div class="panel"><h3>知识条目 (${facts.length})</h3>
+            <div class="desc">从文档中抽取的结构化三元组（主语、谓语、宾语），每条附带置信度评分</div>`;
+          html += facts.slice(0, 20).map(f =>
+            `<div class="fact-row">
+              <span class="fact-s">${f.subject||''}</span>
+              <span class="fact-p">${f.predicate||''}</span>
+              <span class="fact-o">${f.object||''}</span>
+              <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span>
+            </div>`
+          ).join('');
+          if (facts.length > 20) html += `<div style="color:#666;font-size:0.75rem;margin-top:4px;">... and ${facts.length-20} more</div>`;
+          html += '</div>';
+        }
+
+        // Reasoning chain
+        const chain = ctx.reasoning_chain || [];
+        if (chain.length) {
+          html += `<div class="panel"><h3>五层推理链</h3>
+            <div class="desc">概念 &rarr; 机制 &rarr; 方法 &rarr; 条件 &rarr; 场景</div>`;
+          const layerNames = {concept:'概念',mechanism:'机制',method:'方法',condition:'条件',scenario:'场景'};
+          const layerColors = {concept:'#4fc3f7',mechanism:'#ff9800',method:'#81c784',condition:'#ce93d8',scenario:'#f44336'};
+          for (const item of chain) {
+            const seed = item.seed || '';
+            html += `<div style="padding:4px 0;font-size:0.85rem;font-weight:600;color:#4fc3f7;border-bottom:1px solid #252830;margin-bottom:6px;">
+              [概念] ${seed}</div>`;
+            const layers = item.layers || {};
+            for (const [layerKey, nodes] of Object.entries(layers)) {
+              if (!nodes || !nodes.length) continue;
+              const lname = layerNames[layerKey] || layerKey;
+              const lcolor = layerColors[layerKey] || '#aaa';
+              for (const n of nodes) {
+                html += `<div style="padding:3px 0 3px 16px;font-size:0.82rem;">
+                  <span style="color:${lcolor};font-weight:600;">[${lname}]</span>
+                  <span style="color:#e0e0e0;">${n.name||n.node_id||''}</span>
+                  <span style="color:#666;font-size:0.72rem;margin-left:6px;">${n.relation||''}</span>
+                  ${n.description ? `<div style="color:#555;font-size:0.72rem;padding-left:16px;margin-top:2px;">${n.description.substring(0,120)}</div>` : ''}
+                </div>`;
+              }
+            }
+          }
+          html += '</div>';
+        }
+
+        // Source segments
+        const segs = ctx.segments || [];
+        if (segs.length) {
+          html += `<div class="panel"><h3>来源文本段落 (${segs.length})</h3>
+            <div class="desc">知识被抽取的原始文本片段，可追溯至具体文档</div>`;
+          html += segs.slice(0, 5).map(s =>
+            `<div class="segment-box">
+              <div class="seg-meta">[${s.segment_type||'?'}] ${s.section_title||''} <span style="color:#444">tokens=${s.token_count||'?'}</span></div>
+              <div class="seg-text">${(s.raw_text||'').substring(0,600)}${(s.raw_text||'').length>600?'...':''}</div>
+            </div>`
+          ).join('');
+          html += '</div>';
+        }
+      } catch(e) {
+        html += `<div class="panel"><p style="color:#666">上下文组装不可用: ${e.message}</p></div>`;
+      }
+    } else {
+      html += `<div class="panel"><p class="empty">术语 "${term}" 未在本体中找到。它可能作为候选词存在于待审核池中。</p></div>`;
     }
 
     container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = `<p style="color:#f44336;font-size:0.8rem;">Error: ${e.message}</p>`;
+  } catch(e) {
+    container.innerHTML = `<div class="panel"><p style="color:#f44336">Error: ${e.message}</p></div>`;
   }
 }
 
-function getSelectedIds() {
-  return [...document.querySelectorAll('.merge-check:checked')].map(cb => cb.value);
-}
+/* ── Showcase cases ── */
+async function loadShowcase(caseId) {
+  const container = document.getElementById('showcase-results');
+  document.getElementById('search-results').innerHTML = '';
+  container.innerHTML = '<p class="loading">加载中...</p>';
+  container.scrollIntoView({behavior:'smooth'});
 
-function updateMergeBar() {
-  const ids = getSelectedIds();
-  const bar = document.getElementById('merge-bar');
-  bar.style.display = ids.length >= 2 ? 'block' : 'none';
-  document.getElementById('merge-count').textContent = ids.length;
-  document.getElementById('merge-result').textContent = '';
-}
-
-async function checkSynonymsSelected() {
-  const ids = getSelectedIds();
-  if (ids.length < 2) return;
-  document.getElementById('merge-result').textContent = 'Asking LLM...';
   try {
-    const res = await fetch(`${API}/review/check_synonyms`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({candidate_ids: ids}),
-    });
-    const data = await res.json();
-    if (data.is_synonym !== undefined) {
-      const icon = data.is_synonym ? '🟢 Yes' : '🔴 No';
-      document.getElementById('merge-result').innerHTML =
-        `${icon} — suggested: <strong>${data.suggested_canonical || '?'}</strong> — ${data.reason || ''}`;
-    } else {
-      document.getElementById('merge-result').textContent = data.raw_response || data.error || 'No result';
+    const res = await fetch(`${API}/showcase/${caseId}`);
+    const d = await res.json();
+    if (d.error) { container.innerHTML = `<p style="color:#f44336">${d.error}</p>`; return; }
+    container.innerHTML = renderShowcase(d);
+  } catch(e) { container.innerHTML = `<p style="color:#f44336">Error: ${e.message}</p>`; }
+}
+
+function renderShowcase(d) {
+  let html = `<div class="panel" style="border-left:4px solid var(--blue);">
+    <h3>${d.title}</h3>
+    <div class="desc" style="color:#ff9800;font-weight:600;font-size:0.85rem;margin-bottom:8px;">${d.question}</div>
+    <div class="desc" style="color:#4caf50;">${d.why_unique}</div>
+  </div>`;
+
+  if (d.case === 'fault_impact') {
+    html += `<div class="panel"><h3>受影响的节点 (${(d.affected_nodes||[]).length})</h3>` +
+      tableHtml(d.affected_nodes||[], ['name','layer','relation','predicate']) + '</div>';
+    html += `<div class="panel"><h3>相关知识条目 (${(d.related_facts||[]).length})</h3>` +
+      (d.related_facts||[]).map(f =>
+        `<div class="fact-row"><span class="fact-s">${f.subject}</span>
+         <span class="fact-p">${f.predicate}</span>
+         <span class="fact-o">${f.object}</span>
+         <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span></div>`
+      ).join('') + '</div>';
+    html += renderSegments(d.source_segments, '原文证据 — 排障/故障相关文本');
+  }
+
+  else if (d.case === 'multi_source') {
+    html += `<div class="panel"><h3>检测到的矛盾 (${d.total_conflicts})</h3>`;
+    for (const c of (d.conflicts||[])) {
+      html += `<div class="card" style="margin:10px 0;">
+        <div style="font-size:0.85rem;font-weight:600;color:#fff;margin-bottom:6px;">
+          ${c.subject} — ${c.predicate}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="border-left:3px solid ${c.verdict==='A'?'#4caf50':'#f44336'};padding-left:10px;">
+            <div style="color:${c.verdict==='A'?'#4caf50':'#f44336'};font-weight:600;">
+              说法 A: ${c.claim_a.object} (置信度 ${c.claim_a.confidence.toFixed(2)})
+              ${c.verdict==='A'?' — 采信':''}
+            </div>
+            ${(c.claim_a.evidence||[]).map(e =>
+              `<div class="segment-box"><div class="seg-meta">${e.doc_title||''} [${e.source_rank||'?'}] ${e.extraction_method||''}</div>
+               <div class="seg-text">${e.text_preview||''}</div></div>`
+            ).join('')}
+          </div>
+          <div style="border-left:3px solid ${c.verdict==='B'?'#4caf50':'#f44336'};padding-left:10px;">
+            <div style="color:${c.verdict==='B'?'#4caf50':'#f44336'};font-weight:600;">
+              说法 B: ${c.claim_b.object} (置信度 ${c.claim_b.confidence.toFixed(2)})
+              ${c.verdict==='B'?' — 采信':''}
+            </div>
+            ${(c.claim_b.evidence||[]).map(e =>
+              `<div class="segment-box"><div class="seg-meta">${e.doc_title||''} [${e.source_rank||'?'}] ${e.extraction_method||''}</div>
+               <div class="seg-text">${e.text_preview||''}</div></div>`
+            ).join('')}
+          </div>
+        </div>
+      </div>`;
     }
-  } catch (e) {
-    document.getElementById('merge-result').textContent = `Error: ${e.message}`;
+    html += '</div>';
   }
-}
 
-async function mergeSelected() {
-  const ids = getSelectedIds();
-  if (ids.length < 2) return;
-  if (!confirm(`Merge ${ids.length} candidates into one?`)) return;
-  try {
-    const res = await fetch(`${API}/review/merge`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({candidate_ids: ids}),
-    });
-    const data = await res.json();
-    if (data.status === 'merged') {
-      alert(`Merged into ${data.surface_forms.join(', ')}`);
-      loadReviewList();
-    } else {
-      alert(data.error || 'Merge failed');
+  else if (d.case === 'dependency_closure') {
+    html += `<div class="panel"><h3>${d.target.name} 依赖什么 (${(d.depends_on||[]).length})</h3>` +
+      tableHtml(d.depends_on||[], ['node_id','name','hops','path_types']) + '</div>';
+    html += `<div class="panel"><h3>谁依赖 ${d.target.name} (${(d.depended_by||[]).length})</h3>` +
+      tableHtml(d.depended_by||[], ['node_id','name','layer','hops']) + '</div>';
+    html += renderSegments(d.source_segments, '原文证据 — 依赖关系相关文本');
+  }
+
+  else if (d.case === 'cross_layer_reasoning') {
+    html += `<div class="panel"><h3>完整五层推理链 (${(d.chains||[]).length})</h3>`;
+    const layerColors = {concept:'#4fc3f7',mechanism:'#ff9800',method:'#81c784',condition:'#ce93d8',scenario:'#f44336'};
+    for (const c of (d.chains||[])) {
+      html += `<div class="card" style="margin:8px 0;">
+        <div style="font-size:0.82rem;">
+          <span style="color:${layerColors.concept};font-weight:600;">[概念]</span> ${c.concept}
+          <span style="color:#555;"> — ${c.rel1} &rarr;</span>
+          <span style="color:${layerColors.mechanism};font-weight:600;">[机制]</span> ${c.mechanism}
+          <span style="color:#555;"> — ${c.rel2} &rarr;</span>
+          <span style="color:${layerColors.method};font-weight:600;">[方法]</span> ${c.method}
+          <span style="color:#555;"> — ${c.rel3} &rarr;</span>
+          <span style="color:${layerColors.condition};font-weight:600;">[条件]</span> ${c.condition}
+          <span style="color:#555;"> — ${c.rel4} &rarr;</span>
+          <span style="color:${layerColors.scenario};font-weight:600;">[场景]</span> ${c.scenario}
+        </div>
+        ${c.mech_desc?`<div style="font-size:0.75rem;color:#666;margin-top:4px;">机制: ${c.mech_desc.substring(0,150)}</div>`:''}
+        ${c.method_desc?`<div style="font-size:0.75rem;color:#666;">方法: ${c.method_desc.substring(0,150)}</div>`:''}
+        ${c.cond_desc?`<div style="font-size:0.75rem;color:#666;">条件: ${c.cond_desc.substring(0,150)}</div>`:''}
+        ${c.scenario_desc?`<div style="font-size:0.75rem;color:#666;">场景: ${c.scenario_desc.substring(0,150)}</div>`:''}
+        ${(c.source_segments||[]).map(s =>
+          `<div class="segment-box"><div class="seg-meta">${s.section_title||''}</div>
+           <div class="seg-text">${(s.raw_text||'').substring(0,400)}</div></div>`
+        ).join('')}
+      </div>`;
     }
-  } catch (e) {
-    alert(`Error: ${e.message}`);
+    html += '</div>';
   }
+
+  else if (d.case === 'knowledge_gap') {
+    const cov = d.coverage || {};
+    html += `<div class="panel"><h3>知识覆盖率</h3>
+      <div style="font-size:1.2rem;font-weight:700;color:${cov.coverage_rate>0.5?'#4caf50':'#ff9800'};">
+        ${(cov.coverage_rate*100).toFixed(1)}%
+      </div>
+      <div style="font-size:0.82rem;color:#666;">
+        ${cov.nodes_with_knowledge} / ${cov.total_ontology_nodes} 个本体节点有对应知识
+      </div>
+    </div>`;
+    html += `<div class="panel"><h3>无知识覆盖的节点 (${(d.nodes_without_facts||[]).length})</h3>` +
+      tableHtml(d.nodes_without_facts||[]) + '</div>';
+    html += `<div class="panel"><h3>从未使用的关系类型 (${d.unused_relation_count}/${d.unused_relation_count+(d.coverage?.nodes_with_knowledge||0)})</h3>
+      <div style="font-size:0.82rem;color:#666;display:flex;flex-wrap:wrap;gap:4px;">
+        ${(d.unused_relation_types||[]).map(p => `<span style="background:#252830;padding:2px 8px;border-radius:4px;">${p}</span>`).join('')}
+      </div></div>`;
+  }
+
+  return html;
 }
 
-async function approveCandidate(id, type, suggestedParent) {
-  const reviewer = prompt('Reviewer name:');
-  if (!reviewer) return;
-  let parentId = null;
-  if (type === 'concept') {
-    const defaultParent = suggestedParent || 'IP.L3_ROUTING';
-    parentId = prompt(`Parent node ID (suggested: ${defaultParent}):`, defaultParent);
-    if (parentId === null) return; // cancelled
-    parentId = parentId.trim() || null;
-  }
-
-  const card = document.getElementById(`card-${id}`);
-  card.querySelectorAll('.btn').forEach(b => b.disabled = true);
-
-  try {
-    const res = await fetch(`${API}/review/${id}/approve`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reviewer, parent_node_id: parentId}),
-    });
-    const data = await res.json();
-    if (data.error) {
-      alert(`Error: ${data.error}`);
-    } else {
-      card.style.borderLeft = '3px solid #4caf50';
-      card.querySelector('.meta').textContent = `APPROVED by ${reviewer}` +
-        (data.backfill ? ` — ${data.backfill}` : '');
-      card.querySelector('.review-actions').innerHTML = '<span style="color:#4caf50">✓ Approved</span>';
-    }
-  } catch (e) {
-    alert(`Error: ${e.message}`);
-    card.querySelectorAll('.btn').forEach(b => b.disabled = false);
-  }
+function renderSegments(segments, title) {
+  if (!segments || !segments.length) return '';
+  return `<div class="panel"><h3>${title} (${segments.length})</h3>` +
+    segments.map(s =>
+      `<div class="segment-box">
+        <div class="seg-meta">[${s.segment_type||'?'}] ${s.section_title||''}</div>
+        <div class="seg-text">${(s.raw_text||'')}</div>
+      </div>`
+    ).join('') + '</div>';
 }
 
-async function rejectCandidate(id) {
-  const reviewer = prompt('Reviewer name:');
-  if (!reviewer) return;
-  const note = prompt('Rejection reason:') || '';
-
-  const card = document.getElementById(`card-${id}`);
-  card.querySelectorAll('.btn').forEach(b => b.disabled = true);
-
-  try {
-    const res = await fetch(`${API}/review/${id}/reject`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reviewer, note}),
-    });
-    const data = await res.json();
-    card.style.borderLeft = '3px solid #f44336';
-    card.querySelector('.review-actions').innerHTML = '<span style="color:#f44336">✗ Rejected</span>';
-  } catch (e) {
-    alert(`Error: ${e.message}`);
-    card.querySelectorAll('.btn').forEach(b => b.disabled = false);
-  }
-}
-
-// ── Ontology Quality ──
-let radarChart = null;
-let qualityAutoRefresh = null;
-
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 3: Quality                                                         */
+/* ════════════════════════════════════════════════════════════════════════ */
 async function loadQuality() {
   try {
     const res = await fetch(`${SEM}/ontology_quality`);
     const data = await res.json();
     const q = data.result || data;
     renderQuality(q);
-    document.getElementById('quality-ts').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-  } catch (e) {
-    document.getElementById('quality-issues').innerHTML = `<p>Error: ${e.message}</p>`;
-  }
+  } catch(e) { document.getElementById('quality-issues').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
-
-// Quality auto-refresh handled in Init section (setInterval every 5 min)
 
 function renderQuality(q) {
   const scores = q.scores || {};
   const overall = q.overall_score || 0;
   const issues = q.issues || [];
 
-  // Overall score
-  const color = overall > 0.7 ? '#4caf50' : overall > 0.4 ? '#ff9800' : '#f44336';
+  // Overall
+  const color = overall>0.7?'#4caf50':overall>0.4?'#ff9800':'#f44336';
   document.getElementById('overall-score').innerHTML =
-    `<div style="font-size:4rem;font-weight:700;color:${color};">${(overall * 100).toFixed(0)}%</div>
-     <div style="color:#8b95a5;">${issues.length} issues · auto-refreshing</div>`;
+    `<div style="font-size:3.5rem;font-weight:700;color:${color};">${(overall*100).toFixed(0)}%</div>
+     <div style="color:#8b95a5;font-size:0.85rem;">检测到 ${issues.length} 个问题</div>`;
 
-  // Radar chart
-  const labels = Object.keys(scores).map(k => k.charAt(0).toUpperCase() + k.slice(1));
-  const values = Object.values(scores).map(v => (v * 100));
+  // Radar
+  const labels = Object.keys(scores).map(k=>k.charAt(0).toUpperCase()+k.slice(1));
+  const values = Object.values(scores).map(v=>v*100);
   const ctx = document.getElementById('radar-chart');
   if (radarChart) radarChart.destroy();
   radarChart = new Chart(ctx, {
-    type: 'radar',
-    data: { labels, datasets: [{ label: 'Quality %', data: values,
-      backgroundColor: 'rgba(79,195,247,0.2)', borderColor: '#4fc3f7', pointBackgroundColor: '#4fc3f7' }] },
-    options: { responsive: true,
-      scales: { r: { beginAtZero: true, max: 100, ticks: { color: '#666' }, grid: { color: '#2a2d37' }, pointLabels: { color: '#aaa', font: { size: 11 } } } },
-      plugins: { legend: { display: false } } },
+    type:'radar', data:{ labels, datasets:[{label:'质量 %',data:values,
+      backgroundColor:'rgba(79,195,247,0.15)',borderColor:'#4fc3f7',pointBackgroundColor:'#4fc3f7'}] },
+    options:{ responsive:true, scales:{r:{beginAtZero:true,max:100,ticks:{color:'#666'},grid:{color:'#2a2d37'},pointLabels:{color:'#aaa',font:{size:11}}}},
+      plugins:{legend:{display:false}} },
   });
 
-  // ── Dimension detail panels ──
-  renderGranularity(q.granularity || {});
-  renderOrthogonality(q.orthogonality || {});
-  renderCrossLayer(q.cross_layer || {});
-  renderDiscoverability(q.discoverability || {});
-  renderStructural(q.structural || {});
+  // Dimension cards
+  const dims = [
+    { key:'granularity', title:'G: 粒度合理性', zh:'Granularity', desc:'节点边界是否清晰？有没有超级节点或孤立节点？', data:q.granularity||{},
+      indicators: g => [
+        ind('G1','基尼系数',g.G1_gini,g.G1_gini<=0.8,'度分布不均等度。0=完全均等，1=一个节点占所有连接。',()=>drillModal('super_nodes','度数最高的节点 — 是否存在过度集中？')),
+        ind('G2','超级节点比例',g.G2_super_ratio,g.G2_super_ratio<0.1,'度数超过均值+3倍标准差的节点占比。',()=>drillModal('super_nodes','连接数异常高的节点')),
+        ind('G3','孤立节点比例',g.G3_isolation_ratio,g.G3_isolation_ratio<0.4,'没有任何知识边的节点。',()=>drillModal('isolated_nodes','孤立的本体节点 — 没有关联任何知识条目')),
+        ind('G4','段落平均标签数',g.G4_avg_tags_per_segment,g.G4_avg_tags_per_segment<=8,'每段文本平均挂几个本体标签。>8说明节点边界可能不清晰。'),
+        ind('G5','万金油节点数',(g.G5_ubiquitous_nodes||[]).length,(g.G5_ubiquitous_nodes||[]).length<=2,'出现在>80%段落中的节点 — 定义过于宽泛。'),
+      ]},
+    { key:'orthogonality', title:'O: 正交性', zh:'Orthogonality', desc:'谓语和节点是否独立、不重叠？', data:q.orthogonality||{},
+      indicators: o => [
+        ind('O1','谓语重叠对数',Object.keys(o.O1_overlapping_predicates||{}).length,Object.keys(o.O1_overlapping_predicates||{}).length===0,'共享相同节点对的谓语对（Jaccard>0.5）。',()=>openModal('O1: 重叠谓语','两种谓语被用在相同的节点对上 — 可能是语义冗余',tableHtml(Object.entries(o.O1_overlapping_predicates||{}).map(([k,v])=>({pair:k,jaccard:v}))))),
+        ind('O2','Top3谓语占比',o.O2_top3_predicate_ratio,o.O2_top3_predicate_ratio<0.6,'前3种谓语是否过度集中？>80%说明关系类型设计过于粗放。',()=>openModal('O2: 谓语使用分布','每种谓语（关系类型）在知识条目中被使用的次数和占比',tableHtml(o.O2_predicate_distribution||[])),'%'),
+        ind('O3','集中度异常节点',o.O3_concentrated_nodes,o.O3_concentrated_nodes<=5,'>90%的边只使用一种谓语的节点数。',()=>openModal('O3: 谓语集中度异常节点','这些节点90%以上的边都使用同一种谓语，说明关系类型不够丰富',tableHtml(o.O3_concentrated_nodes_detail||[]))),
+        ind('O4','谓语利用率',o.O4_predicate_utilization,o.O4_predicate_utilization>0.5,'已定义的关系类型中实际被使用的比例。',()=>openModal('O4: 未使用的谓语类型','这些关系类型已在本体中定义但从未出现在任何知识条目中','<div style="font-size:0.82rem;">'+(o.O4_unused_predicates||[]).map(p=>`<div style="padding:3px 0;border-bottom:1px solid #1e2130;">${p}</div>`).join('')+'</div>'),'%'),
+        ind('O5','语义相似节点对',(o.O5_similar_node_pairs||[]).length,(o.O5_similar_node_pairs||[]).length<=3,'语义高度相似的节点对 — 可能是重复定义。',()=>document.getElementById('quality-similar-panel').scrollIntoView({behavior:'smooth'})),
+      ]},
+    { key:'cross_layer', title:'L: 层间连通', zh:'Cross-Layer', desc:'五层本体模型之间是否充分连接？', data:q.cross_layer||{},
+      indicators: l => {
+        const cov = l.L1_coverage || {};
+        const rows = Object.entries(cov).map(([k,v]) =>
+          ind('L1',k,v,v>0.1,`覆盖率: ${k.split('→')[0]}层节点中有多少比例连接到${k.split('→')[1]}层。`,null,'%')
+        );
+        rows.push(ind('L2','直达边(概念→场景)',l.L2_direct_concept_scenario,true,'跳过中间层的直连边数。'));
+        rows.push(ind('L3','完整五层路径数',l.L3_complete_paths,l.L3_complete_paths>0,'从概念到场景的完整五层推理链数量。'));
+        return rows;
+      }},
+    { key:'discoverability', title:'D: 可发现性', zh:'Discoverability', desc:'知识是否能被搜索和别名匹配到？', data:q.discoverability||{},
+      indicators: d => [
+        ind('D1','别名覆盖率',d.D1_alias_coverage,d.D1_alias_coverage>0.5,'至少有一个别名的节点比例。',()=>drillModal('no_alias_nodes','没有别名的节点 — 搜索时很难被发现'),'%'),
+        ind('D3','关系类型利用率',d.D3_relation_utilization,d.D3_relation_utilization>0.5,'已定义关系类型中实际在知识条目中出现的比例。',null,'%'),
+        ind('D4','标签命中率',d.D4_tag_hit_rate,d.D4_tag_hit_rate>0.3,'至少在一个文本段落中被标记的节点比例。',null,'%'),
+      ]},
+  ];
+
+  // Structural is special (fewer indicators)
+  const s = q.structural || {};
+
+  let dimHtml = '';
+  dims.forEach(d => {
+    const indicators = d.indicators(d.data);
+    dimHtml += `<div class="panel">
+      <h3>${d.title} <span style="font-size:0.75rem;color:#666;">(${d.zh})</span></h3>
+      <div class="desc">${d.desc}</div>
+      ${indicators.join('')}
+      <div style="text-align:right;margin-top:6px;font-size:0.8rem;color:#666;">得分: <strong style="color:#4fc3f7;">${((d.data.score||0)*100).toFixed(0)}%</strong></div>
+    </div>`;
+  });
+
+  // Structural
+  dimHtml += `<div class="panel">
+    <h3>S: 结构健康 <span style="font-size:0.75rem;color:#666;">(Structural)</span></h3>
+    <div class="desc">图的连通性、环路检测、路径长度</div>
+    ${ind('S1','已连接节点',s.S1_connected_nodes,true,'至少有一条知识边的节点。',()=>openModal('S1: 度数最高的节点','连接数最多的节点 — 是知识枢纽还是定义过宽？',tableHtml(s.S1_top_degree||[])))}
+    ${ind('S1','断连节点',s.S1_disconnected_nodes,s.S1_disconnected_nodes<50,'没有任何边的节点。',()=>openModal('S1: 断连节点列表','这些节点没有任何知识边，可能需要补充关系或清理',tableHtml(s.S1_disconnected_list||[])))}
+    ${ind('S2','依赖环路',s.S2_dependency_cycles,s.S2_dependency_cycles===0,'循环依赖 — 逻辑错误。',s.S2_dependency_cycles>0?()=>openModal('S2: 环路详情','图中检测到的循环依赖路径','<pre>'+JSON.stringify(s.S2_cycle_detail||[],null,2)+'</pre>'):null)}
+    ${ind('S5','平均最短路径',s.S5_avg_shortest_path,true,'已连接节点对之间的平均跳数。值越小说明知识越紧密。')}
+    <div style="text-align:right;margin-top:6px;font-size:0.8rem;color:#666;">得分: <strong style="color:#4fc3f7;">${((s.score||0)*100).toFixed(0)}%</strong></div>
+  </div>`;
+
+  document.getElementById('quality-dims').innerHTML = dimHtml;
+
+  // Similar pairs
+  const simPairs = (q.orthogonality||{}).O5_similar_node_pairs || [];
+  if (!simPairs.length) {
+    document.getElementById('q-similar-pairs').innerHTML = '<p style="color:#4caf50;font-size:0.82rem;">未检测到高度相似的节点对。</p>';
+  } else {
+    document.getElementById('q-similar-pairs').innerHTML = tableHtml(simPairs.slice(0,20),
+      ['node_a','node_b','neighbor_jaccard','tag_cooccurrence','embedding_cosine','combined_score']);
+  }
 
   // Issues
   document.getElementById('issue-count').textContent = issues.length;
   if (!issues.length) {
-    document.getElementById('quality-issues').innerHTML = '<p style="color:#4caf50">No issues detected!</p>';
-    return;
+    document.getElementById('quality-issues').innerHTML = '<p style="color:#4caf50">未检测到问题!</p>';
+  } else {
+    document.getElementById('quality-issues').innerHTML = issues.map((issue, idx) => {
+      const safeType = (issue.type||'').replace(/'/g,'&#39;');
+      const safeSugg = (issue.suggestion||'').replace(/'/g,'&#39;');
+      return `<div class="indicator" data-issue-idx="${idx}">
+        <span><span class="dot dot-yellow"></span>${issue.type}${issue.value!==undefined?' = '+JSON.stringify(issue.value):''}</span>
+        <span class="val" style="color:#ff9800;">${issue.suggestion||''}</span>
+      </div>`;
+    }).join('');
+    // Bind click events safely (avoids inline quote escaping issues)
+    document.querySelectorAll('[data-issue-idx]').forEach(el => {
+      const idx = parseInt(el.dataset.issueIdx);
+      const issue = issues[idx];
+      el.onclick = () => openModal('问题: '+issue.type, issue.suggestion||'', '<pre>'+JSON.stringify(issue,null,2)+'</pre>');
+    });
   }
-  document.getElementById('quality-issues').innerHTML = issues.map(issue => {
-    const typeColor = issue.type.includes('cycle') ? '#f44336' : '#ff9800';
-    return `<div class="alert-item">
-      <span style="color:${typeColor}">⚠ ${issue.type}</span>
-      ${issue.value !== undefined ? ` — ${typeof issue.value === 'number' ? issue.value.toFixed(4) : JSON.stringify(issue.value)}` : ''}
-      ${issue.pair ? ` — ${JSON.stringify(issue.pair)}` : ''}
-      ${issue.jaccard ? ` (Jaccard: ${issue.jaccard})` : ''}
-      <div style="font-size:0.75rem;color:#666;margin-top:2px;">${issue.suggestion || ''}</div>
+
+  // Bind indicator click handlers (deferred to avoid inline JS escaping issues)
+  document.querySelectorAll('[data-ind-click]').forEach(el => {
+    const idx = parseInt(el.dataset.indClick);
+    if (_indClickHandlers[idx]) el.onclick = _indClickHandlers[idx];
+  });
+}
+
+const _indClickHandlers = [];
+function ind(id, label, value, healthy, tooltip, onclick, unit) {
+  const v = value!=null ? (unit==='%' ? (value*100).toFixed(1)+'%' : (typeof value==='number'?value.toFixed(4):value)) : '-';
+  const dot = healthy ? 'dot-green' : 'dot-yellow';
+  let clickAttr = '';
+  if (onclick) {
+    const idx = _indClickHandlers.length;
+    _indClickHandlers.push(onclick);
+    clickAttr = `data-ind-click="${idx}" style="cursor:pointer"`;
+  }
+  const titleAttr = tooltip && !onclick ? `title="${tooltip.replace(/"/g,'&quot;')}"` : (tooltip ? `title="${tooltip.replace(/"/g,'&quot;')}"` : '');
+  return `<div class="indicator" ${clickAttr} ${titleAttr}>
+    <span><span class="dot ${dot}"></span><strong>${id}</strong> ${label}</span>
+    <span class="val">${v}</span>
+  </div>`;
+}
+
+async function drillModal(metric, desc) {
+  openModal(metric.replace(/_/g,' '), desc||'', '<p class="loading">加载中...</p>');
+  try {
+    const res = await fetch(`${API}/drilldown/${metric}?limit=30`);
+    const data = await res.json();
+    const result = data.result || data;
+    const arrayKey = Object.keys(result).find(k=>Array.isArray(result[k])&&result[k].length>0);
+    document.getElementById('modal-body').innerHTML = arrayKey ? tableHtml(result[arrayKey]) : `<pre>${JSON.stringify(result,null,2)}</pre>`;
+  } catch(e) { document.getElementById('modal-body').innerHTML = `<p>Error: ${e.message}</p>`; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 4: Evolution                                                       */
+/* ════════════════════════════════════════════════════════════════════════ */
+async function loadEvoStats() {
+  try {
+    const [distRes, actRes] = await Promise.all([
+      fetch(`${API}/candidate_distribution`), fetch(`${API}/recent_activity?limit=20`)
+    ]);
+    const dist = await distRes.json();
+    const act = await actRes.json();
+
+    // Cards
+    const byStatus = dist.by_status || {};
+    const byType = dist.by_type || {};
+    const total = Object.values(byStatus).reduce((a,b)=>a+b,0);
+    document.getElementById('evo-cards').innerHTML = [
+      `<div class="card" onclick="filterReview('all','all')"><div class="value">${fmt(total)}</div><div class="label">候选词总数</div></div>`,
+      `<div class="card" onclick="filterReview('all','accepted')"><div class="value">${fmt(byStatus.accepted||0)}</div><div class="label">已审批</div></div>`,
+      `<div class="card" onclick="filterReview('all','discovered')"><div class="value">${fmt(byStatus.discovered||0)}</div><div class="label">待审核</div></div>`,
+      `<div class="card" onclick="filterReview('all','rejected')"><div class="value">${fmt(byStatus.rejected||0)}</div><div class="label">已拒绝</div></div>`,
+      `<div class="card" onclick="filterReview('concept','all')"><div class="value">${fmt(byType.concept||0)}</div><div class="label">概念(含已审批)</div></div>`,
+      `<div class="card" onclick="filterReview('relation','all')"><div class="value">${fmt(byType.relation||0)}</div><div class="label">关系(含已审批)</div></div>`,
+    ].join('');
+
+    // Distribution chart
+    const buckets = dist.distribution || [];
+    const ctx = document.getElementById('cand-dist-chart');
+    if (candDistChart) candDistChart.destroy();
+    candDistChart = new Chart(ctx, {
+      type:'bar', data:{ labels:buckets.map(b=>b.bucket), datasets:[{label:'候选词',
+        data:buckets.map(b=>b.cnt),backgroundColor:'#4fc3f7'}] },
+      options:{ responsive:true, scales:{x:{ticks:{color:'#888'}},y:{ticks:{color:'#888'}}},
+        plugins:{legend:{display:false}} },
+    });
+
+    // Timeline
+    const reviews = act.reviews || [];
+    if (!reviews.length) {
+      document.getElementById('review-timeline').innerHTML = '<p class="empty">暂无审核记录</p>';
+    } else {
+      document.getElementById('review-timeline').innerHTML = reviews.map(r =>
+        `<div class="timeline-item">
+          <span class="t-action ${r.action==='approve'?'t-approve':'t-reject'}">${r.action}</span>
+          ${r.object_type} by ${r.reviewer||'?'}
+          ${r.note?` &mdash; <span style="color:#888">${r.note}</span>`:''}
+          <div class="t-time">${(r.created_at||'').substring(0,19)}</div>
+        </div>`
+      ).join('');
+    }
+  } catch(e) {}
+}
+
+/* ── Review list (shared with Tab 4) ── */
+const REVIEW_PAGE_SIZE = 20;
+let reviewPage = 0;
+let reviewTotal = 0;
+
+function filterReview(type, status) {
+  document.getElementById('review-type').value = type;
+  document.getElementById('review-status').value = status;
+  reviewPage = 0;
+  loadReviewList();
+  document.getElementById('review-list').scrollIntoView({behavior:'smooth'});
+}
+
+async function loadReviewList() {
+  const type = document.getElementById('review-type').value;
+  const status = document.getElementById('review-status').value;
+  const container = document.getElementById('review-list');
+  container.innerHTML = '<p class="loading">加载中...</p>';
+  try {
+    // Fetch larger set for client-side paging
+    const res = await fetch(`${API}/review?type=${type}&status=${status}&limit=500`);
+    const data = await res.json();
+    const allCandidates = data.candidates || [];
+    reviewTotal = allCandidates.length;
+
+    if (!allCandidates.length) { container.innerHTML = '<p class="empty">未找到候选词。</p>'; return; }
+
+    const start = reviewPage * REVIEW_PAGE_SIZE;
+    const end = Math.min(start + REVIEW_PAGE_SIZE, reviewTotal);
+    const pageCandidates = allCandidates.slice(start, end);
+    const totalPages = Math.ceil(reviewTotal / REVIEW_PAGE_SIZE);
+
+    let html = '';
+
+    // Pagination top
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:0.82rem;color:#8b95a5;">
+      <span>共 ${reviewTotal} 条，第 ${reviewPage+1}/${totalPages} 页（每页 ${REVIEW_PAGE_SIZE} 条）</span>
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage=0;loadReviewList()" ${reviewPage===0?'disabled':''}>首页</button>
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage--;loadReviewList()" ${reviewPage===0?'disabled':''}>上一页</button>
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage++;loadReviewList()" ${end>=reviewTotal?'disabled':''}>下一页</button>
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage=${totalPages-1};loadReviewList()" ${end>=reviewTotal?'disabled':''}>末页</button>
+      </div>
     </div>`;
-  }).join('');
+
+    html += pageCandidates.map(c => {
+      const typeBadge = c.candidate_type==='relation'?'<span class="type-badge type-relation">relation</span>':'<span class="type-badge type-concept">concept</span>';
+      const isReadonly = (c.review_status === 'accepted' || c.review_status === 'rejected');
+      const actions = isReadonly
+        ? `<span style="color:${c.review_status==='accepted'?'#4caf50':'#f44336'};font-size:0.8rem;">${c.review_status==='accepted'?'已审批':'已拒绝'}</span>`
+        : `<button class="btn btn-sm btn-blue" onclick="showCandidateContext('${c.candidate_id}')">查看来源</button>
+           <button class="btn btn-sm btn-green" onclick="approveCandidate('${c.candidate_id}','${c.candidate_type}','${c.candidate_parent_id||''}')">审批</button>
+           <button class="btn btn-sm btn-red" onclick="rejectCandidate('${c.candidate_id}')">拒绝</button>`;
+      return `<div class="review-card" id="card-${c.candidate_id}">
+        ${!isReadonly ? `<label style="float:right;cursor:pointer;font-size:0.75rem;"><input type="checkbox" class="merge-check" value="${c.candidate_id}" onchange="updateMergeBar()"> select</label>` : ''}
+        <div class="term">${(c.surface_forms&&c.surface_forms[0])||c.normalized_form||'?'}${typeBadge}</div>
+        <div class="meta">来源数: ${c.source_count||0} &middot; 评分: ${(c.composite_score||0).toFixed(2)} &middot; 状态: ${c.review_status} &middot; 首次发现: ${(c.first_seen_at||'').substring(0,10)}</div>
+        <div class="meta">表面形式: ${(c.surface_forms||[]).join(', ')}</div>
+        <div style="display:flex;gap:6px;margin-top:8px;">${actions}</div>
+        <div id="ctx-${c.candidate_id}" style="display:none;margin-top:8px;"></div>
+      </div>`;
+    }).join('');
+
+    // Pagination bottom
+    if (totalPages > 1) {
+      html += `<div style="display:flex;justify-content:center;gap:4px;margin-top:10px;">
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage--;loadReviewList()" ${reviewPage===0?'disabled':''}>上一页</button>
+        <span style="color:#666;font-size:0.8rem;line-height:2;">第 ${reviewPage+1}/${totalPages} 页</span>
+        <button class="btn btn-sm" style="background:#252830;color:#8b95a5;" onclick="reviewPage++;loadReviewList()" ${end>=reviewTotal?'disabled':''}>下一页</button>
+      </div>`;
+    }
+
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
-function indicatorRow(id, label, value, healthy, unit) {
-  const v = value != null ? (typeof value === 'number' ? value : value) : '—';
-  const display = unit === '%' ? (v * 100).toFixed(1) + '%' : (typeof v === 'number' ? v.toFixed(4) : v);
-  const ok = healthy !== undefined ? healthy : true;
-  const dot = ok ? '🟢' : '🟡';
-  return `<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:0.82rem;">
-    <span>${dot} <strong>${id}</strong> ${label}</span><span style="color:#4fc3f7;">${display}</span></div>`;
+async function showCandidateContext(id) {
+  const container = document.getElementById(`ctx-${id}`);
+  if (container.style.display==='block') { container.style.display='none'; return; }
+  container.innerHTML = '<p class="loading">加载来源文本...</p>';
+  container.style.display = 'block';
+  try {
+    const res = await fetch(`${API}/review/${id}`);
+    const data = await res.json();
+    const segments = data.related_segments || [];
+    const total = data.segment_count || 0;
+    if (!segments.length) { container.innerHTML = `<p style="color:#666;font-size:0.78rem;">暂无来源文本（共 ${total} 条引用）。</p>`; return; }
+    container.innerHTML = `<div style="font-size:0.78rem;color:#666;margin-bottom:4px;font-weight:600;">来源文本 (${segments.length}/${total}):</div>` +
+      segments.map(s => `<div class="segment-box"><div class="seg-meta">[${s.segment_type||'?'}] ${s.section_title||''}</div><div class="seg-text">${(s.raw_text||'').substring(0,600)}</div></div>`).join('');
+  } catch(e) { container.innerHTML = `<p style="color:#f44336;font-size:0.78rem;">Error: ${e.message}</p>`; }
 }
 
-function renderGranularity(g) {
-  const html = [
-    indicatorRow('G1', 'Gini 系数', g.G1_gini, g.G1_gini <= 0.8),
-    indicatorRow('G2', '超级节点比例', g.G2_super_ratio, g.G2_super_ratio < 0.1, '%'),
-    indicatorRow('G3', '孤立节点比例', g.G3_isolation_ratio, g.G3_isolation_ratio < 0.4, '%'),
-    indicatorRow('G4', '段落平均标签数', g.G4_avg_tags_per_segment, g.G4_avg_tags_per_segment <= 8),
-    indicatorRow('G5', '万金油节点', (g.G5_ubiquitous_nodes||[]).length, (g.G5_ubiquitous_nodes||[]).length <= 2),
-    `<div style="text-align:right;margin-top:4px;font-size:0.8rem;color:#8b95a5;">Score: <strong>${((g.score||0)*100).toFixed(0)}%</strong></div>`,
-  ].join('');
-  document.getElementById('q-granularity').innerHTML = html;
+function getSelectedIds() { return [...document.querySelectorAll('.merge-check:checked')].map(cb=>cb.value); }
+function updateMergeBar() {
+  const ids = getSelectedIds();
+  document.getElementById('merge-bar').style.display = ids.length>=2?'flex':'none';
+  document.getElementById('merge-count').textContent = ids.length;
+  document.getElementById('merge-result').textContent = '';
 }
 
-function renderOrthogonality(o) {
-  const overlaps = Object.keys(o.O1_overlapping_predicates || {}).length;
-  const html = [
-    indicatorRow('O1', '谓语重叠对数', overlaps, overlaps === 0),
-    indicatorRow('O2', 'Top3 谓语占比', o.O2_top3_predicate_ratio, o.O2_top3_predicate_ratio < 0.6, '%'),
-    indicatorRow('O3', '集中度异常节点', o.O3_concentrated_nodes, o.O3_concentrated_nodes <= 5),
-    indicatorRow('O4', '谓语利用率', o.O4_predicate_utilization, o.O4_predicate_utilization > 0.5, '%'),
-    `<div style="text-align:right;margin-top:4px;font-size:0.8rem;color:#8b95a5;">Score: <strong>${((o.score||0)*100).toFixed(0)}%</strong></div>`,
-  ].join('');
-  document.getElementById('q-orthogonality').innerHTML = html;
+async function checkSynonymsSelected() {
+  const ids = getSelectedIds(); if (ids.length<2) return;
+  document.getElementById('merge-result').textContent = '检测中...';
+  try {
+    const res = await fetch(`${API}/review/check_synonyms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_ids:ids})});
+    const data = await res.json();
+    if (data.is_synonym!==undefined) {
+      document.getElementById('merge-result').innerHTML = `${data.is_synonym?'Yes':'No'} (${data.method||'?'}) &mdash; ${data.suggested_canonical||''} &mdash; ${data.reason||''}`;
+    } else { document.getElementById('merge-result').textContent = data.error||'无结果'; }
+  } catch(e) { document.getElementById('merge-result').textContent = e.message; }
 }
 
-function renderCrossLayer(l) {
-  const cov = l.L1_coverage || {};
-  const rows = Object.entries(cov).map(([k, v]) => {
-    const pct = (v * 100).toFixed(1);
-    const color = v > 0.3 ? '#4caf50' : v > 0.1 ? '#ff9800' : '#f44336';
-    return `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:0.78rem;">
-      <span>${k}</span><span style="color:${color};font-weight:600;">${pct}%</span></div>`;
-  }).join('');
-  const html = rows +
-    indicatorRow('L2', '短路边数', l.L2_direct_concept_scenario, true) +
-    indicatorRow('L3', '完整路径数', l.L3_complete_paths, l.L3_complete_paths > 0) +
-    `<div style="text-align:right;margin-top:4px;font-size:0.8rem;color:#8b95a5;">Score: <strong>${((l.score||0)*100).toFixed(0)}%</strong></div>`;
-  document.getElementById('q-cross-layer').innerHTML = html;
+async function mergeSelected() {
+  const ids = getSelectedIds(); if (ids.length<2||!confirm(`确定合并 ${ids.length} 个候选词？`)) return;
+  try {
+    const res = await fetch(`${API}/review/merge`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidate_ids:ids})});
+    const data = await res.json();
+    if (data.status==='merged') { alert(`Merged: ${data.surface_forms.join(', ')}`); loadReviewList(); }
+    else alert(data.error||'Failed');
+  } catch(e) { alert(e.message); }
 }
 
-function renderDiscoverability(d) {
-  const html = [
-    indicatorRow('D1', '别名覆盖率', d.D1_alias_coverage, d.D1_alias_coverage > 0.5, '%'),
-    indicatorRow('D3', '关系类型利用率', d.D3_relation_utilization, d.D3_relation_utilization > 0.5, '%'),
-    indicatorRow('D4', '标签命中率', d.D4_tag_hit_rate, d.D4_tag_hit_rate > 0.3, '%'),
-    `<div style="text-align:right;margin-top:4px;font-size:0.8rem;color:#8b95a5;">Score: <strong>${((d.score||0)*100).toFixed(0)}%</strong></div>`,
-  ].join('');
-  document.getElementById('q-discoverability').innerHTML = html;
+async function approveCandidate(id, type, suggestedParent) {
+  const reviewer = prompt('审核人姓名:'); if (!reviewer) return;
+  let parentId = null;
+  if (type==='concept') { parentId = prompt(`父节点ID (建议: ${suggestedParent||'IP.L3_ROUTING'}):`,suggestedParent||'IP.L3_ROUTING'); if (parentId===null) return; }
+  const card = document.getElementById(`card-${id}`);
+  card.querySelectorAll('.btn').forEach(b=>b.disabled=true);
+  try {
+    const res = await fetch(`${API}/review/${id}/approve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer,parent_node_id:parentId})});
+    const data = await res.json();
+    if (data.error) { alert(data.error); card.querySelectorAll('.btn').forEach(b=>b.disabled=false); }
+    else { card.style.borderLeft='3px solid #4caf50'; card.querySelector('.meta').textContent=`已审批 — ${reviewer}`; }
+  } catch(e) { alert(e.message); card.querySelectorAll('.btn').forEach(b=>b.disabled=false); }
 }
 
-function renderStructural(s) {
-  const html = [
-    indicatorRow('S1', '已连接节点', s.S1_connected_nodes, true),
-    indicatorRow('S1', '孤立节点', s.S1_disconnected_nodes, s.S1_disconnected_nodes < 50),
-    indicatorRow('S2', '依赖环', s.S2_dependency_cycles, s.S2_dependency_cycles === 0),
-    indicatorRow('S5', '平均最短路径', s.S5_avg_shortest_path, true),
-    `<div style="text-align:right;margin-top:4px;font-size:0.8rem;color:#8b95a5;">Score: <strong>${((s.score||0)*100).toFixed(0)}%</strong></div>`,
-  ].join('');
-  document.getElementById('q-structural').innerHTML = html;
+async function rejectCandidate(id) {
+  const reviewer = prompt('审核人姓名:'); if (!reviewer) return;
+  const note = prompt('拒绝原因:')||'';
+  const card = document.getElementById(`card-${id}`);
+  card.querySelectorAll('.btn').forEach(b=>b.disabled=true);
+  try {
+    await fetch(`${API}/review/${id}/reject`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reviewer,note})});
+    card.style.borderLeft='3px solid #f44336';
+  } catch(e) { alert(e.message); card.querySelectorAll('.btn').forEach(b=>b.disabled=false); }
 }
 
-// ── Init ──
-fetchStats();
-fetchHistory();
-loadQuality();                       // quality: first load immediately
-setInterval(fetchStats, 60000);      // monitor: every 60s
-setInterval(fetchHistory, 300000);   // trend: every 5min
-setInterval(loadQuality, 300000);    // quality: every 5min
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 5: Monitoring                                                      */
+/* ════════════════════════════════════════════════════════════════════════ */
+async function loadMonitoring() {
+  try {
+    const res = await fetch(`${API}/stats`);
+    const data = await res.json();
+    const s = data.snapshot || data;
+    const k = s.knowledge||{}, q = s.quality||{}, gh = s.graph_health||{};
+    const docs = k.documents||{}, facts = k.facts||{}, segs = k.segments||{};
+    const totalDocs = Object.values(docs).reduce((a,b)=>a+b,0);
+    const totalFacts = Object.values(facts).reduce((a,b)=>a+b,0);
+    const totalSegs = Object.values(segs).reduce((a,b)=>a+b,0);
+
+    document.getElementById('mon-cards').innerHTML = [
+      `<div class="card"><div class="value">${fmt(docs.indexed||0)}</div><div class="label">文档</div></div>`,
+      `<div class="card"><div class="value">${fmt(totalSegs)}</div><div class="label">段落</div></div>`,
+      `<div class="card"><div class="value">${fmt(totalFacts)}</div><div class="label">知识条目</div></div>`,
+      `<div class="card"><div class="value">${fmt(k.evidence_total||0)}</div><div class="label">证据链</div></div>`,
+      `<div class="card"><div class="value">${fmt(k.neo4j_nodes||0)}</div><div class="label">图节点</div></div>`,
+      `<div class="card"><div class="value">${fmt(k.neo4j_relationships||0)}</div><div class="label">图关系</div></div>`,
+    ].join('');
+
+    document.getElementById('quality-gauges').innerHTML = [
+      gauge('本体覆盖率',q.ontology_coverage,false,'cross_layer_gaps'),
+      gauge('平均置信度',q.avg_fact_confidence,false),
+      gauge('冲突率',q.conflict_ratio,true),
+      gauge('弱证据率',q.single_evidence_weak_ratio,true,'single_evidence_weak'),
+    ].join('');
+
+    document.getElementById('graph-health').innerHTML = `
+      <div style="font-size:0.82rem;">
+        ${ghRow('孤立节点',gh.isolated_node_count,'isolated_nodes')}
+        ${ghRow('平均度数',gh.avg_degree)}
+        ${ghRow('最大度数',gh.max_degree,'super_nodes')}
+        ${ghRow('谓语使用',`${gh.predicates_used}/${gh.predicates_defined}`,'unused_predicates')}
+      </div>`;
+  } catch(e) {}
+}
+
+function gauge(label,value,invert,metric) {
+  const v=value||0; const p=Math.round(v*100);
+  const color=invert?(v>0.15?'dot-red':v>0.05?'dot-yellow':'dot-green'):(v>0.6?'dot-green':v>0.3?'dot-yellow':'dot-red');
+  const click=metric?`onclick="drillModal('${metric}','${label}')"style="cursor:pointer"`:'';
+  return `<div class="indicator" ${click}><span><span class="dot ${color}"></span>${label}</span><span class="val">${p}%</span></div>`;
+}
+function ghRow(label,value,metric) {
+  const click=metric?`onclick="drillModal('${metric}','${label}')"style="cursor:pointer"`:'';
+  return `<div class="indicator" ${click}><span>${label}</span><span class="val">${fmt(value)}</span></div>`;
+}
+
+async function loadHistory() {
+  try {
+    const res = await fetch(`${API}/stats/history?hours=24`);
+    const data = await res.json();
+    const snaps = data.snapshots||[];
+    if (!snaps.length) return;
+    const labels = snaps.map(s=>(s.collected_at||'').substring(11,16));
+    const facts = snaps.map(s=>{const k=((s.snapshot||s).knowledge||{}).facts||{};return Object.values(k).reduce((a,b)=>a+b,0);});
+    const docs = snaps.map(s=>((s.snapshot||s).knowledge||{}).documents?.indexed||0);
+    const ctx = document.getElementById('trend-chart');
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(ctx, { type:'line', data:{ labels, datasets:[
+      {label:'知识条目',data:facts,borderColor:'#4fc3f7',tension:0.3,pointRadius:1},
+      {label:'文档数',data:docs,borderColor:'#4caf50',tension:0.3,pointRadius:1},
+    ]}, options:{responsive:true,scales:{x:{ticks:{color:'#666'}},y:{ticks:{color:'#666'}}},plugins:{legend:{labels:{color:'#aaa'}}}} });
+  } catch(e) {}
+}
+
+/* ── Init ── */
+loadOverview();
+setInterval(loadOverview, 120000);
 </script>
 </body>
 </html>

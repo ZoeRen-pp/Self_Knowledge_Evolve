@@ -119,6 +119,26 @@ class AlignStage(Stage):
                 "tagger":          "rule",
             })
 
+        # Embedding fallback: if no canonical tags from exact match, try semantic matching
+        canonical_count = sum(1 for n, c in matched_nodes.items()
+                             if _LAYER_TAG_TYPE.get(
+                                 (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept"),
+                                 "canonical") == "canonical")
+        if canonical_count == 0:
+            for node_id, conf in self._embedding_match(text):
+                if node_id not in matched_nodes:
+                    matched_nodes[node_id] = conf
+                    node = ontology.get_node_dict(node_id)
+                    layer = node.get("knowledge_layer", "concept") if node else "concept"
+                    tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
+                    tags.append({
+                        "tag_type":        tag_type,
+                        "tag_value":       node["canonical_name"] if node else node_id,
+                        "ontology_node_id": node_id,
+                        "confidence":      conf,
+                        "tagger":          "embedding",
+                    })
+
         candidate_terms = self._collect_candidates(
             raw_text, matched_nodes, segment["source_doc_id"], str(segment["segment_id"]),
         )
@@ -172,40 +192,241 @@ class AlignStage(Stage):
 
         return found
 
+    # ── Embedding-based caches (class-level, loaded once) ────────
+
+    _onto_embeddings = None
+    _onto_node_ids = None
+
+    def _ensure_onto_embeddings(self):
+        """Lazily compute and cache ontology node embeddings."""
+        if self.__class__._onto_embeddings is not None:
+            return True
+        from src.config.settings import settings
+        if not getattr(settings, "EMBEDDING_ENABLED", False):
+            return False
+        try:
+            from src.utils.embedding import get_embeddings
+            ontology = self._ontology
+            nodes = [n for n in ontology.get_all_nodes() if n.label]
+            if not nodes:
+                return False
+            texts = [n.label.lower() for n in nodes]
+            vecs = get_embeddings(texts)
+            if vecs is None:
+                return False
+            import numpy as np
+            self.__class__._onto_embeddings = np.array(vecs)
+            self.__class__._onto_node_ids = [n.node_id for n in nodes]
+            log.info("Cached embeddings for %d ontology nodes", len(nodes))
+            return True
+        except Exception as exc:
+            log.debug("Embedding init failed: %s", exc)
+            return False
+
+    def _embedding_match(self, text: str) -> list[tuple[str, float]]:
+        """Semantic fallback: match segment text against ontology node embeddings.
+
+        Only called when exact alias matching yields 0 canonical tags.
+        Returns list of (node_id, confidence) for matches above threshold.
+        """
+        if not self._ensure_onto_embeddings():
+            return []
+        try:
+            from src.utils.embedding import get_embeddings
+            import numpy as np
+            # Encode segment text (truncated for efficiency)
+            vecs = get_embeddings([text[:512]])
+            if not vecs:
+                return []
+            seg_vec = np.array(vecs[0])
+            similarities = np.dot(self.__class__._onto_embeddings, seg_vec)
+            # Top matches above threshold
+            THRESHOLD = 0.80
+            MAX_MATCHES = 3
+            top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES]
+            results = []
+            for idx in top_indices:
+                sim = float(similarities[idx])
+                if sim >= THRESHOLD:
+                    node_id = self.__class__._onto_node_ids[idx]
+                    confidence = round(0.60 + (sim - THRESHOLD) * 2, 2)  # 0.80→0.60, 1.0→1.0
+                    confidence = min(confidence, 0.80)  # cap at 0.80 for embedding matches
+                    results.append((node_id, confidence))
+                    log.debug("  Embedding match: %s (sim=%.3f conf=%.2f)",
+                              node_id, sim, confidence)
+            return results
+        except Exception as exc:
+            log.debug("Embedding match failed: %s", exc)
+            return []
+
     def _collect_candidates(
         self, text: str, matched_nodes: dict, source_doc_id: str, segment_id: str,
     ) -> int:
         """Rule A3: discover terms not in ontology → candidate pool.
 
-        Priority: LLM extraction → regex fallback.
-        Uses normalized_form as dedup key; accumulates source_count.
-        Records segment_id in examples for traceability.
+        LLM extracts AND classifies terms. No regex fallback — when LLM is
+        unavailable, this segment produces zero candidates (quality over quantity).
         """
-        from src.utils.normalize import normalize_term
         ontology = self._ontology
 
-        # Priority 1: LLM — understands context, catches multi-word terms
-        unmatched_terms: list[str] = []
-        if self._llm and hasattr(self._llm, "extract_candidate_terms"):
-            known = [n.label for n in ontology.get_all_nodes() if n.label]
-            llm_candidates = self._llm.extract_candidate_terms(text, known)
-            for item in llm_candidates:
-                term = item.get("term", "").strip()
-                if term and not ontology.lookup_alias(term.lower()):
-                    unmatched_terms.append(term)
-            if unmatched_terms:
-                log.debug("  LLM discovered %d candidate terms", len(unmatched_terms))
+        if not self._llm or not hasattr(self._llm, "extract_candidate_terms"):
+            return 0
 
-        # Priority 2: Regex fallback — CamelCase / uppercase acronyms
-        if not unmatched_terms:
-            regex_matches = re.findall(r"\b([A-Z][A-Za-z0-9\-]{2,}|[A-Z]{2,10})\b", text)
-            unmatched_terms = [
-                c for c in regex_matches
-                if not ontology.lookup_alias(c.lower())
-            ]
+        known = [n.label for n in ontology.get_all_nodes() if n.label]
+        llm_results = self._llm.extract_candidate_terms(text, known)
+        if not llm_results:
+            return 0
 
-        self._upsert_candidates(unmatched_terms, source_doc_id, segment_id)
-        return len(set(unmatched_terms))
+        # Only keep new_concept — discard variant and noise
+        new_concepts = []
+        variant_count = 0
+        noise_count = 0
+        for item in llm_results:
+            classification = item.get("classification", "new_concept")
+            term = item.get("term", "").strip()
+            if not term:
+                continue
+            if classification == "noise":
+                noise_count += 1
+                continue
+            if classification == "variant":
+                variant_count += 1
+                continue
+            # new_concept: verify not already in ontology
+            if ontology.lookup_alias(term.lower()):
+                continue
+            new_concepts.append(term)
+
+        if variant_count or noise_count:
+            log.debug("  LLM classified: %d new, %d variant, %d noise",
+                      len(new_concepts), variant_count, noise_count)
+
+        # Stopword filter (last insurance against LLM misclassification)
+        filtered = self._filter_stopwords(new_concepts)
+
+        # Embedding dedup (if available)
+        filtered = self._embedding_dedup(filtered)
+
+        if filtered:
+            log.debug("  %d candidates after filtering (from %d LLM results)",
+                      len(filtered), len(llm_results))
+            self._upsert_candidates(filtered, source_doc_id, segment_id)
+
+        return len(filtered)
+
+    # ── Candidate filters ──────────────────────────────────────────
+
+    _stopwords: set[str] | None = None
+
+    def _load_stopwords(self) -> set[str]:
+        """Load stopword list from ontology/patterns/candidate_stopwords.yaml."""
+        if self.__class__._stopwords is not None:
+            return self.__class__._stopwords
+        import yaml
+        from pathlib import Path
+        sw_path = Path(__file__).resolve().parents[3] / "ontology" / "patterns" / "candidate_stopwords.yaml"
+        try:
+            data = yaml.safe_load(sw_path.read_text(encoding="utf-8")) or {}
+            self.__class__._stopwords = set(data.get("stopwords", []))
+            log.debug("Loaded %d stopwords", len(self.__class__._stopwords))
+        except FileNotFoundError:
+            log.warning("Stopword file not found: %s", sw_path)
+            self.__class__._stopwords = set()
+        return self.__class__._stopwords
+
+    def _filter_stopwords(self, terms: list[str]) -> list[str]:
+        """Remove obvious non-concept terms via stopword list."""
+        from src.utils.normalize import normalize_term
+        stopwords = self._load_stopwords()
+        if not stopwords:
+            return terms
+        result = []
+        for term in terms:
+            normalized = normalize_term(term)
+            tokens = normalized.split()
+            # Single-token candidate that is a stopword → drop
+            if len(tokens) == 1 and tokens[0] in stopwords:
+                log.debug("  Stopword filtered: %s", term)
+                continue
+            # All tokens are stopwords → drop
+            if all(t in stopwords for t in tokens):
+                log.debug("  All-stopword filtered: %s", term)
+                continue
+            result.append(term)
+        return result
+
+    def _embedding_dedup(self, terms: list[str]) -> list[str]:
+        """Deduplicate candidates against ontology nodes and existing candidates using embeddings.
+
+        Requires EMBEDDING_ENABLED=true. Falls back gracefully (returns terms unchanged) if
+        embedding model is not available.
+        """
+        from src.config.settings import settings
+        if not getattr(settings, "EMBEDDING_ENABLED", False):
+            return terms
+
+        try:
+            from src.utils.embedding import get_embedding_model
+            model = get_embedding_model()
+            if model is None:
+                return terms
+        except Exception:
+            return terms
+
+        ontology = self._ontology
+        store = self._store
+
+        # Build reference texts: ontology node canonical names
+        ref_texts = []
+        ref_labels = []
+        for node in ontology.get_all_nodes():
+            if node.label:
+                ref_texts.append(node.label.lower())
+                ref_labels.append(node.node_id)
+
+        # Add existing candidates (top 500 by source_count)
+        try:
+            rows = store.fetchall(
+                """SELECT normalized_form FROM governance.evolution_candidates
+                   WHERE review_status NOT IN ('rejected')
+                   ORDER BY source_count DESC LIMIT 500"""
+            )
+            existing_candidates = {r["normalized_form"] for r in rows}
+        except Exception:
+            existing_candidates = set()
+
+        for nf in existing_candidates:
+            ref_texts.append(nf)
+            ref_labels.append(f"candidate:{nf}")
+
+        if not ref_texts:
+            return terms
+
+        # Encode references and candidates
+        try:
+            import numpy as np
+            ref_embeddings = model.encode(ref_texts, normalize_embeddings=True)
+            term_texts = [t.lower() for t in terms]
+            term_embeddings = model.encode(term_texts, normalize_embeddings=True)
+        except Exception as exc:
+            log.warning("Embedding dedup failed: %s", exc)
+            return terms
+
+        THRESHOLD = 0.85
+        result = []
+        for i, term in enumerate(terms):
+            similarities = np.dot(ref_embeddings, term_embeddings[i])
+            max_idx = int(np.argmax(similarities))
+            max_sim = float(similarities[max_idx])
+            if max_sim >= THRESHOLD:
+                log.debug("  Embedding dedup: '%s' similar to '%s' (%.3f), skipping",
+                          term, ref_labels[max_idx], max_sim)
+                continue
+            result.append(term)
+
+        if len(result) < len(terms):
+            log.info("  Embedding dedup: %d → %d candidates", len(terms), len(result))
+        return result
 
     def _upsert_candidates(self, terms: list[str], source_doc_id: str, segment_id: str) -> None:
         """Write candidate terms to governance.evolution_candidates.

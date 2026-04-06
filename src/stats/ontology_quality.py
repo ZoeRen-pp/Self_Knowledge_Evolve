@@ -213,14 +213,35 @@ class OntologyQualityCalculator:
             issues.append({"type": "low_utilization", "used": used, "defined": defined,
                            "suggestion": f"Only {used}/{defined} relation types used"})
 
+        # O5: Node semantic similarity (neighborhood overlap + tag co-occurrence)
+        similar_pairs = self._detect_similar_nodes()
+        if len(similar_pairs) > 3:
+            issues.append({
+                "type": "similar_nodes", "count": len(similar_pairs),
+                "suggestion": f"{len(similar_pairs)} node pairs with high semantic similarity — consider merging",
+            })
+
         penalty = min(len(issues) * 0.15, 0.6)
         score = max(0, 1.0 - penalty - (0.2 if top3_ratio > 0.7 else 0))
+
+        # O2 detail: full predicate distribution
+        pred_distribution = [
+            {"predicate": p, "count": c, "ratio": round(c / total_facts, 4)}
+            for p, c in pred_counts.most_common()
+        ]
+
+        # O4 detail: unused predicates
+        unused_predicates = sorted(reg.relation_ids - set(pred_counts.keys()))
 
         return {
             "O1_overlapping_predicates": overlapping,
             "O2_top3_predicate_ratio": round(top3_ratio, 4),
+            "O2_predicate_distribution": pred_distribution,
             "O3_concentrated_nodes": len(concentrated),
+            "O3_concentrated_nodes_detail": concentrated[:30],
             "O4_predicate_utilization": round(utilization, 4),
+            "O4_unused_predicates": unused_predicates,
+            "O5_similar_node_pairs": similar_pairs,
             "score": round(score, 4),
             "issues": issues,
         }
@@ -371,15 +392,46 @@ class OntologyQualityCalculator:
         connected = connected_rows[0]["cnt"] if connected_rows else 0
         disconnected = total - connected
 
+        # S1 detail: list disconnected nodes
+        disconnected_list = []
+        if disconnected > 0:
+            disc_rows = g.read(
+                """MATCH (n:OntologyNode) WHERE n.lifecycle_state='active'
+                   AND NOT (n)-[]-()
+                   RETURN n.node_id AS node_id, n.canonical_name AS name
+                   ORDER BY n.node_id LIMIT 50"""
+            )
+            disconnected_list = [{"node_id": r["node_id"], "name": r["name"]} for r in disc_rows]
+
         # S2: Dependency cycles (check for depends_on/requires cycles)
         cycle_rows = g.read(
             """MATCH path = (a:OntologyNode)-[:DEPENDS_ON*2..5]->(a)
                RETURN count(path) AS cycles LIMIT 1"""
         )
         cycles = cycle_rows[0]["cycles"] if cycle_rows else 0
+        cycle_detail = []
         if cycles > 0:
             issues.append({"type": "dependency_cycle", "count": cycles,
                            "suggestion": "Dependency graph contains cycles — logic error"})
+            try:
+                cycle_detail_rows = g.read(
+                    """MATCH path = (a:OntologyNode)-[:DEPENDS_ON*2..5]->(a)
+                       RETURN [n IN nodes(path) | n.node_id] AS cycle_nodes LIMIT 5"""
+                )
+                cycle_detail = [r["cycle_nodes"] for r in cycle_detail_rows]
+            except Exception:
+                pass
+
+        # S1 detail: top degree nodes
+        top_degree_rows = g.read(
+            """MATCH (n:OntologyNode) WHERE n.lifecycle_state='active'
+               OPTIONAL MATCH (n)-[r WHERE r.predicate IS NOT NULL]-()
+               WITH n, count(r) AS degree
+               RETURN n.node_id AS node_id, n.canonical_name AS name, degree
+               ORDER BY degree DESC LIMIT 15"""
+        )
+        top_degree = [{"node_id": r["node_id"], "name": r["name"], "degree": r["degree"]}
+                      for r in top_degree_rows]
 
         # S3: Average shortest path (sample: pick 10 random connected pairs)
         apl_rows = g.read(
@@ -401,11 +453,132 @@ class OntologyQualityCalculator:
         return {
             "S1_connected_nodes": connected,
             "S1_disconnected_nodes": disconnected,
+            "S1_disconnected_list": disconnected_list,
+            "S1_top_degree": top_degree,
             "S2_dependency_cycles": cycles,
+            "S2_cycle_detail": cycle_detail,
             "S5_avg_shortest_path": round(apl, 2),
             "score": round(score, 4),
             "issues": issues,
         }
+
+    # ── Node Similarity Detection ────────────────────────────────
+
+    def _detect_similar_nodes(self) -> list[dict]:
+        """Detect node pairs with high semantic similarity.
+
+        Three complementary signals:
+        - Neighborhood overlap: Jaccard of connected-neighbor sets in Neo4j
+        - Tag co-occurrence: fraction of segments where both nodes appear
+        - Embedding cosine: semantic similarity of node canonical names
+
+        Weights: 0.35 neighbor + 0.35 tag + 0.30 embedding (degrades to 0.5/0.5 if no embedding).
+        """
+        g = self._graph
+        s = self._store
+
+        # Step 1: Build neighbor sets from Neo4j
+        neighbor_rows = g.read(
+            """MATCH (n:OntologyNode)-[r WHERE r.predicate IS NOT NULL]-(m)
+               WHERE n.lifecycle_state = 'active'
+               RETURN n.node_id AS node, m.node_id AS neighbor"""
+        )
+        neighbors: dict[str, set] = {}
+        for row in neighbor_rows:
+            nid = row["node"]
+            mid = row["neighbor"]
+            if nid and mid:
+                neighbors.setdefault(nid, set()).add(mid)
+
+        # Step 2: Build tag co-occurrence from PG (segment_tags)
+        tag_rows = s.fetchall(
+            """SELECT ontology_node_id, segment_id
+               FROM segment_tags
+               WHERE tag_type = 'canonical' AND ontology_node_id IS NOT NULL"""
+        )
+        node_segments: dict[str, set] = {}
+        for row in tag_rows:
+            nid = row["ontology_node_id"]
+            sid = str(row["segment_id"])
+            node_segments.setdefault(nid, set()).add(sid)
+
+        # Step 3: Build embedding similarity matrix (if available)
+        candidates = set(neighbors.keys()) | set(node_segments.keys())
+        node_list = sorted(candidates)
+        emb_sim = self._compute_node_embeddings(node_list)
+        has_embedding = emb_sim is not None
+
+        # Step 4: Compare all pairs
+        similar: list[dict] = []
+
+        for i, n1 in enumerate(node_list):
+            for n2 in node_list[i + 1:]:
+                j = node_list.index(n2)
+
+                # Neighborhood Jaccard
+                nb1 = neighbors.get(n1, set()) - {n2}
+                nb2 = neighbors.get(n2, set()) - {n1}
+                nb_union = nb1 | nb2
+                nb_jaccard = len(nb1 & nb2) / len(nb_union) if nb_union else 0
+
+                # Tag co-occurrence Jaccard
+                seg1 = node_segments.get(n1, set())
+                seg2 = node_segments.get(n2, set())
+                seg_union = seg1 | seg2
+                tag_jaccard = len(seg1 & seg2) / len(seg_union) if seg_union else 0
+
+                # Embedding cosine
+                if has_embedding:
+                    emb_cos = float(emb_sim[i][j])
+                    combined = 0.35 * nb_jaccard + 0.35 * tag_jaccard + 0.30 * emb_cos
+                else:
+                    emb_cos = 0.0
+                    combined = 0.5 * nb_jaccard + 0.5 * tag_jaccard
+
+                if combined >= 0.3:
+                    entry = {
+                        "node_a": n1,
+                        "node_b": n2,
+                        "neighbor_jaccard": round(nb_jaccard, 4),
+                        "tag_cooccurrence": round(tag_jaccard, 4),
+                        "combined_score": round(combined, 4),
+                    }
+                    if has_embedding:
+                        entry["embedding_cosine"] = round(emb_cos, 4)
+                    similar.append(entry)
+
+        similar.sort(key=lambda x: -x["combined_score"])
+        log.info("Node similarity: %d pairs above threshold (checked %d nodes, embedding=%s)",
+                 len(similar), len(node_list), has_embedding)
+        return similar[:50]
+
+    def _compute_node_embeddings(self, node_ids: list[str]):
+        """Compute pairwise embedding similarity matrix for node canonical names."""
+        from src.config.settings import settings
+        if not getattr(settings, "EMBEDDING_ENABLED", False):
+            return None
+        try:
+            from src.utils.embedding import get_embeddings
+            import numpy as np
+            g = self._graph
+            # Get canonical names for node_ids
+            texts = []
+            for nid in node_ids:
+                rows = g.read(
+                    "MATCH (n {node_id: $nid}) RETURN n.canonical_name AS name",
+                    nid=nid,
+                )
+                name = rows[0]["name"] if rows else nid
+                texts.append((name or nid).lower())
+
+            vecs = get_embeddings(texts)
+            if vecs is None:
+                return None
+            emb = np.array(vecs)
+            return np.dot(emb, emb.T)  # pairwise cosine (already normalized)
+        except Exception as exc:
+            log.debug("Node embedding computation failed: %s", exc)
+            return None
 
     # ── Helpers ───────────────────────────────────────────────────
 
