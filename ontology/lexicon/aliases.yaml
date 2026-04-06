@@ -1465,3 +1465,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.60
+- surface_form: bgp-ls
+  canonical_node_id: IP.BGP_LS
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.61
+- surface_form: BGP-LS
+  canonical_node_id: IP.BGP_LS
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.61

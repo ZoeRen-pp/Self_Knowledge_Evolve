@@ -586,3 +586,17 @@ nodes:
   - peer-group
   - peer_name
   allowed_relations: []
+- id: IP.BGP_LS
+  canonical_name: BGP-LS
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.61
+  description: BGP-LS is a BGP extension that distributes link-state and TE information
+    across network domains for path computation.
+  aliases:
+  - bgp-ls
+  - BGP-LS
+  allowed_relations: []
