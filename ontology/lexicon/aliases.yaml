@@ -979,3 +979,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.48
+- surface_form: IGMP protocol
+  canonical_node_id: IP.IGMP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.49
+- surface_form: IGMP
+  canonical_node_id: IP.IGMP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.49

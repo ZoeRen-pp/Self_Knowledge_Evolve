@@ -1,0 +1,88 @@
+# Minimal stopword list for candidate discovery.
+# Only catches obvious non-concepts that slip through LLM classification.
+# NOT a substitute for intelligent filtering — just a last safety net.
+#
+# Rules:
+# - Single-token candidates matching a stopword are dropped
+# - Multi-token candidates where ALL tokens are stopwords are dropped
+
+stopwords:
+  # Pronouns / determiners
+  - this
+  - that
+  - these
+  - those
+  - which
+  - what
+  - such
+  - each
+  - other
+  - some
+  - most
+  - both
+  - its
+
+  # Common verbs / auxiliaries
+  - has
+  - was
+  - are
+  - can
+  - may
+  - will
+  - must
+  - should
+  - does
+  - did
+  - been
+  - being
+  - have
+  - had
+
+  # Conjunctions / prepositions / adverbs
+  - also
+  - however
+  - therefore
+  - thus
+  - then
+  - only
+  - more
+  - very
+  - well
+
+  # Document structure words
+  - figure
+  - table
+  - section
+  - chapter
+  - page
+  - example
+  - note
+  - see
+  - refer
+  - appendix
+  - reference
+  - abstract
+  - summary
+  - overview
+  - introduction
+  - conclusion
+
+  # Generic non-domain words
+  - new
+  - old
+  - first
+  - second
+  - following
+  - previous
+  - next
+  - current
+  - above
+  - below
+  - same
+  - different
+  - specific
+  - general
+  - common
+  - various
+  - certain
+  - given

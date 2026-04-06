@@ -357,3 +357,17 @@ nodes:
   - segment routing
   - Segment Routing
   allowed_relations: []
+- id: IP.IGMP
+  canonical_name: IGMP
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.49
+  description: IGMP (Internet Group Management Protocol) manages multicast group membership
+    on IP networks, allowing hosts to join and leave groups and routers to track members.
+  aliases:
+  - IGMP protocol
+  - IGMP
+  allowed_relations: []
