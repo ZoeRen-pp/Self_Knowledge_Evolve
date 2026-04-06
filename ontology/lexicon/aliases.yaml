@@ -1435,3 +1435,33 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.59
+- surface_form: peer group
+  canonical_node_id: IP.PEER_GROUP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.60
+- surface_form: peer-group-name
+  canonical_node_id: IP.PEER_GROUP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.60
+- surface_form: peer_group_name
+  canonical_node_id: IP.PEER_GROUP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.60
+- surface_form: peer-group
+  canonical_node_id: IP.PEER_GROUP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.60
+- surface_form: peer_name
+  canonical_node_id: IP.PEER_GROUP
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.60

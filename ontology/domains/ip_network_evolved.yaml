@@ -569,3 +569,20 @@ nodes:
   - TCP-AO
   - tcp-ao
   allowed_relations: []
+- id: IP.PEER_GROUP
+  canonical_name: peer group
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.60
+  description: A BGP peer group is a template for configuring multiple neighbors with
+    shared settings, where individual neighbor configurations override group defaults.
+  aliases:
+  - peer group
+  - peer-group-name
+  - peer_group_name
+  - peer-group
+  - peer_name
+  allowed_relations: []
