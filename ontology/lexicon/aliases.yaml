@@ -1231,3 +1231,27 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.53
+- surface_form: NVE nodes
+  canonical_node_id: IP.NVE
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.54
+- surface_form: NVE
+  canonical_node_id: IP.NVE
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.54
+- surface_form: nves
+  canonical_node_id: IP.NVE
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.54
+- surface_form: nve
+  canonical_node_id: IP.NVE
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.54

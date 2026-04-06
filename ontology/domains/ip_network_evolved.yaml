@@ -460,3 +460,20 @@ nodes:
   - multi-homed host
   - multihomed sites
   allowed_relations: []
+- id: IP.NVE
+  canonical_name: NVE
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.54
+  description: An NVE (Network Virtualization Edge) is a network entity that implements
+    the data-plane functions for network virtualization, enabling the creation and
+    management of virtual networks over a shared physical infrastructure.
+  aliases:
+  - NVE nodes
+  - NVE
+  - nves
+  - nve
+  allowed_relations: []
