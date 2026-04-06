@@ -510,3 +510,24 @@ nodes:
   - ingress-replicated
   - ingress replication
   allowed_relations: []
+- id: IP.PATH_MTU_DISCOVERY
+  canonical_name: Path MTU Discovery
+  display_name_zh: ''
+  parent_id: IP.TUNNEL
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.57
+  description: Path MTU Discovery (PMTUD) is a technique used to determine the maximum
+    transmission unit (MTU) size on the network path between two IP hosts to avoid
+    packet fragmentation.
+  aliases:
+  - Path MTU Discovery
+  - path mtu discovery
+  - path mtu discovery process
+  - packetization layer path mtu discovery
+  - tunnel path mtu discovery
+  - Path MTU discovery
+  - path-mtu-discovery
+  - path MTU discovery
+  allowed_relations: []

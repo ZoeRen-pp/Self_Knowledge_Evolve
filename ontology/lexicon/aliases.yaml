@@ -1309,3 +1309,51 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.56
+- surface_form: Path MTU Discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: path mtu discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: path mtu discovery process
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: packetization layer path mtu discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: tunnel path mtu discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: Path MTU discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: path-mtu-discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
+- surface_form: path MTU discovery
+  canonical_node_id: IP.PATH_MTU_DISCOVERY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.57
