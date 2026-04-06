@@ -498,3 +498,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.45
+- id: signaled_in
+  category: evolved
+  description: 'Discovered relation: signaled_in'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.46
