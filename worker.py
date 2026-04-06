@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import sys
@@ -399,13 +400,32 @@ def _crawler_thread(app, stop_event: threading.Event) -> None:
 # ── Thread: Pipeline ─────────────────────────────────────────────────────────
 
 def _pipeline_thread(app, stop_event: threading.Event) -> None:
-    """Continuously process raw documents through the pipeline."""
+    """Continuously process raw documents through the pipeline.
+
+    LLM availability is a hard requirement: if LLM cannot be reached the
+    thread pauses and retries every 2 minutes until it recovers.
+    """
     thread_name = "pipeline"
     log.info("[%s] Thread started", thread_name)
+
+    from src.utils.llm_extract import LLMExtractor
+
+    _LLM_RETRY_SECS = 120  # pause duration when LLM is down
 
     idle_count = 0
     try:
         while not stop_event.is_set():
+
+            # ── Hard LLM check before each batch ─────────────────────────────
+            if not LLMExtractor().ping(timeout=10.0):
+                log.warning(
+                    "[%s] LLM not available — pipeline paused. "
+                    "Retrying in %ds. Fix LLM_API_KEY / LLM_BASE_URL to resume.",
+                    thread_name, _LLM_RETRY_SECS,
+                )
+                stop_event.wait(_LLM_RETRY_SECS)
+                continue
+
             try:
                 rows = app.store.fetchall(
                     """SELECT source_doc_id FROM documents
@@ -420,6 +440,13 @@ def _pipeline_thread(app, stop_event: threading.Event) -> None:
                     idle_count = 0
                     for doc_id in doc_ids:
                         if stop_event.is_set():
+                            break
+                        # Re-check LLM between docs in case it just went down
+                        if not LLMExtractor().ping(timeout=10.0):
+                            log.warning(
+                                "[%s] LLM went down mid-batch — pausing pipeline.",
+                                thread_name,
+                            )
                             break
                         ctx = PipelineContext(source_doc_id=doc_id)
                         try:
@@ -451,19 +478,35 @@ def _pipeline_thread(app, stop_event: threading.Event) -> None:
 
 # ── Thread: Stats / Monitoring ───────────────────────────────────────────────
 
+def _next_3am_cst() -> float:
+    """Return seconds until the next 03:00 China Standard Time (UTC+8)."""
+    cst = datetime.timezone(datetime.timedelta(hours=8))
+    now = datetime.datetime.now(tz=cst)
+    target = now.replace(hour=3, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += datetime.timedelta(days=1)
+    return (target - now).total_seconds()
+
+
 def _maintenance_thread(app, stop_event: threading.Event) -> None:
-    """Periodic ontology maintenance: embedding dedup, LLM classification, cleanup."""
+    """Ontology maintenance: runs once daily at 03:00 CST (Shanghai time)."""
     thread_name = "maintenance"
     log.info("[%s] Thread started", thread_name)
 
-    interval_hours = getattr(settings, "ONTOLOGY_MAINTENANCE_INTERVAL_HOURS", 24)
-    interval_secs = interval_hours * 3600
-
-    # Wait 5 minutes after startup before first run (let pipeline populate data first)
-    stop_event.wait(300)
-
     try:
         while not stop_event.is_set():
+            secs = _next_3am_cst()
+            cst = datetime.timezone(datetime.timedelta(hours=8))
+            run_at = datetime.datetime.now(tz=cst) + datetime.timedelta(seconds=secs)
+            log.info(
+                "[%s] Next run at %s CST (in %.1fh)",
+                thread_name, run_at.strftime("%Y-%m-%d 03:00"), secs / 3600,
+            )
+            stop_event.wait(secs)
+            if stop_event.is_set():
+                break
+
+            log.info("[%s] Starting scheduled maintenance cycle (03:00 CST)", thread_name)
             try:
                 from src.governance.maintenance import OntologyMaintenance
                 maint = OntologyMaintenance(
@@ -473,8 +516,6 @@ def _maintenance_thread(app, stop_event: threading.Event) -> None:
                 log.info("[%s] Cycle complete: %s", thread_name, stats.get("final", {}))
             except Exception as exc:
                 log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
-
-            stop_event.wait(interval_secs)
     finally:
         log.info("[%s] Thread stopped", thread_name)
 
@@ -510,6 +551,16 @@ def main() -> None:
     setup_logging(settings.LOG_LEVEL)
     if not startup_health_check():
         raise SystemExit("Startup health check failed.")
+
+    # LLM is required for pipeline — fail fast if not reachable
+    from src.utils.llm_extract import LLMExtractor
+    log.info("Checking LLM connectivity...")
+    if not LLMExtractor().ping():
+        raise SystemExit(
+            "LLM is not available. "
+            "Fix LLM_API_KEY / LLM_BASE_URL in .env and restart."
+        )
+    log.info("LLM connectivity: ok")
 
     app = get_app()
     crawler_store = app.crawler_store or app.store
