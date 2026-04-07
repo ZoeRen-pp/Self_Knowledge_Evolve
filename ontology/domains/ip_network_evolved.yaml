@@ -662,3 +662,20 @@ nodes:
   - autonomous systems
   - autonomous system
   allowed_relations: []
+- id: IP.FEC
+  canonical_name: fec
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.65
+  description: A forwarding equivalence class (FEC) is a group of packets that are
+    forwarded in the same manner by a router, typically based on a common destination
+    address prefix.
+  aliases:
+  - FECs
+  - fec
+  - fecs
+  - FEC
+  allowed_relations: []

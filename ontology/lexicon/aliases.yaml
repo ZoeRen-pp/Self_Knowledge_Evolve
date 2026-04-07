@@ -1633,3 +1633,27 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.64
+- surface_form: FECs
+  canonical_node_id: IP.FEC
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.65
+- surface_form: fec
+  canonical_node_id: IP.FEC
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.65
+- surface_form: fecs
+  canonical_node_id: IP.FEC
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.65
+- surface_form: FEC
+  canonical_node_id: IP.FEC
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.65
