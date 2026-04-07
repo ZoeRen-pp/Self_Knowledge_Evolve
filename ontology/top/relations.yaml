@@ -538,3 +538,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.69
+- id: receive
+  category: evolved
+  description: 'Discovered relation: receive'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.70
