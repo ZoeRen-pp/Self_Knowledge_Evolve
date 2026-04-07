@@ -1675,3 +1675,15 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.66
+- surface_form: nat64
+  canonical_node_id: IP.NAT64
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.71
+- surface_form: NAT64
+  canonical_node_id: IP.NAT64
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.71

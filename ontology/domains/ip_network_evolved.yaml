@@ -695,3 +695,18 @@ nodes:
   - LSR
   - lsr
   allowed_relations: []
+- id: IP.NAT64
+  canonical_name: nat64
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.71
+  description: NAT64 is a stateful translation mechanism that enables IPv6-only clients
+    to communicate with IPv4-only servers by mapping IPv6 addresses to IPv4 addresses
+    and translating packet headers.
+  aliases:
+  - nat64
+  - NAT64
+  allowed_relations: []
