@@ -522,3 +522,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.67
+- id: send
+  category: evolved
+  description: 'Discovered relation: send'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.68
