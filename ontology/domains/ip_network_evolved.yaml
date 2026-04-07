@@ -647,3 +647,18 @@ nodes:
   - control plane functions
   - control plane attacks
   allowed_relations: []
+- id: IP.AUTONOMOUS_SYSTEMS
+  canonical_name: autonomous systems
+  display_name_zh: ''
+  parent_id: IP.DNS
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.64
+  description: Autonomous systems are distinct networks under a single administrative
+    domain, identified by a unique number and exchanging routing information via BGP.
+  aliases:
+  - Autonomous Systems
+  - autonomous systems
+  - autonomous system
+  allowed_relations: []
