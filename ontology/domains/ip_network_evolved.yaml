@@ -679,3 +679,19 @@ nodes:
   - fecs
   - FEC
   allowed_relations: []
+- id: IP.LSR
+  canonical_name: LSR
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.66
+  description: A Label Switch Router (LSR) is a network device that forwards data
+    packets based on short path labels rather than long network addresses, typically
+    within an MPLS framework.
+  aliases:
+  - LSRs
+  - LSR
+  - lsr
+  allowed_relations: []

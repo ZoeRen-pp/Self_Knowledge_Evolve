@@ -1657,3 +1657,21 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.65
+- surface_form: LSRs
+  canonical_node_id: IP.LSR
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.66
+- surface_form: LSR
+  canonical_node_id: IP.LSR
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.66
+- surface_form: lsr
+  canonical_node_id: IP.LSR
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.66
