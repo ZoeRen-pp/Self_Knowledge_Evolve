@@ -1687,3 +1687,27 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.71
+- surface_form: clos network topology
+  canonical_node_id: IP.CLOS_TOPOLOGY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.74
+- surface_form: clos networks
+  canonical_node_id: IP.CLOS_TOPOLOGY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.74
+- surface_form: clos topology
+  canonical_node_id: IP.CLOS_TOPOLOGY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.74
+- surface_form: Clos topology
+  canonical_node_id: IP.CLOS_TOPOLOGY
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.74

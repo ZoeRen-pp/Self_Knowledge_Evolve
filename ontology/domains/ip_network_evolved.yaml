@@ -710,3 +710,18 @@ nodes:
   - nat64
   - NAT64
   allowed_relations: []
+- id: IP.CLOS_TOPOLOGY
+  canonical_name: clos topology
+  display_name_zh: ''
+  parent_id: IP.VPN_OVERLAY
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.74
+  description: ''
+  aliases:
+  - clos network topology
+  - clos networks
+  - clos topology
+  - Clos topology
+  allowed_relations: []
