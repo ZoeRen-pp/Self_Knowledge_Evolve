@@ -741,3 +741,17 @@ nodes:
   - PIM-SM
   - pim-sm
   allowed_relations: []
+- id: IP.RPKI
+  canonical_name: rpki
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.76
+  description: ''
+  aliases:
+  - rpki database
+  - RPKI
+  - rpki
+  allowed_relations: []
