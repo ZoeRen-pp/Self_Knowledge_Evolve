@@ -546,3 +546,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.70
+- id: describe
+  category: evolved
+  description: 'Discovered relation: describe'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.72
