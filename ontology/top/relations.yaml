@@ -554,3 +554,11 @@ relations:
   symmetric: false
   transitive: false
   version_introduced: v0.1.72
+- id: originate
+  category: evolved
+  description: 'Discovered relation: originate'
+  domain_hint: any
+  range_hint: any
+  symmetric: false
+  transitive: false
+  version_introduced: v0.1.73
