@@ -1711,3 +1711,33 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.74
+- surface_form: pim-sm protocol
+  canonical_node_id: IP.PIM_SM
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.75
+- surface_form: PIM
+  canonical_node_id: IP.PIM_SM
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.75
+- surface_form: pim
+  canonical_node_id: IP.PIM_SM
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.75
+- surface_form: PIM-SM
+  canonical_node_id: IP.PIM_SM
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.75
+- surface_form: pim-sm
+  canonical_node_id: IP.PIM_SM
+  alias_type: evolved
+  language: en
+  confidence: 0.9
+  version_introduced: v0.1.75

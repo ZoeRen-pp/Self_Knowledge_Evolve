@@ -725,3 +725,19 @@ nodes:
   - clos topology
   - Clos topology
   allowed_relations: []
+- id: IP.PIM_SM
+  canonical_name: PIM-SM
+  display_name_zh: ''
+  parent_id: IP.L3_ROUTING
+  knowledge_layer: concept
+  maturity_level: evolved
+  lifecycle_state: active
+  version_introduced: v0.1.75
+  description: ''
+  aliases:
+  - pim-sm protocol
+  - PIM
+  - pim
+  - PIM-SM
+  - pim-sm
+  allowed_relations: []
