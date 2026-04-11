@@ -242,6 +242,14 @@ class ExtractStage(Stage):
         canonical_nodes = segment.get("canonical_nodes") or []
         candidate_ids = [n for n in canonical_nodes if n]
 
+        # Always include mechanism/method/condition/scenario nodes so LLM
+        # can extract cross-layer relationships, not just concept-level facts
+        multi_layer_ids = [
+            nid for nid in ontology.all_node_ids()
+            if nid.startswith(("MECH.", "METHOD.", "COND.", "SCENE."))
+        ]
+        candidate_ids = list(set(candidate_ids + multi_layer_ids))
+
         if len(candidate_ids) < 5:
             candidate_ids = ontology.all_node_ids()[:100]
 
@@ -255,6 +263,11 @@ class ExtractStage(Stage):
             obj = triple.get("object", "")
             if not subj or not pred or not obj or subj == obj:
                 continue
+            # Normalize subject/object: try alias → node_id mapping
+            subj = ontology.resolve_alias(subj) or subj
+            obj = ontology.resolve_alias(obj) or obj
+            # Normalize predicate: lowercase, strip, underscores
+            pred = pred.strip().lower().replace(" ", "_").replace("-", "_")
             if not ontology.is_valid_relation(pred):
                 # Unknown predicate → candidate relation pool
                 self._record_relation_candidate(

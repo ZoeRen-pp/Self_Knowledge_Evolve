@@ -102,6 +102,7 @@ class Settings(BaseSettings):
 
     WORKER_CRAWL_LIMIT: int = 10
     WORKER_PIPELINE_LIMIT: int = 10
+    WORKER_PIPELINE_WORKERS: int = 4
     WORKER_SLEEP_SECS: int = 30
 
 

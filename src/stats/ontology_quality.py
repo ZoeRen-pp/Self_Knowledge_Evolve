@@ -372,38 +372,33 @@ class OntologyQualityCalculator:
 
     # ── S: Structural Health ──────────────────────────────────────
 
+    # Neo4j label for each ontology layer
+    _LAYER_LABELS = {
+        "concept": "OntologyNode",
+        "mechanism": "MechanismNode",
+        "method": "MethodNode",
+        "condition": "ConditionRuleNode",
+        "scenario": "ScenarioPatternNode",
+    }
+
     def _structural(self) -> dict:
         g = self._graph
         issues = []
 
-        # S1: Connected components (approximate: remove top-5 hubs, count groups)
-        # Neo4j community edition doesn't have GDS, so approximate with BFS
-        # Just report basic stats
-        total_rows = g.read(
-            "MATCH (n:OntologyNode) WHERE n.lifecycle_state='active' RETURN count(n) AS cnt"
-        )
-        total = total_rows[0]["cnt"] if total_rows else 0
+        # ── Per-layer connectivity metrics ───────────────────────────
+        layer_connectivity = {}
+        for layer_name, label in self._LAYER_LABELS.items():
+            lm = self._layer_connectivity(g, label, layer_name)
+            layer_connectivity[layer_name] = lm
+            for iss in lm.get("issues", []):
+                issues.append(iss)
 
-        connected_rows = g.read(
-            """MATCH (n:OntologyNode)-[r WHERE r.predicate IS NOT NULL]-()
-               WHERE n.lifecycle_state='active'
-               RETURN count(DISTINCT n) AS cnt"""
-        )
-        connected = connected_rows[0]["cnt"] if connected_rows else 0
-        disconnected = total - connected
+        # ── Global graph (all layers combined) ───────────────────────
+        global_metrics = self._layer_connectivity(g, None, "global")
+        for iss in global_metrics.get("issues", []):
+            issues.append(iss)
 
-        # S1 detail: list disconnected nodes
-        disconnected_list = []
-        if disconnected > 0:
-            disc_rows = g.read(
-                """MATCH (n:OntologyNode) WHERE n.lifecycle_state='active'
-                   AND NOT (n)-[]-()
-                   RETURN n.node_id AS node_id, n.canonical_name AS name
-                   ORDER BY n.node_id LIMIT 50"""
-            )
-            disconnected_list = [{"node_id": r["node_id"], "name": r["name"]} for r in disc_rows]
-
-        # S2: Dependency cycles (check for depends_on/requires cycles)
+        # ── S2: Dependency cycles ────────────────────────────────────
         cycle_rows = g.read(
             """MATCH path = (a:OntologyNode)-[:DEPENDS_ON*2..5]->(a)
                RETURN count(path) AS cycles LIMIT 1"""
@@ -422,9 +417,11 @@ class OntologyQualityCalculator:
             except Exception:
                 pass
 
-        # S1 detail: top degree nodes
+        # ── Top degree nodes ─────────────────────────────────────────
         top_degree_rows = g.read(
-            """MATCH (n:OntologyNode) WHERE n.lifecycle_state='active'
+            """MATCH (n) WHERE n.lifecycle_state='active'
+               AND (n:OntologyNode OR n:MechanismNode OR n:MethodNode
+                    OR n:ConditionRuleNode OR n:ScenarioPatternNode)
                OPTIONAL MATCH (n)-[r WHERE r.predicate IS NOT NULL]-()
                WITH n, count(r) AS degree
                RETURN n.node_id AS node_id, n.canonical_name AS name, degree
@@ -433,34 +430,247 @@ class OntologyQualityCalculator:
         top_degree = [{"node_id": r["node_id"], "name": r["name"], "degree": r["degree"]}
                       for r in top_degree_rows]
 
-        # S3: Average shortest path (sample: pick 10 random connected pairs)
-        apl_rows = g.read(
-            """MATCH (a:OntologyNode)-[r WHERE r.predicate IS NOT NULL]-(b:OntologyNode)
-               WHERE a.lifecycle_state='active' AND b.lifecycle_state='active' AND a <> b
-               WITH a, b LIMIT 50
-               MATCH p = shortestPath((a)-[*..6]-(b))
-               RETURN avg(length(p)) AS apl"""
-        )
-        apl = float(apl_rows[0]["apl"] or 0) if apl_rows else 0
-
-        score = 0.8  # start healthy
+        # ── Score ────────────────────────────────────────────────────
+        score = 0.8
         if cycles > 0:
             score -= 0.3
-        if disconnected / max(total, 1) > 0.4:
+        global_lcc = global_metrics.get("lcc_ratio", 0)
+        if global_lcc < 0.5:
+            score -= 0.2
+        elif global_metrics.get("disconnected_nodes", 0) / max(global_metrics.get("total_nodes", 1), 1) > 0.4:
             score -= 0.2
         score = max(0, round(score, 4))
 
         return {
-            "S1_connected_nodes": connected,
-            "S1_disconnected_nodes": disconnected,
-            "S1_disconnected_list": disconnected_list,
+            "layer_connectivity": layer_connectivity,
+            "global_connectivity": global_metrics,
             "S1_top_degree": top_degree,
             "S2_dependency_cycles": cycles,
             "S2_cycle_detail": cycle_detail,
-            "S5_avg_shortest_path": round(apl, 2),
             "score": round(score, 4),
             "issues": issues,
         }
+
+    def _layer_connectivity(self, g, label: str | None, layer_name: str) -> dict:
+        """Compute 4 connectivity metrics for one layer (or all layers if label=None).
+
+        Returns: lcc_ratio, avg_reachability, density, fiedler_value + diagnostics.
+        """
+        if label is not None:
+            node_match = f"(n:{label})"
+            edge_match = f"(a:{label})-[r WHERE r.predicate IS NOT NULL]-(b:{label})"
+            dir_edge_match = f"(a:{label})-[r WHERE r.predicate IS NOT NULL]->(b)"
+        else:
+            all_labels = "|".join(self._LAYER_LABELS.values())
+            node_match = f"(n:{all_labels})"
+            edge_match = (
+                "(a)-[r WHERE r.predicate IS NOT NULL]-(b) "
+                "WHERE (a:OntologyNode OR a:MechanismNode OR a:MethodNode "
+                "OR a:ConditionRuleNode OR a:ScenarioPatternNode) "
+                "AND (b:OntologyNode OR b:MechanismNode OR b:MethodNode "
+                "OR b:ConditionRuleNode OR b:ScenarioPatternNode)"
+            )
+            dir_edge_match = (
+                "(a)-[r WHERE r.predicate IS NOT NULL]->(b) "
+                "WHERE (a:OntologyNode OR a:MechanismNode OR a:MethodNode "
+                "OR a:ConditionRuleNode OR a:ScenarioPatternNode) "
+                "AND a.lifecycle_state='active'"
+            )
+
+        # Load nodes
+        node_rows = g.read(
+            f"MATCH {node_match} WHERE n.lifecycle_state='active' RETURN n.node_id AS nid"
+        )
+        all_ids = [r["nid"] for r in node_rows if r["nid"]]
+        total = len(all_ids)
+
+        if total < 2:
+            return {"total_nodes": total, "lcc_ratio": 1.0 if total == 1 else 0,
+                    "avg_reachability": 1.0 if total == 1 else 0,
+                    "density": 0, "fiedler_value": None, "issues": []}
+
+        # Load undirected adjacency (within this layer/scope)
+        if label is not None:
+            edge_rows = g.read(
+                f"""MATCH {edge_match}
+                    WHERE a.lifecycle_state='active' AND b.lifecycle_state='active'
+                    RETURN DISTINCT a.node_id AS src, b.node_id AS dst"""
+            )
+        else:
+            edge_rows = g.read(
+                f"""MATCH {edge_match}
+                    AND a.lifecycle_state='active' AND b.lifecycle_state='active'
+                    RETURN DISTINCT a.node_id AS src, b.node_id AS dst"""
+            )
+        id_set = set(all_ids)
+        adj: dict[str, set[str]] = {nid: set() for nid in all_ids}
+        for row in edge_rows:
+            s, d = row["src"], row["dst"]
+            if s in id_set and d in id_set:
+                adj[s].add(d)
+                adj[d].add(s)
+
+        # 1) LCC ratio
+        components = self._find_connected_components(all_ids, adj)
+        comp_sizes = sorted((len(c) for c in components), reverse=True)
+        lcc_size = comp_sizes[0] if comp_sizes else 0
+        lcc_ratio = lcc_size / total
+
+        # 2) Average reachability
+        avg_reach = self._avg_reachability(all_ids, adj)
+
+        # 3) Density (directed edges / V*(V-1))
+        if label is not None:
+            dir_rows = g.read(
+                f"""MATCH {dir_edge_match}
+                    WHERE a.lifecycle_state='active'
+                    RETURN count(r) AS cnt"""
+            )
+        else:
+            dir_rows = g.read(
+                f"MATCH {dir_edge_match} RETURN count(r) AS cnt"
+            )
+        edge_count = dir_rows[0]["cnt"] if dir_rows else 0
+        density = edge_count / (total * (total - 1))
+
+        # 4) Fiedler value
+        fiedler = self._fiedler_value(all_ids, adj)
+
+        # Issues
+        layer_issues = []
+        if lcc_ratio < 0.5:
+            layer_issues.append({
+                "type": "fragmented_layer", "layer": layer_name,
+                "lcc_ratio": round(lcc_ratio, 4), "components": len(components),
+                "suggestion": f"{layer_name}: largest component covers <50% of layer nodes",
+            })
+        if fiedler is not None and fiedler < 0.01 and lcc_ratio > 0.5:
+            layer_issues.append({
+                "type": "low_algebraic_connectivity", "layer": layer_name,
+                "fiedler": round(fiedler, 6),
+                "suggestion": f"{layer_name}: near-zero Fiedler value; layer barely connected",
+            })
+
+        result = {
+            "total_nodes": total,
+            "lcc_size": lcc_size,
+            "lcc_ratio": round(lcc_ratio, 4),
+            "num_components": len(components),
+            "component_sizes": comp_sizes[:10],
+            "avg_reachability": round(avg_reach, 4),
+            "density": round(density, 6),
+            "edge_count": edge_count,
+            "issues": layer_issues,
+        }
+        if fiedler is not None:
+            result["fiedler_value"] = round(fiedler, 6)
+        return result
+
+    # ── Connectivity helpers ─────────────────────────────────────
+
+    @staticmethod
+    def _find_connected_components(node_ids: list[str],
+                                   adj: dict[str, set[str]]) -> list[set[str]]:
+        """BFS-based connected component discovery."""
+        visited: set[str] = set()
+        components: list[set[str]] = []
+        for nid in node_ids:
+            if nid in visited:
+                continue
+            component: set[str] = set()
+            queue = [nid]
+            while queue:
+                current = queue.pop()
+                if current in visited:
+                    continue
+                visited.add(current)
+                component.add(current)
+                for neighbor in adj.get(current, ()):
+                    if neighbor not in visited:
+                        queue.append(neighbor)
+            components.append(component)
+        return components
+
+    @staticmethod
+    def _avg_reachability(node_ids: list[str], adj: dict[str, set[str]]) -> float:
+        """Average fraction of graph reachable from each node via BFS.
+
+        Samples 80 nodes when graph > 200 to keep runtime bounded.
+        """
+        n = len(node_ids)
+        if n <= 1:
+            return 1.0
+
+        import random
+        sample = node_ids if n <= 200 else random.sample(node_ids, 80)
+        reach_sum = 0.0
+
+        for start in sample:
+            visited: set[str] = set()
+            queue = [start]
+            while queue:
+                cur = queue.pop()
+                if cur in visited:
+                    continue
+                visited.add(cur)
+                for nb in adj.get(cur, ()):
+                    if nb not in visited:
+                        queue.append(nb)
+            reach_sum += (len(visited) - 1) / (n - 1)
+
+        return reach_sum / len(sample)
+
+    @staticmethod
+    def _fiedler_value(node_ids: list[str], adj: dict[str, set[str]]):
+        """Algebraic connectivity: 2nd smallest eigenvalue of graph Laplacian.
+
+        Returns None if numpy unavailable or graph < 3 nodes.
+        Uses sparse eigsh (scipy) when > 300 nodes; dense eigvalsh otherwise.
+        """
+        n = len(node_ids)
+        if n < 3:
+            return None
+        try:
+            import numpy as np
+        except ImportError:
+            log.debug("numpy unavailable, skipping Fiedler value")
+            return None
+
+        idx = {nid: i for i, nid in enumerate(node_ids)}
+
+        if n <= 300:
+            laplacian = np.zeros((n, n), dtype=np.float64)
+            for nid, neighbors in adj.items():
+                i = idx.get(nid)
+                if i is None:
+                    continue
+                laplacian[i, i] = len(neighbors)
+                for nb in neighbors:
+                    j = idx.get(nb)
+                    if j is not None:
+                        laplacian[i, j] = -1.0
+            eigenvalues = np.linalg.eigvalsh(laplacian)
+            return float(eigenvalues[1]) if len(eigenvalues) > 1 else 0.0
+        else:
+            try:
+                from scipy.sparse import lil_matrix
+                from scipy.sparse.linalg import eigsh
+            except ImportError:
+                log.debug("scipy unavailable, skipping Fiedler value for large graph")
+                return None
+            lap = lil_matrix((n, n), dtype=np.float64)
+            for nid, neighbors in adj.items():
+                i = idx.get(nid)
+                if i is None:
+                    continue
+                lap[i, i] = len(neighbors)
+                for nb in neighbors:
+                    j = idx.get(nb)
+                    if j is not None:
+                        lap[i, j] = -1.0
+            eigenvalues = eigsh(lap.tocsr(), k=2, which="SM", return_eigenvectors=False)
+            eigenvalues.sort()
+            return float(eigenvalues[1]) if len(eigenvalues) > 1 else 0.0
 
     # ── Node Similarity Detection ────────────────────────────────
 

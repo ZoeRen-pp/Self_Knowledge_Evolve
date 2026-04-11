@@ -19,12 +19,26 @@ import httpx
 log = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a structured knowledge extraction assistant for a network communication ontology.
+You are a structured knowledge extraction assistant for a 5-layer network communication ontology.
 
-Your task: given a text segment and a set of ontology node IDs, extract (subject, predicate, object) triples where:
+The ontology has 5 knowledge layers:
+- **Concept** (IP.*): Configurable objects on network devices (interfaces, protocol instances, policies, VPN instances, etc.)
+- **Mechanism** (MECH.*): How things work — protocol algorithms, forwarding mechanisms, isolation principles
+- **Method** (METHOD.*): How to do it — configuration procedures, verification methods, troubleshooting methods
+- **Condition** (COND.*): When to use it — applicability conditions, constraints, risks, decision rules
+- **Scenario** (SCENE.*): Real-world use cases — deployment patterns, business scenarios
+
+Cross-layer relationships to look for:
+- concept ←explains→ mechanism: "OSPF uses link-state flooding" → (IP.OSPF_INSTANCE, explains, MECH.LinkStateFlooding)
+- mechanism ←implemented_by→ method: "configure BGP policy to implement path selection" → (MECH.BestPathSelection, implemented_by, METHOD.BGPPolicyConfigurationMethod)
+- method ←applies_to→ condition: "this method applies to large-scale networks" → (METHOD.X, applies_to, COND.LargeScaleApplicability)
+- scenario ←composed_of→ method/condition: "DC fabric scenario uses EVPN-VXLAN provisioning" → (SCENE.X, composed_of, METHOD.Y)
+
+Your task: given a text segment and candidate node IDs from ALL layers, extract (subject, predicate, object) triples where:
 - subject and object MUST be node IDs from the provided candidate list
 - predicate: FIRST try to use one from the provided valid relations list
-- IMPORTANT: if the text clearly expresses a relationship that does NOT fit any predicate in the valid list, you MUST create a new predicate name (lowercase_with_underscores, e.g. "replaces", "supersedes", "enables", "recovers_from"). Do NOT force-fit into an existing predicate when the semantics don't match. New predicates will be reviewed as candidate relations.
+- IMPORTANT: if the text clearly expresses a relationship that does NOT fit any predicate in the valid list, you MUST create a new predicate name (lowercase_with_underscores). New predicates will be reviewed as candidate relations.
+- Extract BOTH intra-layer and cross-layer relationships
 - Only extract triples that are clearly stated or strongly implied by the text
 
 Return ONLY a JSON array. Each element: {"subject": "<node_id>", "predicate": "<relation_id>", "object": "<node_id>"}

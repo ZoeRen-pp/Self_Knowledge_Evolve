@@ -10,8 +10,14 @@ _CHINESE_TO_ASCII = {
 }
 
 
-def normalize_text(text: str) -> str:
-    """Normalize text: full-width→half-width, punctuation, whitespace, lowercase."""
+def normalize_text(text: str, preserve_paragraphs: bool = False) -> str:
+    """Normalize text: full-width→half-width, punctuation, whitespace, lowercase.
+
+    Args:
+        preserve_paragraphs: If True, keep paragraph boundaries (\\n\\n) intact
+            while collapsing inline whitespace. This produces better segmentation
+            in Stage 2 because paragraph boundaries are natural semantic breaks.
+    """
     if not text:
         return ""
     # NFKC: full-width → half-width, composed forms
@@ -19,8 +25,16 @@ def normalize_text(text: str) -> str:
     # Chinese punctuation → ASCII
     for ch, asc in _CHINESE_TO_ASCII.items():
         text = text.replace(ch, asc)
-    # Collapse all whitespace (including \t \r \n) to single space
-    text = re.sub(r'\s+', ' ', text)
+    if preserve_paragraphs:
+        # Normalize paragraph breaks: 2+ newlines → exactly \n\n
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        # Within each paragraph, collapse inline whitespace (but keep \n\n)
+        lines = text.split('\n\n')
+        lines = [re.sub(r'[ \t]+', ' ', para).strip() for para in lines]
+        text = '\n\n'.join(para for para in lines if para)
+    else:
+        # Collapse all whitespace to single space (original behavior)
+        text = re.sub(r'\s+', ' ', text)
     text = text.strip().lower()
     return text
 

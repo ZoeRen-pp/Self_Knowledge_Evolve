@@ -295,7 +295,7 @@ class SegmentStage(Stage):
         tc = token_count(text)
         seg_type = self._classify_semantic_role(text)
 
-        if tc < 30:
+        if tc < 15:
             return []
 
         conf = self._estimate_confidence(text, tc, seg_type)
@@ -308,7 +308,7 @@ class SegmentStage(Stage):
         results = []
         for sub in sub_texts:
             sub_tc = token_count(sub)
-            if sub_tc < 30:
+            if sub_tc < 15:
                 continue
             sub_type = self._classify_semantic_role(sub)
             sub_conf = self._estimate_confidence(sub, sub_tc, sub_type)
@@ -342,16 +342,31 @@ class SegmentStage(Stage):
                 result.extend(self._split_by_sentences(para, target_tokens=512))
         return result
 
-    @staticmethod
-    def _split_by_sentences(text: str, target_tokens: int = 512) -> list[str]:
-        """Split text by sentence boundaries, greedy merge short sentences.
+    # Discourse markers that signal a topic shift — force split before these
+    _DISCOURSE_MARKERS = re.compile(
+        r"^(?:however|therefore|in contrast|furthermore|on the other hand"
+        r"|as a result|in conclusion|for example|note that|importantly"
+        r"|conversely|similarly|moreover|nevertheless|in addition"
+        r"|in summary|consequently|meanwhile|alternatively)\b",
+        re.I,
+    )
+
+    @classmethod
+    def _split_by_sentences(cls, text: str, target_tokens: int = 512) -> list[str]:
+        """Split text by sentence boundaries with discourse-marker awareness.
+
+        Forces a chunk break:
+          - When accumulated tokens exceed target_tokens
+          - At paragraph boundaries (\\n\\n)
+          - Before discourse markers signaling a topic shift
 
         Falls back to sliding window if sentences are still too long.
         """
-        # Split on sentence-ending punctuation followed by space or newline
-        sentences = re.split(r"(?<=[.!?])\s+", text)
+        # Split on sentence-ending punctuation followed by space/newline,
+        # OR on paragraph boundaries (\n\n)
+        sentences = re.split(r"(?<=[.!?])\s+|\n\n+", text)
+        sentences = [s.strip() for s in sentences if s.strip()]
         if len(sentences) <= 1:
-            # No sentence boundaries — fall back to sliding window
             return sliding_window_split(text, window=target_tokens, overlap=64)
 
         chunks: list[str] = []
@@ -361,14 +376,16 @@ class SegmentStage(Stage):
         for sent in sentences:
             sent_tc = token_count(sent)
             if sent_tc > target_tokens:
-                # Single sentence too long — flush current, then window-split this sentence
                 if current:
                     chunks.append(" ".join(current))
                     current, current_tc = [], 0
                 chunks.extend(sliding_window_split(sent, window=target_tokens, overlap=64))
                 continue
 
-            if current_tc + sent_tc > target_tokens and current:
+            # Force break before discourse markers (topic shift signal)
+            is_topic_shift = bool(cls._DISCOURSE_MARKERS.match(sent))
+
+            if current and (current_tc + sent_tc > target_tokens or is_topic_shift):
                 chunks.append(" ".join(current))
                 current, current_tc = [], 0
 

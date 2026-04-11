@@ -131,7 +131,7 @@ class Spider:
         tasks = self._store.fetchall(
             """
             SELECT ct.id, ct.url, ct.site_key, ct.priority, ct.task_type,
-                   sr.rate_limit_rps, sr.extra_headers
+                   sr.rate_limit_rps, sr.extra_headers, sr.source_rank
             FROM crawl_tasks ct
             JOIN source_registry sr ON ct.site_key = sr.site_key
             WHERE ct.status = 'pending' AND sr.crawl_enabled = true

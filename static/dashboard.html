@@ -88,6 +88,19 @@ table.data tr:hover { background: #1e2130; }
   border-radius: 16px; cursor: pointer; font-size: 0.8rem; }
 .quick-btns button:hover { border-color: #4fc3f7; color: #4fc3f7; }
 
+/* ── Rich Tooltip ── */
+.tip-wrap { position: relative; }
+.tip-box { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #252830; border: 1px solid #4fc3f7; border-radius: 8px; padding: 10px 14px;
+  min-width: 280px; max-width: 420px; z-index: 200; font-size: 0.78rem; color: #ccc;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5); pointer-events: none; white-space: normal; line-height: 1.5; }
+.tip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: #4fc3f7; }
+.tip-box .tip-title { font-weight: 700; color: #4fc3f7; margin-bottom: 4px; font-size: 0.82rem; }
+.tip-box .tip-formula { background: #1a1d27; padding: 5px 8px; border-radius: 4px; margin-top: 6px;
+  font-family: 'Consolas','Courier New',monospace; color: #ff9800; font-size: 0.76rem; }
+.indicator:hover .tip-box, th:hover .tip-box { display: block; }
+
 .segment-box { font-size: 0.78rem; padding: 8px 10px; margin: 6px 0; background: #151820;
   border-radius: 4px; border-left: 3px solid #2196f3; }
 .segment-box .seg-meta { color: #666; margin-bottom: 4px; }
@@ -696,35 +709,35 @@ function renderQuality(q) {
   const dims = [
     { key:'granularity', title:'G: 粒度合理性', zh:'Granularity', desc:'节点边界是否清晰？有没有超级节点或孤立节点？', data:q.granularity||{},
       indicators: g => [
-        ind('G1','基尼系数',g.G1_gini,g.G1_gini<=0.8,'度分布不均等度。0=完全均等，1=一个节点占所有连接。',()=>drillModal('super_nodes','度数最高的节点 — 是否存在过度集中？')),
-        ind('G2','超级节点比例',g.G2_super_ratio,g.G2_super_ratio<0.1,'度数超过均值+3倍标准差的节点占比。',()=>drillModal('super_nodes','连接数异常高的节点')),
-        ind('G3','孤立节点比例',g.G3_isolation_ratio,g.G3_isolation_ratio<0.4,'没有任何知识边的节点。',()=>drillModal('isolated_nodes','孤立的本体节点 — 没有关联任何知识条目')),
-        ind('G4','段落平均标签数',g.G4_avg_tags_per_segment,g.G4_avg_tags_per_segment<=8,'每段文本平均挂几个本体标签。>8说明节点边界可能不清晰。'),
-        ind('G5','万金油节点数',(g.G5_ubiquitous_nodes||[]).length,(g.G5_ubiquitous_nodes||[]).length<=2,'出现在>80%段落中的节点 — 定义过于宽泛。'),
+        ind('G1','基尼系数',g.G1_gini,g.G1_gini<=0.8,{desc:'衡量节点度数分布的不均等程度。0 = 完全均等，1 = 一个节点占所有连接。',formula:'Gini = \u03a3(2i - n - 1) \u00d7 d_i / (n \u00d7 \u03a3d_i)',threshold:'\u2705 \u2264 0.8 | \u26a0 > 0.8 需拆分超级节点'},()=>drillModal('super_nodes','度数最高的节点 — 是否存在过度集中？')),
+        ind('G2','超级节点比例',g.G2_super_ratio,g.G2_super_ratio<0.1,{desc:'度数超过均值 + 3 倍标准差阈值的节点占比。超级节点过多说明本体粒度不均。',formula:'threshold = mean(degree) + 3\u00d7std(degree)\nratio = count(d > threshold) / N',threshold:'\u2705 < 10% | \u26a0 \u2265 10%'},()=>drillModal('super_nodes','连接数异常高的节点')),
+        ind('G3','孤立节点比例',g.G3_isolation_ratio,g.G3_isolation_ratio<0.4,{desc:'没有任何知识边（degree=0）的节点比例。孤立节点无法参与推理。',formula:'ratio = count(degree = 0) / N',threshold:'\u2705 < 40% | \u26a0 \u2265 40%'},()=>drillModal('isolated_nodes','孤立的本体节点 — 没有关联任何知识条目')),
+        ind('G4','段落平均标签数',g.G4_avg_tags_per_segment,g.G4_avg_tags_per_segment<=8,{desc:'每段文本平均被标注的本体节点数。过高说明节点粒度过粗，边界模糊。',formula:'avg_tags = \u03a3(tags_per_segment) / segment_count',threshold:'\u2705 \u2264 8 | \u26a0 > 8 节点边界可能不清'}),
+        ind('G5','万金油节点数',(g.G5_ubiquitous_nodes||[]).length,(g.G5_ubiquitous_nodes||[]).length<=2,{desc:'出现在超过 80% 段落中的节点。这类节点定义过于宽泛，几乎不提供区分度。',formula:'ubiquitous = nodes where seg_count > 0.8 \u00d7 total_segs',threshold:'\u2705 \u2264 2 | \u26a0 > 5 定义过于宽泛'}),
       ]},
     { key:'orthogonality', title:'O: 正交性', zh:'Orthogonality', desc:'谓语和节点是否独立、不重叠？', data:q.orthogonality||{},
       indicators: o => [
-        ind('O1','谓语重叠对数',Object.keys(o.O1_overlapping_predicates||{}).length,Object.keys(o.O1_overlapping_predicates||{}).length===0,'共享相同节点对的谓语对（Jaccard>0.5）。',()=>openModal('O1: 重叠谓语','两种谓语被用在相同的节点对上 — 可能是语义冗余',tableHtml(Object.entries(o.O1_overlapping_predicates||{}).map(([k,v])=>({pair:k,jaccard:v}))))),
-        ind('O2','Top3谓语占比',o.O2_top3_predicate_ratio,o.O2_top3_predicate_ratio<0.6,'前3种谓语是否过度集中？>80%说明关系类型设计过于粗放。',()=>openModal('O2: 谓语使用分布','每种谓语（关系类型）在知识条目中被使用的次数和占比',tableHtml(o.O2_predicate_distribution||[])),'%'),
-        ind('O3','集中度异常节点',o.O3_concentrated_nodes,o.O3_concentrated_nodes<=5,'>90%的边只使用一种谓语的节点数。',()=>openModal('O3: 谓语集中度异常节点','这些节点90%以上的边都使用同一种谓语，说明关系类型不够丰富',tableHtml(o.O3_concentrated_nodes_detail||[]))),
-        ind('O4','谓语利用率',o.O4_predicate_utilization,o.O4_predicate_utilization>0.5,'已定义的关系类型中实际被使用的比例。',()=>openModal('O4: 未使用的谓语类型','这些关系类型已在本体中定义但从未出现在任何知识条目中','<div style="font-size:0.82rem;">'+(o.O4_unused_predicates||[]).map(p=>`<div style="padding:3px 0;border-bottom:1px solid #1e2130;">${p}</div>`).join('')+'</div>'),'%'),
-        ind('O5','语义相似节点对',(o.O5_similar_node_pairs||[]).length,(o.O5_similar_node_pairs||[]).length<=3,'语义高度相似的节点对 — 可能是重复定义。',()=>document.getElementById('quality-similar-panel').scrollIntoView({behavior:'smooth'})),
+        ind('O1','谓语重叠对数',Object.keys(o.O1_overlapping_predicates||{}).length,Object.keys(o.O1_overlapping_predicates||{}).length===0,{desc:'共享相同节点对的谓语对数（Jaccard > 0.5）。高重叠说明两种关系类型语义冗余，应考虑合并。',formula:'Jaccard(p1,p2) = |pairs(p1) \u2229 pairs(p2)| / |pairs(p1) \u222a pairs(p2)|',threshold:'\u2705 = 0 | \u26a0 > 0 存在语义重叠'},()=>openModal('O1: 重叠谓语','两种谓语被用在相同的节点对上 — 可能是语义冗余',tableHtml(Object.entries(o.O1_overlapping_predicates||{}).map(([k,v])=>({pair:k,jaccard:v}))))),
+        ind('O2','Top3谓语占比',o.O2_top3_predicate_ratio,o.O2_top3_predicate_ratio<0.6,{desc:'使用量前 3 的谓语占全部知识条目的比例。过高说明关系类型设计过于粗放，区分度不足。',formula:'ratio = sum(top3_pred_count) / total_facts',threshold:'\u2705 < 60% | \u26a0 > 80% 谓语种类过少'},()=>openModal('O2: 谓语使用分布','每种谓语（关系类型）在知识条目中被使用的次数和占比',tableHtml(o.O2_predicate_distribution||[])),'%'),
+        ind('O3','集中度异常节点',o.O3_concentrated_nodes,o.O3_concentrated_nodes<=5,{desc:'90% 以上的边只使用同一种谓语的节点数量。这类节点的关系类型不够丰富。',formula:'concentrated = nodes where top_pred_count / total_edges > 0.9 (min 5 edges)',threshold:'\u2705 \u2264 5 | \u26a0 > 5'},()=>openModal('O3: 谓语集中度异常节点','这些节点90%以上的边都使用同一种谓语，说明关系类型不够丰富',tableHtml(o.O3_concentrated_nodes_detail||[]))),
+        ind('O4','谓语利用率',o.O4_predicate_utilization,o.O4_predicate_utilization>0.5,{desc:'本体中已定义的关系类型中，实际在知识条目中被使用的比例。低利用率说明定义了过多冗余谓语。',formula:'utilization = used_predicates / defined_predicates',threshold:'\u2705 > 50% | \u26a0 < 30%'},()=>openModal('O4: 未使用的谓语类型','这些关系类型已在本体中定义但从未出现在任何知识条目中','<div style="font-size:0.82rem;">'+(o.O4_unused_predicates||[]).map(p=>`<div style="padding:3px 0;border-bottom:1px solid #1e2130;">${p}</div>`).join('')+'</div>'),'%'),
+        ind('O5','语义相似节点对',(o.O5_similar_node_pairs||[]).length,(o.O5_similar_node_pairs||[]).length<=3,{desc:'通过邻域重叠、标签共现、向量余弦三维信号检测的高相似度节点对。可能是重复定义。',formula:'score = 0.35\u00d7neighbor_jaccard + 0.35\u00d7tag_jaccard + 0.30\u00d7emb_cosine\nthreshold \u2265 0.3',threshold:'\u2705 \u2264 3 | \u26a0 > 3 考虑合并'},()=>document.getElementById('quality-similar-panel').scrollIntoView({behavior:'smooth'})),
       ]},
     { key:'cross_layer', title:'L: 层间连通', zh:'Cross-Layer', desc:'五层本体模型之间是否充分连接？', data:q.cross_layer||{},
       indicators: l => {
         const cov = l.L1_coverage || {};
         const rows = Object.entries(cov).map(([k,v]) =>
-          ind('L1',k,v,v>0.1,`覆盖率: ${k.split('→')[0]}层节点中有多少比例连接到${k.split('→')[1]}层。`,null,'%')
+          ind('L1',k,v,v>0.1,{desc:`${k.split('\u2192')[0]} 层节点中连接到 ${k.split('\u2192')[1]} 层的比例。低覆盖率说明层间知识链路断裂。`,formula:`coverage = connected_${k.split('\u2192')[0]}_nodes / total_${k.split('\u2192')[0]}_nodes`,threshold:'\u2705 > 10% | \u26a0 < 10% 层间断裂'},null,'%')
         );
-        rows.push(ind('L2','直达边(概念→场景)',l.L2_direct_concept_scenario,true,'跳过中间层的直连边数。'));
-        rows.push(ind('L3','完整五层路径数',l.L3_complete_paths,l.L3_complete_paths>0,'从概念到场景的完整五层推理链数量。'));
+        rows.push(ind('L2','直达边(概念\u2192场景)',l.L2_direct_concept_scenario,true,{desc:'从概念层直接连接到场景层、跳过中间层的边数。少量直达是正常的快捷路径。',formula:'count(OntologyNode -[r]- ScenarioPatternNode)'}));
+        rows.push(ind('L3','完整五层路径数',l.L3_complete_paths,l.L3_complete_paths>0,{desc:'从概念经机制、方法、条件到达场景的完整五层推理链数量。0 条说明五层模型尚未贯通。',formula:'MATCH (c:Concept)--(m:Mechanism)--(mt:Method)--(cn:Condition)--(s:Scenario)',threshold:'\u2705 > 0 | \u26a0 = 0 五层未贯通'}));
         return rows;
       }},
     { key:'discoverability', title:'D: 可发现性', zh:'Discoverability', desc:'知识是否能被搜索和别名匹配到？', data:q.discoverability||{},
       indicators: d => [
-        ind('D1','别名覆盖率',d.D1_alias_coverage,d.D1_alias_coverage>0.5,'至少有一个别名的节点比例。',()=>drillModal('no_alias_nodes','没有别名的节点 — 搜索时很难被发现'),'%'),
-        ind('D3','关系类型利用率',d.D3_relation_utilization,d.D3_relation_utilization>0.5,'已定义关系类型中实际在知识条目中出现的比例。',null,'%'),
-        ind('D4','标签命中率',d.D4_tag_hit_rate,d.D4_tag_hit_rate>0.3,'至少在一个文本段落中被标记的节点比例。',null,'%'),
+        ind('D1','别名覆盖率',d.D1_alias_coverage,d.D1_alias_coverage>0.5,{desc:'至少拥有一个别名（中英文/厂商变体）的本体节点比例。无别名的节点在搜索和 pipeline 对齐时难以被发现。',formula:'coverage = aliased_nodes / total_active_nodes',threshold:'\u2705 > 50% | \u26a0 < 50%'},()=>drillModal('no_alias_nodes','没有别名的节点 — 搜索时很难被发现'),'%'),
+        ind('D3','关系类型利用率',d.D3_relation_utilization,d.D3_relation_utilization>0.5,{desc:'本体中已定义的关系类型中，实际在知识条目中出现的比例。',formula:'utilization = distinct_predicates_in_facts / defined_relations',threshold:'\u2705 > 50% | \u26a0 < 30%'},null,'%'),
+        ind('D4','标签命中率',d.D4_tag_hit_rate,d.D4_tag_hit_rate>0.3,{desc:'至少在一个文本段落中被 pipeline 标记的本体节点比例。低命中率说明节点定义与实际文本不匹配。',formula:'hit_rate = tagged_nodes / total_active_nodes',threshold:'\u2705 > 30% | \u26a0 < 30%'},null,'%'),
       ]},
   ];
 
@@ -742,14 +755,49 @@ function renderQuality(q) {
     </div>`;
   });
 
-  // Structural
+  // Structural — global metrics + per-layer connectivity
+  const gl = s.global_connectivity || {};
+  const lc = s.layer_connectivity || {};
+  const layerNames = {concept:'概念',mechanism:'机制',method:'方法',condition:'条件',scenario:'场景'};
+
+  let layerRows = '';
+  for (const [layer, zh] of Object.entries(layerNames)) {
+    const m = lc[layer] || {};
+    layerRows += `<tr>
+      <td style="font-weight:600;">${zh}<br><span style="font-size:0.7rem;color:#666;">${layer}</span></td>
+      <td>${m.total_nodes??'-'}</td>
+      <td style="color:${(m.lcc_ratio||0)>=0.5?'#4caf50':'#f44336'}">${m.lcc_ratio!=null?(m.lcc_ratio*100).toFixed(1)+'%':'-'}</td>
+      <td style="color:${(m.avg_reachability||0)>=0.3?'#4caf50':'#ff9800'}">${m.avg_reachability!=null?(m.avg_reachability*100).toFixed(1)+'%':'-'}</td>
+      <td>${m.density!=null?m.density.toFixed(4):'-'}</td>
+      <td>${m.fiedler_value!=null?m.fiedler_value.toFixed(4):'-'}</td>
+      <td>${m.num_components??'-'}</td>
+    </tr>`;
+  }
+
   dimHtml += `<div class="panel">
     <h3>S: 结构健康 <span style="font-size:0.75rem;color:#666;">(Structural)</span></h3>
-    <div class="desc">图的连通性、环路检测、路径长度</div>
-    ${ind('S1','已连接节点',s.S1_connected_nodes,true,'至少有一条知识边的节点。',()=>openModal('S1: 度数最高的节点','连接数最多的节点 — 是知识枢纽还是定义过宽？',tableHtml(s.S1_top_degree||[])))}
-    ${ind('S1','断连节点',s.S1_disconnected_nodes,s.S1_disconnected_nodes<50,'没有任何边的节点。',()=>openModal('S1: 断连节点列表','这些节点没有任何知识边，可能需要补充关系或清理',tableHtml(s.S1_disconnected_list||[])))}
-    ${ind('S2','依赖环路',s.S2_dependency_cycles,s.S2_dependency_cycles===0,'循环依赖 — 逻辑错误。',s.S2_dependency_cycles>0?()=>openModal('S2: 环路详情','图中检测到的循环依赖路径','<pre>'+JSON.stringify(s.S2_cycle_detail||[],null,2)+'</pre>'):null)}
-    ${ind('S5','平均最短路径',s.S5_avg_shortest_path,true,'已连接节点对之间的平均跳数。值越小说明知识越紧密。')}
+    <div class="desc">图的连通性、环路检测、每层拓扑健康度</div>
+    ${ind('S1','全局 LCC 覆盖率',gl.lcc_ratio,gl.lcc_ratio>=0.5,{desc:'最大连通分量 (Largest Connected Component) 覆盖全图节点的比例。低于 50% 说明图严重碎片化，知识形成孤岛。',formula:'LCC_ratio = max_component_size / total_nodes',threshold:'\u2705 \u2265 50% | \u26a0 < 50% 图碎片化'},()=>openModal('S1: 度数最高的节点','连接数最多的节点 — 是知识枢纽还是定义过宽？',tableHtml(s.S1_top_degree||[])),'%')}
+    ${ind('S1','全局可达性',gl.avg_reachability,gl.avg_reachability>=0.5,{desc:'从任意节点出发，通过 BFS 平均能到达的其他节点比例。反映图的整体连通程度。采样 80 个节点估算。',formula:'avg_reach = mean(reachable_from(v) / (N-1)) for v in sample',threshold:'\u2705 \u2265 50% | \u26a0 < 50%'},null,'%')}
+    ${ind('S1','全局密度',gl.density,true,{desc:'图中实际有向边数与最大可能边数的比值。密度越高说明节点间关系越丰富。',formula:'density = edge_count / (V \u00d7 (V - 1))'})}
+    ${ind('S2','依赖环路',s.S2_dependency_cycles,s.S2_dependency_cycles===0,{desc:'通过 DEPENDS_ON 关系形成的循环依赖数量。任何环路都是逻辑错误，必须修复。',formula:'MATCH path = (a)-[:DEPENDS_ON*2..5]->(a)',threshold:'\u2705 = 0 | \u274c > 0 存在逻辑错误'},s.S2_dependency_cycles>0?()=>openModal('S2: 环路详情','图中检测到的循环依赖路径','<pre>'+JSON.stringify(s.S2_cycle_detail||[],null,2)+'</pre>'):null)}
+    <div style="margin-top:12px;">
+      <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;">每层连通性指标</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;font-size:0.78rem;border-collapse:collapse;">
+          <thead><tr style="border-bottom:1px solid #333;color:#8b95a5;">
+            <th style="text-align:left;padding:4px 6px;">层</th>
+            <th style="padding:4px 6px;" class="tip-wrap">节点数<div class="tip-box"><div class="tip-title">节点数</div>该层中 lifecycle_state=active 的本体节点总数。</div></th>
+            <th style="padding:4px 6px;" class="tip-wrap">LCC覆盖率<div class="tip-box"><div class="tip-title">LCC 覆盖率</div>该层最大连通分量占总节点的比例。接近 100% 说明该层是一个整体。<div class="tip-formula">LCC_ratio = max_component / total</div></div></th>
+            <th style="padding:4px 6px;" class="tip-wrap">可达性<div class="tip-box"><div class="tip-title">平均可达性</div>从该层任意节点出发，通过 BFS 平均能到达的本层其他节点比例。<div class="tip-formula">avg_reach = mean(reachable / (N-1))</div></div></th>
+            <th style="padding:4px 6px;" class="tip-wrap">密度<div class="tip-box"><div class="tip-title">图密度</div>该层内有向边数与最大可能边数的比值。<div class="tip-formula">density = edges / (V \u00d7 (V-1))</div></div></th>
+            <th style="padding:4px 6px;" class="tip-wrap">Fiedler值<div class="tip-box"><div class="tip-title">Fiedler 值 (代数连通性)</div>图拉普拉斯矩阵的第二小特征值。> 0 说明图连通，越大越鲁棒。= 0 说明图不连通。<div class="tip-formula">\u03bb\u2082 = second smallest eigenvalue of L</div></div></th>
+            <th style="padding:4px 6px;" class="tip-wrap">连通分量数<div class="tip-box"><div class="tip-title">连通分量数</div>BFS 发现的独立连通子图数量。= 1 说明全部连通，越多说明越碎片化。</div></th>
+          </tr></thead>
+          <tbody style="text-align:center;">${layerRows}</tbody>
+        </table>
+      </div>
+    </div>
     <div style="text-align:right;margin-top:6px;font-size:0.8rem;color:#666;">得分: <strong style="color:#4fc3f7;">${((s.score||0)*100).toFixed(0)}%</strong></div>
   </div>`;
 
@@ -802,10 +850,19 @@ function ind(id, label, value, healthy, tooltip, onclick, unit) {
     _indClickHandlers.push(onclick);
     clickAttr = `data-ind-click="${idx}" style="cursor:pointer"`;
   }
-  const titleAttr = tooltip && !onclick ? `title="${tooltip.replace(/"/g,'&quot;')}"` : (tooltip ? `title="${tooltip.replace(/"/g,'&quot;')}"` : '');
-  return `<div class="indicator" ${clickAttr} ${titleAttr}>
+  // Rich tooltip: tooltip can be string or {desc, formula}
+  let tipHtml = '';
+  if (tooltip) {
+    if (typeof tooltip === 'object') {
+      tipHtml = `<div class="tip-box"><div class="tip-title">${id} ${label}</div>${tooltip.desc}${tooltip.formula?'<div class="tip-formula">'+tooltip.formula+'</div>':''}${tooltip.threshold?'<div style="margin-top:4px;color:#8b95a5;">'+tooltip.threshold+'</div>':''}</div>`;
+    } else {
+      tipHtml = `<div class="tip-box"><div class="tip-title">${id} ${label}</div>${tooltip}</div>`;
+    }
+  }
+  return `<div class="indicator tip-wrap" ${clickAttr}>
     <span><span class="dot ${dot}"></span><strong>${id}</strong> ${label}</span>
     <span class="val">${v}</span>
+    ${tipHtml}
   </div>`;
 }
 
@@ -1043,31 +1100,35 @@ async function loadMonitoring() {
     ].join('');
 
     document.getElementById('quality-gauges').innerHTML = [
-      gauge('本体覆盖率',q.ontology_coverage,false,'cross_layer_gaps'),
-      gauge('平均置信度',q.avg_fact_confidence,false),
-      gauge('冲突率',q.conflict_ratio,true),
-      gauge('弱证据率',q.single_evidence_weak_ratio,true,'single_evidence_weak'),
+      gauge('本体覆盖率',q.ontology_coverage,false,'cross_layer_gaps',{desc:'被至少一条知识条目覆盖的本体节点比例。',formula:'coverage = covered_nodes / total_nodes'}),
+      gauge('平均置信度',q.avg_fact_confidence,false,null,{desc:'全部活跃知识条目的五维置信度均值。',formula:'score = 0.30\u00d7source + 0.20\u00d7extraction + 0.20\u00d7ontology_fit + 0.20\u00d7cross_source + 0.10\u00d7temporal'}),
+      gauge('冲突率',q.conflict_ratio,true,null,{desc:'状态为 conflicted 的知识条目占总量的比例。',formula:'ratio = conflicted_facts / total_facts'}),
+      gauge('弱证据率',q.single_evidence_weak_ratio,true,'single_evidence_weak',{desc:'仅有单条证据且置信度低于阈值的知识条目占比。',formula:'ratio = single_evidence_weak / total_facts'}),
     ].join('');
 
     document.getElementById('graph-health').innerHTML = `
       <div style="font-size:0.82rem;">
-        ${ghRow('孤立节点',gh.isolated_node_count,'isolated_nodes')}
-        ${ghRow('平均度数',gh.avg_degree)}
-        ${ghRow('最大度数',gh.max_degree,'super_nodes')}
-        ${ghRow('谓语使用',`${gh.predicates_used}/${gh.predicates_defined}`,'unused_predicates')}
+        ${ghRow('孤立节点',gh.isolated_node_count,'isolated_nodes',{desc:'没有任何知识边的本体节点数。',formula:'count(degree = 0)'})}
+        ${ghRow('平均度数',gh.avg_degree,null,{desc:'所有本体节点的平均边数。',formula:'avg_degree = 2 \u00d7 edges / nodes'})}
+        ${ghRow('最大度数',gh.max_degree,'super_nodes',{desc:'度数最高的单个节点的边数。过高可能是超级节点。'})}
+        ${ghRow('谓语使用',`${gh.predicates_used}/${gh.predicates_defined}`,'unused_predicates',{desc:'已使用的谓语类型 / 本体中定义的谓语类型总数。',formula:'utilization = used / defined'})}
       </div>`;
   } catch(e) {}
 }
 
-function gauge(label,value,invert,metric) {
+function gauge(label,value,invert,metric,tip) {
   const v=value||0; const p=Math.round(v*100);
   const color=invert?(v>0.15?'dot-red':v>0.05?'dot-yellow':'dot-green'):(v>0.6?'dot-green':v>0.3?'dot-yellow':'dot-red');
   const click=metric?`onclick="drillModal('${metric}','${label}')"style="cursor:pointer"`:'';
-  return `<div class="indicator" ${click}><span><span class="dot ${color}"></span>${label}</span><span class="val">${p}%</span></div>`;
+  let tipHtml='';
+  if(tip){tipHtml=`<div class="tip-box"><div class="tip-title">${label}</div>${tip.desc||''}${tip.formula?'<div class="tip-formula">'+tip.formula+'</div>':''}</div>`;}
+  return `<div class="indicator tip-wrap" ${click}><span><span class="dot ${color}"></span>${label}</span><span class="val">${p}%</span>${tipHtml}</div>`;
 }
-function ghRow(label,value,metric) {
+function ghRow(label,value,metric,tip) {
   const click=metric?`onclick="drillModal('${metric}','${label}')"style="cursor:pointer"`:'';
-  return `<div class="indicator" ${click}><span>${label}</span><span class="val">${fmt(value)}</span></div>`;
+  let tipHtml='';
+  if(tip){tipHtml=`<div class="tip-box"><div class="tip-title">${label}</div>${tip.desc||''}${tip.formula?'<div class="tip-formula">'+tip.formula+'</div>':''}</div>`;}
+  return `<div class="indicator tip-wrap" ${click}><span>${label}</span><span class="val">${fmt(value)}</span>${tipHtml}</div>`;
 }
 
 async function loadHistory() {

@@ -31,7 +31,9 @@ class DocumentNormalizer:
         text = self._remove_repeated_blocks(text)
         if preserve_newlines:
             return self._normalize_preserve_lines(text)
-        return normalize_text(text)
+        # For HTML-extracted text: preserve paragraph boundaries (\n\n)
+        # so Stage 2 can split on semantic breaks instead of fixed windows
+        return normalize_text(text, preserve_paragraphs=True)
 
     @staticmethod
     def _normalize_preserve_lines(text: str) -> str:

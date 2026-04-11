@@ -402,15 +402,27 @@ def _crawler_thread(app, stop_event: threading.Event) -> None:
 def _pipeline_thread(app, stop_event: threading.Event) -> None:
     """Continuously process raw documents through the pipeline.
 
+    Uses a thread pool to process multiple documents in parallel.
     LLM availability is a hard requirement: if LLM cannot be reached the
     thread pauses and retries every 2 minutes until it recovers.
     """
     thread_name = "pipeline"
-    log.info("[%s] Thread started", thread_name)
+    log.info("[%s] Thread started (workers=%d)", thread_name,
+             settings.WORKER_PIPELINE_WORKERS)
 
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from src.utils.llm_extract import LLMExtractor
 
     _LLM_RETRY_SECS = 120  # pause duration when LLM is down
+
+    def _process_one(doc_id: str) -> tuple[str, int, str | None]:
+        """Process a single document. Returns (doc_id, error_count, error_msg)."""
+        ctx = PipelineContext(source_doc_id=doc_id)
+        try:
+            app.ingest_context(ctx)
+            return (doc_id, len(ctx.errors), None)
+        except Exception as exc:
+            return (doc_id, -1, str(exc))
 
     idle_count = 0
     try:
@@ -438,24 +450,26 @@ def _pipeline_thread(app, stop_event: threading.Event) -> None:
 
                 if doc_ids:
                     idle_count = 0
-                    for doc_id in doc_ids:
-                        if stop_event.is_set():
-                            break
-                        # Re-check LLM between docs in case it just went down
-                        if not LLMExtractor().ping(timeout=10.0):
-                            log.warning(
-                                "[%s] LLM went down mid-batch — pausing pipeline.",
-                                thread_name,
-                            )
-                            break
-                        ctx = PipelineContext(source_doc_id=doc_id)
-                        try:
-                            app.ingest_context(ctx)
-                            log.info("[%s] Completed doc=%s errors=%d",
-                                     thread_name, doc_id, len(ctx.errors))
-                        except Exception as exc:
-                            log.error("[%s] Failed doc=%s err=%s",
-                                      thread_name, doc_id, exc, exc_info=True)
+                    # Process batch in parallel
+                    with ThreadPoolExecutor(
+                        max_workers=settings.WORKER_PIPELINE_WORKERS,
+                        thread_name_prefix="pipeline-worker",
+                    ) as pool:
+                        futures = {
+                            pool.submit(_process_one, did): did
+                            for did in doc_ids
+                            if not stop_event.is_set()
+                        }
+                        for future in as_completed(futures):
+                            if stop_event.is_set():
+                                break
+                            doc_id, err_count, err_msg = future.result()
+                            if err_msg:
+                                log.error("[%s] Failed doc=%s err=%s",
+                                          thread_name, doc_id, err_msg)
+                            else:
+                                log.info("[%s] Completed doc=%s errors=%d",
+                                         thread_name, doc_id, err_count)
                 else:
                     idle_count += 1
             except Exception as exc:

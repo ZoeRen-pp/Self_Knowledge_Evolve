@@ -138,18 +138,42 @@ class DedupStage(Stage):
                 continue
 
             # Rule D4: conflict detection — same subject+predicate, different object
+            # Pre-check: normalize object for comparison to avoid false conflicts
+            # from trivial string differences (case, whitespace, notation)
+            fact_obj_norm = (fact["object"] or "").strip().lower()
             conflicts = store.fetchall(
                 """
-                SELECT fact_id FROM facts
+                SELECT fact_id, object FROM facts
                 WHERE subject=%s AND predicate=%s AND object != %s
                   AND lifecycle_state='active'
                 """,
                 (fact["subject"], fact["predicate"], fact["object"]),
             )
             for conf_fact in conflicts:
+                # Semantic equivalence pre-check: normalize both objects
+                other_obj_norm = (conf_fact["object"] or "").strip().lower()
+                if fact_obj_norm == other_obj_norm:
+                    # Same after normalization → merge, not conflict
+                    store.execute(
+                        "UPDATE facts SET lifecycle_state='superseded'"
+                        " WHERE fact_id=%s AND lifecycle_state='active'",
+                        (conf_fact["fact_id"],),
+                    )
+                    merged += 1
+                    continue
+                # Check if one object contains the other (subset match)
+                if fact_obj_norm in other_obj_norm or other_obj_norm in fact_obj_norm:
+                    store.execute(
+                        "UPDATE facts SET lifecycle_state='superseded'"
+                        " WHERE fact_id=%s AND lifecycle_state='active'",
+                        (conf_fact["fact_id"],),
+                    )
+                    merged += 1
+                    continue
+                # Genuine conflict: mark both
                 store.execute(
                     "UPDATE facts SET lifecycle_state='conflicted' WHERE fact_id IN (%s,%s)",
-                    (fact["fact_id"], conf_fact["fact_id"]),  # Note: use separate params
+                    (fact["fact_id"], conf_fact["fact_id"]),
                 )
                 store.execute(
                     """
