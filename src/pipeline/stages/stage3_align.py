@@ -278,7 +278,9 @@ class AlignStage(Stage):
             return 0
 
         # Only keep new_concept — discard variant and noise
-        new_concepts = []
+        # Each candidate carries its knowledge_layer from LLM classification
+        _VALID_LAYERS = {"concept", "mechanism", "method", "condition", "scenario"}
+        new_concepts: list[tuple[str, str]] = []  # (term, layer)
         variant_count = 0
         noise_count = 0
         for item in llm_results:
@@ -295,17 +297,22 @@ class AlignStage(Stage):
             # new_concept: verify not already in ontology
             if ontology.lookup_alias(term.lower()):
                 continue
-            new_concepts.append(term)
+            layer = item.get("knowledge_layer", "concept")
+            if layer not in _VALID_LAYERS:
+                layer = "concept"
+            new_concepts.append((term, layer))
 
         if variant_count or noise_count:
             log.debug("  LLM classified: %d new, %d variant, %d noise",
                       len(new_concepts), variant_count, noise_count)
 
         # Stopword filter (last insurance against LLM misclassification)
-        filtered = self._filter_stopwords(new_concepts)
-
-        # Embedding dedup (if available)
-        filtered = self._embedding_dedup(filtered)
+        terms_only = [t for t, _ in new_concepts]
+        filtered_terms = self._filter_stopwords(terms_only)
+        filtered_terms = self._embedding_dedup(filtered_terms)
+        # Rebuild (term, layer) pairs for surviving terms
+        filtered_set = set(filtered_terms)
+        filtered = [(t, l) for t, l in new_concepts if t in filtered_set]
 
         if filtered:
             log.debug("  %d candidates after filtering (from %d LLM results)",
@@ -428,16 +435,32 @@ class AlignStage(Stage):
             log.info("  Embedding dedup: %d → %d candidates", len(terms), len(result))
         return result
 
-    def _upsert_candidates(self, terms: list[str], source_doc_id: str, segment_id: str) -> None:
+    def _upsert_candidates(
+        self, terms: list[tuple[str, str]], source_doc_id: str, segment_id: str,
+    ) -> None:
         """Write candidate terms to governance.evolution_candidates.
+
+        Args:
+            terms: List of (term_text, knowledge_layer) tuples.
+            source_doc_id: Document ID for traceability.
+            segment_id: Segment ID for traceability.
 
         Records segment_id + source_doc_id in examples JSONB for traceability.
         Extracts parenthetical abbreviations as extra surface_forms.
         """
         import json
         from src.utils.normalize import normalize_term, extract_abbreviation
+        _LAYER_TO_TYPE = {
+            "concept": "concept", "mechanism": "mechanism", "method": "method",
+            "condition": "condition", "scenario": "scenario",
+        }
         store = self._store
-        for term in set(terms):
+        seen = set()
+        for term, layer in terms:
+            if term in seen:
+                continue
+            seen.add(term)
+            candidate_type = _LAYER_TO_TYPE.get(layer, "concept")
             normalized = normalize_term(term)
             # Extract abbreviation if present: "xxx (YYY)" → also add "YYY" as surface_form
             abbrev = extract_abbreviation(term)
@@ -452,9 +475,9 @@ class AlignStage(Stage):
             store.execute(
                 """
                 INSERT INTO governance.evolution_candidates
-                    (surface_forms, normalized_form, source_count, last_seen_at,
+                    (surface_forms, normalized_form, candidate_type, source_count, last_seen_at,
                      first_seen_at, seen_source_doc_ids, review_status, examples)
-                VALUES (%s, %s, 1, NOW(), NOW(), ARRAY[%s::uuid], 'discovered', %s::jsonb)
+                VALUES (%s, %s, %s, 1, NOW(), NOW(), ARRAY[%s::uuid], 'discovered', %s::jsonb)
                 ON CONFLICT (normalized_form) DO UPDATE SET
                     source_count = governance.evolution_candidates.source_count + 1,
                     last_seen_at = NOW(),
@@ -470,7 +493,7 @@ class AlignStage(Stage):
                     END,
                     examples = governance.evolution_candidates.examples || %s::jsonb
                 """,
-                (initial_forms, normalized, source_doc_id, example,
+                (initial_forms, normalized, candidate_type, source_doc_id, example,
                  clean_term, clean_term, source_doc_id, source_doc_id, example),
             )
 

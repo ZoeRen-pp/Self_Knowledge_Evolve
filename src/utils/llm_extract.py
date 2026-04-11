@@ -419,27 +419,39 @@ class LLMExtractor:
             "You are a network engineering terminology extractor and classifier.\n"
             "Given a text segment and a list of known ontology concepts, "
             "identify technical terms and CLASSIFY each one.\n\n"
+            "The ontology has 5 knowledge layers:\n"
+            "- concept: Configurable objects on a device (interfaces, protocol instances, "
+            "policies, address objects, VPN instances, QoS profiles, ACL rules)\n"
+            "- mechanism: How things work — algorithms, forwarding principles, "
+            "isolation mechanisms, selection processes\n"
+            "- method: How to do it — configuration procedures, verification steps, "
+            "troubleshooting methods, deployment methods\n"
+            "- condition: When to use it — applicability conditions, constraints, "
+            "risks, decision rules\n"
+            "- scenario: Real-world use cases — deployment patterns, business scenarios\n\n"
             "Return ONLY a JSON array. Each element:\n"
             '{"term": "<exact surface form>", '
             '"classification": "new_concept|variant|noise", '
+            '"knowledge_layer": "concept|mechanism|method|condition|scenario", '
             '"parent_concept": "<known concept if variant, else null>", '
             '"reason": "<brief explanation>"}\n\n'
             "Classifications:\n"
-            "- new_concept: a standalone networking/telecom concept that deserves "
-            "its own ontology entry (protocol, mechanism, configuration object, network function)\n"
+            "- new_concept: a standalone networking/telecom term that deserves "
+            "its own ontology entry. You MUST also specify which knowledge_layer it belongs to.\n"
             "- variant: a qualified/contextual form of a KNOWN concept. "
-            'e.g. if "router ID" is known, then "OSPF router ID", "BGP router-ID", '
-            '"neighbor router ID" are all variants — they reference the same concept '
-            "in a specific context. Set parent_concept to the known concept name.\n"
-            "- noise: generic English words, document structure words (section, figure, table, "
-            "note, example), author names, dates, common verbs/adjectives, plural forms "
-            "of known concepts\n\n"
+            'e.g. if "router ID" is known, then "OSPF router ID" is a variant. '
+            "Set parent_concept to the known concept name.\n"
+            "- noise: generic English words, document structure words, author names, dates\n\n"
             "Rules:\n"
             "- Precision over recall: when in doubt, classify as variant or noise\n"
-            "- Multi-word terms like 'route reflector' or 'forwarding equivalence class' "
-            "CAN be new_concept if they are standalone domain concepts\n"
+            "- knowledge_layer is REQUIRED for new_concept. Use these guidelines:\n"
+            "  - concept: CLI-configurable objects (e.g. 'DHCP snooping', 'route filter')\n"
+            "  - mechanism: protocol algorithms (e.g. 'shortest path first', 'label imposition')\n"
+            "  - method: operational procedures (e.g. 'graceful restart procedure')\n"
+            "  - condition: constraints/rules (e.g. 'MTU mismatch risk')\n"
+            "  - scenario: deployment patterns (e.g. 'hub-spoke VPN scenario')\n"
             "- Do NOT classify as new_concept if the term is just [known concept] + "
-            "[context modifier] (e.g. 'OSPF area' when 'area' is known)\n"
+            "[context modifier]\n"
             "- Return [] if no terms found at all"
         )
         prompt = (
