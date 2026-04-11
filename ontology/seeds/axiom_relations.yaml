@@ -1,219 +1,314 @@
 # Axiom (intra-layer) seed relations: definitional facts within each layer.
 # These are common knowledge — not extracted from documents.
 # confidence: 1.0 (axiom), source: ontology_seed
+#
+# v0.3.0: remapped to YANG-level configurable object IDs.
+# Protocol-level abstract relations (e.g. "BGP uses TCP") removed —
+# these are not about configurable objects. Retained: structural
+# dependencies between config objects that engineers need to know.
 
 relations:
 
   # ══════════════════════════════════════════════════════════════
-  # Classification (is_a)
+  # Configuration dependencies (depends_on)
+  # "A depends_on B" = B must be configured before A can work
   # ══════════════════════════════════════════════════════════════
-  - subject: IP.OSPF
-    predicate: is_a
-    object: IP.ROUTING_PROTOCOL
 
-  - subject: IP.IS_IS
-    predicate: is_a
-    object: IP.ROUTING_PROTOCOL
+  # ── Interface dependencies ──
+  - subject: IP.VLANIF
+    predicate: depends_on
+    object: IP.VLAN_INSTANCE
+    note: VLAN interface requires the VLAN to exist
 
-  - subject: IP.BGP
-    predicate: is_a
-    object: IP.ROUTING_PROTOCOL
+  - subject: IP.SUBINTERFACE
+    predicate: depends_on
+    object: IP.PHYSICAL_INTERFACE
+    note: Sub-interface requires a parent physical interface
 
-  - subject: IP.RIP
-    predicate: is_a
-    object: IP.ROUTING_PROTOCOL
+  - subject: IP.LAG_MEMBER
+    predicate: depends_on
+    object: IP.LAG_INTERFACE
+    note: LAG member must reference an existing LAG bundle
+
+  - subject: IP.NVE_INTERFACE
+    predicate: depends_on
+    object: IP.LOOPBACK_INTERFACE
+    note: NVE source-address typically points to a loopback
+
+  - subject: IP.VBDIF
+    predicate: depends_on
+    object: IP.BRIDGE_DOMAIN
+    note: VBDIF interface requires an existing bridge domain
+
+  # ── Routing dependencies ──
+  - subject: IP.OSPF_INTERFACE
+    predicate: depends_on
+    object: IP.OSPF_INSTANCE
+    note: OSPF interface config requires an OSPF process
+
+  - subject: IP.OSPF_AREA
+    predicate: depends_on
+    object: IP.OSPF_INSTANCE
+    note: OSPF area exists within an OSPF process
+
+  - subject: IP.OSPF_ROUTE_IMPORT
+    predicate: depends_on
+    object: IP.OSPF_INSTANCE
+    note: Route import is configured under an OSPF process
+
+  - subject: IP.ISIS_INTERFACE
+    predicate: depends_on
+    object: IP.ISIS_INSTANCE
+    note: IS-IS interface config requires an IS-IS process
+
+  - subject: IP.ISIS_LEVEL
+    predicate: depends_on
+    object: IP.ISIS_INSTANCE
+    note: IS-IS level is configured within an IS-IS process
+
+  - subject: IP.BGP_PEER
+    predicate: depends_on
+    object: IP.BGP_INSTANCE
+    note: BGP peer is configured under a BGP instance
+
+  - subject: IP.BGP_PEER_GROUP
+    predicate: depends_on
+    object: IP.BGP_INSTANCE
+    note: BGP peer-group belongs to a BGP instance
+
+  - subject: IP.BGP_ADDRESS_FAMILY
+    predicate: depends_on
+    object: IP.BGP_INSTANCE
+    note: BGP address-family is configured under a BGP instance
+
+  - subject: IP.BGP_ROUTE_POLICY_BINDING
+    predicate: depends_on
+    object: IP.BGP_PEER
+    note: Route policy binding is applied to a peer or peer-group
+
+  - subject: IP.BGP_ROUTE_POLICY_BINDING
+    predicate: depends_on
+    object: IP.ROUTE_POLICY
+    note: Policy binding references an existing route-policy
+
+  - subject: IP.BGP_ROUTE_REFLECTOR_CONFIG
+    predicate: depends_on
+    object: IP.BGP_PEER
+    note: RR client designation is per-peer configuration
 
   - subject: IP.STATIC_ROUTE
-    predicate: is_a
-    object: IP.ROUTING_PROTOCOL
-
-  # ══════════════════════════════════════════════════════════════
-  # Protocol dependencies (uses_protocol, depends_on)
-  # ══════════════════════════════════════════════════════════════
-  - subject: IP.BGP
-    predicate: uses_protocol
-    object: IP.TCP
-
-  - subject: IP.OSPF
     predicate: depends_on
-    object: IP.IP
+    object: IP.INTERFACE_IP_ADDRESS
+    note: Static route next-hop requires an interface with IP
 
-  - subject: IP.IS_IS
+  - subject: IP.POLICY_BASED_ROUTE
     predicate: depends_on
-    object: IP.ETHERNET
-    note: IS-IS runs directly on L2
+    object: IP.ACL_RULE_GROUP
+    note: PBR match criteria typically references an ACL
 
-  - subject: IP.BGP
+  # ── MPLS/SR dependencies ──
+  - subject: IP.MPLS_INTERFACE
     predicate: depends_on
-    object: IP.TCP
+    object: IP.MPLS_GLOBAL
+    note: Per-interface MPLS requires global MPLS enabled
 
-  - subject: IP.LDP
-    predicate: uses_protocol
-    object: IP.TCP
+  - subject: IP.LDP_INSTANCE
+    predicate: depends_on
+    object: IP.MPLS_GLOBAL
+    note: LDP requires MPLS globally enabled
 
-  - subject: IP.NETCONF
-    predicate: uses_protocol
-    object: IP.SSH
+  - subject: IP.LDP_PEER
+    predicate: depends_on
+    object: IP.LDP_INSTANCE
+    note: LDP targeted peer requires an LDP instance
 
-  - subject: IP.HTTP
-    predicate: uses_protocol
-    object: IP.TCP
+  - subject: IP.RSVP_TE_TUNNEL
+    predicate: depends_on
+    object: IP.RSVP_TE_INSTANCE
+    note: RSVP-TE tunnel requires RSVP-TE instance
 
-  - subject: IP.DNS
-    predicate: uses_protocol
-    object: IP.UDP
+  - subject: IP.RSVP_TE_INSTANCE
+    predicate: depends_on
+    object: IP.MPLS_GLOBAL
+    note: RSVP-TE requires MPLS globally enabled
 
-  - subject: IP.DHCP
-    predicate: uses_protocol
-    object: IP.UDP
+  - subject: IP.SR_POLICY
+    predicate: depends_on
+    object: IP.MPLS_GLOBAL
+    note: SR policy requires MPLS/SR globally enabled
 
-  - subject: IP.BFD
-    predicate: uses_protocol
-    object: IP.UDP
+  - subject: IP.SR_SEGMENT_LIST
+    predicate: depends_on
+    object: IP.SR_POLICY
+    note: Segment list is referenced by an SR policy
 
-  - subject: IP.SNMP
-    predicate: uses_protocol
-    object: IP.UDP
+  - subject: IP.SRV6_LOCATOR
+    predicate: depends_on
+    object: IP.INTERFACE_IP_ADDRESS
+    note: SRv6 locator is an IPv6 prefix, requires IPv6 addressing
 
-  - subject: IP.VRRP
-    predicate: uses_protocol
-    object: IP.IP
+  # ── VPN/Overlay dependencies ──
+  - subject: IP.L3VPN_INSTANCE
+    predicate: depends_on
+    object: IP.VRF_INSTANCE
+    note: L3VPN binds a VRF to MPLS/SRv6 transport
 
-  # ══════════════════════════════════════════════════════════════
-  # Encapsulation relationships
-  # ══════════════════════════════════════════════════════════════
-  - subject: IP.EVPN
-    predicate: encapsulates
-    object: IP.VXLAN
+  - subject: IP.L3VPN_INSTANCE
+    predicate: depends_on
+    object: IP.BGP_ADDRESS_FAMILY
+    note: L3VPN requires VPNv4/VPNv6 address-family in BGP
 
-  - subject: IP.MPLS
-    predicate: encapsulates
-    object: IP.LABEL
+  - subject: IP.L3VPN_INSTANCE
+    predicate: depends_on
+    object: IP.MPLS_GLOBAL
+    note: L3VPN requires MPLS or SRv6 transport
 
-  - subject: IP.IPSEC
-    predicate: encapsulates
-    object: IP.IP
+  - subject: IP.EVPN_INSTANCE
+    predicate: depends_on
+    object: IP.BGP_ADDRESS_FAMILY
+    note: EVPN requires EVPN address-family in BGP
 
-  - subject: IP.GRE
-    predicate: encapsulates
-    object: IP.IP
+  - subject: IP.EVPN_VXLAN_BINDING
+    predicate: depends_on
+    object: IP.EVPN_INSTANCE
+    note: EVPN-VXLAN binding requires an EVPN instance
 
-  - subject: IP.VXLAN
-    predicate: encapsulates
-    object: IP.ETHERNET
-    note: VXLAN carries L2 frames in UDP
+  - subject: IP.EVPN_VXLAN_BINDING
+    predicate: depends_on
+    object: IP.VXLAN_VNI
+    note: EVPN-VXLAN binding requires a VXLAN VNI
 
-  # ══════════════════════════════════════════════════════════════
-  # Structural relationships (part_of, contains)
-  # ══════════════════════════════════════════════════════════════
-  - subject: IP.LABEL
+  - subject: IP.VXLAN_VNI
+    predicate: depends_on
+    object: IP.NVE_INTERFACE
+    note: VXLAN VNI is mapped on an NVE interface
+
+  - subject: IP.VXLAN_TUNNEL
+    predicate: depends_on
+    object: IP.NVE_INTERFACE
+    note: VXLAN tunnel originates from NVE interface
+
+  - subject: IP.BRIDGE_DOMAIN
+    predicate: depends_on
+    object: IP.VXLAN_VNI
+    note: Bridge domain typically binds to a VXLAN VNI
+
+  - subject: IP.PSEUDOWIRE
+    predicate: depends_on
+    object: IP.MPLS_GLOBAL
+    note: Pseudowire uses MPLS labels for transport
+
+  - subject: IP.ROUTE_TARGET
+    predicate: depends_on
+    object: IP.VRF_INSTANCE
+    note: Route-target is configured within a VRF/VPN instance
+
+  - subject: IP.GRE_TUNNEL
+    predicate: depends_on
+    object: IP.TUNNEL_INTERFACE
+    note: GRE tunnel uses a tunnel interface
+
+  # ── QoS dependencies ──
+  - subject: IP.QOS_TRAFFIC_POLICY
+    predicate: depends_on
+    object: IP.QOS_CLASSIFIER
+    note: Traffic policy binds classifier to behavior
+
+  - subject: IP.QOS_TRAFFIC_POLICY
+    predicate: depends_on
+    object: IP.QOS_BEHAVIOR
+    note: Traffic policy references a behavior definition
+
+  - subject: IP.QOS_BEHAVIOR
+    predicate: depends_on
+    object: IP.QOS_POLICER
+    note: Behavior may reference a policer action
+
+  # ── Security dependencies ──
+  - subject: IP.ACL_RULE
     predicate: part_of
-    object: IP.MPLS
+    object: IP.ACL_RULE_GROUP
+    note: ACL rule is an entry within an ACL rule group
 
-  - subject: IP.VTEP
-    predicate: part_of
-    object: IP.VXLAN
+  - subject: IP.ACL_APPLICATION
+    predicate: depends_on
+    object: IP.ACL_RULE_GROUP
+    note: ACL application references an existing ACL
 
-  - subject: IP.COMMUNITY
-    predicate: part_of
-    object: IP.BGP
+  - subject: IP.NAT_RULE
+    predicate: depends_on
+    object: IP.NAT_POOL
+    note: NAT rule binds ACL to a NAT pool
 
+  - subject: IP.NAT_RULE
+    predicate: depends_on
+    object: IP.ACL_RULE_GROUP
+    note: NAT rule matches traffic via an ACL
+
+  - subject: IP.IPSEC_POLICY
+    predicate: depends_on
+    object: IP.IPSEC_PROPOSAL
+    note: IPsec policy references a transform proposal
+
+  - subject: IP.IPSEC_POLICY
+    predicate: depends_on
+    object: IP.IKE_PEER
+    note: IPsec policy binds to an IKE peer
+
+  # ── Route policy structural ──
   - subject: IP.PREFIX_LIST
     predicate: part_of
     object: IP.ROUTE_POLICY
+    note: Prefix-list is typically referenced by a route-policy
+
+  - subject: IP.COMMUNITY_LIST
+    predicate: part_of
+    object: IP.ROUTE_POLICY
+    note: Community-list is referenced by route-policy match clauses
+
+  - subject: IP.AS_PATH_FILTER
+    predicate: part_of
+    object: IP.ROUTE_POLICY
+    note: AS-path filter is referenced by route-policy match clauses
 
   - subject: IP.QOS_CLASSIFIER
     predicate: part_of
-    object: IP.QOS
+    object: IP.QOS_TRAFFIC_POLICY
+    note: Classifier is a component of a traffic policy
 
-  - subject: IP.QOS_QUEUE
-    predicate: part_of
-    object: IP.QOS
-
-  - subject: IP.QOS_SCHEDULER
-    predicate: part_of
-    object: IP.QOS
-
-  - subject: IP.QOS_POLICER
-    predicate: part_of
-    object: IP.QOS
-
-  - subject: IP.QOS_SHAPER
-    predicate: part_of
-    object: IP.QOS
-
-  - subject: IP.QOS_DROP_POLICY
-    predicate: part_of
-    object: IP.QOS
-
-  # ══════════════════════════════════════════════════════════════
-  # Operational / dependency
-  # ══════════════════════════════════════════════════════════════
-  - subject: IP.MPLS
+  # ── OAM dependencies ──
+  - subject: IP.NETCONF_CONFIG
     predicate: depends_on
-    object: IP.LDP
-    note: MPLS needs a label distribution protocol
+    object: IP.SSH_SERVER
+    note: NETCONF runs over SSH transport
 
-  - subject: IP.L3VPN
+  - subject: IP.TELEMETRY_SUBSCRIPTION
     predicate: depends_on
-    object: IP.MPLS
+    object: IP.TELEMETRY_DESTINATION
+    note: Subscription must target a collector destination
 
-  - subject: IP.L3VPN
+  # ── Service dependencies ──
+  - subject: IP.VRRP_GROUP
     predicate: depends_on
-    object: IP.BGP
+    object: IP.INTERFACE_IP_ADDRESS
+    note: VRRP group is configured on an interface with IP
 
-  - subject: IP.L3VPN
+  - subject: IP.BFD_SESSION
     predicate: depends_on
-    object: IP.VRF
+    object: IP.INTERFACE_IP_ADDRESS
+    note: BFD session requires IP connectivity
 
-  - subject: IP.EVPN
+  - subject: IP.DHCP_RELAY
     predicate: depends_on
-    object: IP.BGP
+    object: IP.INTERFACE_IP_ADDRESS
+    note: DHCP relay is configured on an interface with IP
 
-  - subject: IP.EVPN_VXLAN
+  - subject: IP.STP_PORT_CONFIG
     predicate: depends_on
-    object: IP.EVPN
+    object: IP.STP_INSTANCE
+    note: Per-port STP config requires an STP instance
 
-  - subject: IP.EVPN_VXLAN
+  - subject: IP.VLAN_TRUNK_PORT
     predicate: depends_on
-    object: IP.VXLAN
-
-  - subject: IP.SR_MPLS
-    predicate: depends_on
-    object: IP.MPLS
-
-  - subject: IP.SRV6
-    predicate: depends_on
-    object: IP.IPV6
-
-  - subject: IP.RSVP_TE
-    predicate: depends_on
-    object: IP.MPLS
-
-  - subject: IP.TLS
-    predicate: protects
-    object: IP.HTTP
-
-  - subject: IP.IPSEC
-    predicate: protects
-    object: IP.IP
-
-  # ══════════════════════════════════════════════════════════════
-  # Monitoring / management
-  # ══════════════════════════════════════════════════════════════
-  - subject: IP.NETCONF
-    predicate: configured_by
-    object: IP.YANG
-    note: NETCONF uses YANG data models
-
-  - subject: IP.SNMP
-    predicate: monitored_by
-    object: IP.OAM_MONITORING
-
-  - subject: IP.TELEMETRY
-    predicate: monitored_by
-    object: IP.OAM_MONITORING
-
-  - subject: IP.SYSLOG
-    predicate: monitored_by
-    object: IP.OAM_MONITORING
+    object: IP.VLAN_INSTANCE
+    note: Trunk port allowed-VLAN list references existing VLANs

@@ -1,416 +1,416 @@
 version: v0.1.0
 aliases:
 - surface_form: Border Gateway Protocol
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: BGP-4
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: eBGP
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: iBGP
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: 边界网关协议
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: BGP协议
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: alternate_spelling
   language: zh
 - surface_form: External BGP
-  canonical_node_id: IP.BGP
+  canonical_node_id: IP.BGP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: Open Shortest Path First
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: OSPFv2
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: OSPFv3
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: 开放最短路径优先
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: OSPF协议
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: alternate_spelling
   language: zh
 - surface_form: OSPF routing
-  canonical_node_id: IP.OSPF
+  canonical_node_id: IP.OSPF_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: ISIS
-  canonical_node_id: IP.IS_IS
+  canonical_node_id: IP.ISIS_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: Intermediate System to Intermediate System
-  canonical_node_id: IP.IS_IS
+  canonical_node_id: IP.ISIS_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: IS IS
-  canonical_node_id: IP.IS_IS
+  canonical_node_id: IP.ISIS_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: 中间系统到中间系统
-  canonical_node_id: IP.IS_IS
+  canonical_node_id: IP.ISIS_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: 中间系统协议
-  canonical_node_id: IP.IS_IS
+  canonical_node_id: IP.ISIS_INSTANCE
   alias_type: alternate_spelling
   language: zh
 - surface_form: Multiprotocol Label Switching
-  canonical_node_id: IP.MPLS
+  canonical_node_id: IP.MPLS_GLOBAL
   alias_type: full_name
   language: en
 - surface_form: 多协议标签交换
-  canonical_node_id: IP.MPLS
+  canonical_node_id: IP.MPLS_GLOBAL
   alias_type: full_name
   language: zh
 - surface_form: MPLS forwarding
-  canonical_node_id: IP.MPLS
+  canonical_node_id: IP.MPLS_GLOBAL
   alias_type: alternate_spelling
   language: en
 - surface_form: Label Distribution Protocol
-  canonical_node_id: IP.LDP
+  canonical_node_id: IP.LDP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 标签分发协议
-  canonical_node_id: IP.LDP
+  canonical_node_id: IP.LDP_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Resource Reservation Protocol Traffic Engineering
-  canonical_node_id: IP.RSVP_TE
+  canonical_node_id: IP.RSVP_TE_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: RSVP TE
-  canonical_node_id: IP.RSVP_TE
+  canonical_node_id: IP.RSVP_TE_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: 资源预留协议
-  canonical_node_id: IP.RSVP_TE
+  canonical_node_id: IP.RSVP_TE_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Segment Routing MPLS
-  canonical_node_id: IP.SR_MPLS
+  canonical_node_id: IP.SR_POLICY
   alias_type: full_name
   language: en
 - surface_form: SR MPLS
-  canonical_node_id: IP.SR_MPLS
+  canonical_node_id: IP.SR_POLICY
   alias_type: alternate_spelling
   language: en
 - surface_form: Segment Routing over MPLS
-  canonical_node_id: IP.SR_MPLS
+  canonical_node_id: IP.SR_POLICY
   alias_type: full_name
   language: en
 - surface_form: 段路由MPLS
-  canonical_node_id: IP.SR_MPLS
+  canonical_node_id: IP.SR_POLICY
   alias_type: full_name
   language: zh
 - surface_form: Segment Routing over IPv6
-  canonical_node_id: IP.SRV6
+  canonical_node_id: IP.SRV6_LOCATOR
   alias_type: full_name
   language: en
 - surface_form: Segment Routing IPv6
-  canonical_node_id: IP.SRV6
+  canonical_node_id: IP.SRV6_LOCATOR
   alias_type: alternate_spelling
   language: en
 - surface_form: SRv6 BE
-  canonical_node_id: IP.SRV6
+  canonical_node_id: IP.SRV6_LOCATOR
   alias_type: alternate_spelling
   language: en
 - surface_form: SRv6 TE
-  canonical_node_id: IP.SRV6
+  canonical_node_id: IP.SRV6_LOCATOR
   alias_type: alternate_spelling
   language: en
 - surface_form: 段路由IPv6
-  canonical_node_id: IP.SRV6
+  canonical_node_id: IP.SRV6_LOCATOR
   alias_type: full_name
   language: zh
 - surface_form: Ethernet VPN
-  canonical_node_id: IP.EVPN
+  canonical_node_id: IP.EVPN_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: BGP EVPN
-  canonical_node_id: IP.EVPN
+  canonical_node_id: IP.EVPN_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: BGP-EVPN
-  canonical_node_id: IP.EVPN
+  canonical_node_id: IP.EVPN_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: 以太网VPN
-  canonical_node_id: IP.EVPN
+  canonical_node_id: IP.EVPN_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: 以太网虚拟专用网
-  canonical_node_id: IP.EVPN
+  canonical_node_id: IP.EVPN_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Virtual Extensible LAN
-  canonical_node_id: IP.VXLAN
+  canonical_node_id: IP.VXLAN_VNI
   alias_type: full_name
   language: en
 - surface_form: Virtual Extensible Local Area Network
-  canonical_node_id: IP.VXLAN
+  canonical_node_id: IP.VXLAN_VNI
   alias_type: full_name
   language: en
 - surface_form: 虚拟可扩展局域网
-  canonical_node_id: IP.VXLAN
+  canonical_node_id: IP.VXLAN_VNI
   alias_type: full_name
   language: zh
 - surface_form: EVPN over VXLAN
-  canonical_node_id: IP.EVPN_VXLAN
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
   alias_type: full_name
   language: en
 - surface_form: EVPN VXLAN
-  canonical_node_id: IP.EVPN_VXLAN
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
   alias_type: alternate_spelling
   language: en
 - surface_form: BGP EVPN VXLAN
-  canonical_node_id: IP.EVPN_VXLAN
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
   alias_type: alternate_spelling
   language: en
 - surface_form: VXLAN Tunnel Endpoint
-  canonical_node_id: IP.VTEP
+  canonical_node_id: IP.NVE_INTERFACE
   alias_type: full_name
   language: en
 - surface_form: VxLAN TEP
-  canonical_node_id: IP.VTEP
+  canonical_node_id: IP.NVE_INTERFACE
   alias_type: alternate_spelling
   language: en
 - surface_form: 隧道端点
-  canonical_node_id: IP.VTEP
+  canonical_node_id: IP.NVE_INTERFACE
   alias_type: full_name
   language: zh
 - surface_form: Virtual Routing and Forwarding
-  canonical_node_id: IP.VRF
+  canonical_node_id: IP.VRF_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: VRF instance
-  canonical_node_id: IP.VRF
+  canonical_node_id: IP.VRF_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: VPN instance
-  canonical_node_id: IP.VRF
+  canonical_node_id: IP.VRF_INSTANCE
   alias_type: vendor_term
   vendor: Huawei
   language: en
 - surface_form: 虚拟路由转发
-  canonical_node_id: IP.VRF
+  canonical_node_id: IP.VRF_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Layer 3 VPN
-  canonical_node_id: IP.L3VPN
+  canonical_node_id: IP.L3VPN_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: BGP MPLS VPN
-  canonical_node_id: IP.L3VPN
+  canonical_node_id: IP.L3VPN_INSTANCE
   alias_type: alternate_spelling
   language: en
 - surface_form: BGP/MPLS IP VPN
-  canonical_node_id: IP.L3VPN
+  canonical_node_id: IP.L3VPN_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 三层VPN
-  canonical_node_id: IP.L3VPN
+  canonical_node_id: IP.L3VPN_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Virtual Router Redundancy Protocol
-  canonical_node_id: IP.VRRP
+  canonical_node_id: IP.VRRP_GROUP
   alias_type: full_name
   language: en
 - surface_form: 虚拟路由冗余协议
-  canonical_node_id: IP.VRRP
+  canonical_node_id: IP.VRRP_GROUP
   alias_type: full_name
   language: zh
 - surface_form: HSRP
-  canonical_node_id: IP.VRRP
+  canonical_node_id: IP.VRRP_GROUP
   alias_type: vendor_term
   vendor: Cisco
   language: en
 - surface_form: GLBP
-  canonical_node_id: IP.VRRP
+  canonical_node_id: IP.VRRP_GROUP
   alias_type: vendor_term
   vendor: Cisco
   language: en
 - surface_form: Access Control List
-  canonical_node_id: IP.ACL
+  canonical_node_id: IP.ACL_RULE_GROUP
   alias_type: full_name
   language: en
 - surface_form: 访问控制列表
-  canonical_node_id: IP.ACL
+  canonical_node_id: IP.ACL_RULE_GROUP
   alias_type: full_name
   language: zh
 - surface_form: access-list
-  canonical_node_id: IP.ACL
+  canonical_node_id: IP.ACL_RULE_GROUP
   alias_type: alternate_spelling
   language: en
 - surface_form: ip access-group
-  canonical_node_id: IP.ACL
+  canonical_node_id: IP.ACL_RULE_GROUP
   alias_type: alternate_spelling
   language: en
 - surface_form: Network Address Translation
-  canonical_node_id: IP.NAT
+  canonical_node_id: IP.NAT_RULE
   alias_type: full_name
   language: en
 - surface_form: NAPT
-  canonical_node_id: IP.NAT
+  canonical_node_id: IP.NAT_RULE
   alias_type: abbreviation
   language: en
 - surface_form: PAT
-  canonical_node_id: IP.NAT
+  canonical_node_id: IP.NAT_RULE
   alias_type: abbreviation
   language: en
 - surface_form: 网络地址转换
-  canonical_node_id: IP.NAT
+  canonical_node_id: IP.NAT_RULE
   alias_type: full_name
   language: zh
 - surface_form: IP Security
-  canonical_node_id: IP.IPSEC
+  canonical_node_id: IP.IPSEC_POLICY
   alias_type: full_name
   language: en
 - surface_form: IPSec
-  canonical_node_id: IP.IPSEC
+  canonical_node_id: IP.IPSEC_POLICY
   alias_type: alternate_spelling
   language: en
 - surface_form: Internet Protocol Security
-  canonical_node_id: IP.IPSEC
+  canonical_node_id: IP.IPSEC_POLICY
   alias_type: full_name
   language: en
 - surface_form: 网络层安全协议
-  canonical_node_id: IP.IPSEC
+  canonical_node_id: IP.IPSEC_POLICY
   alias_type: full_name
   language: zh
 - surface_form: Bidirectional Forwarding Detection
-  canonical_node_id: IP.BFD
+  canonical_node_id: IP.BFD_SESSION
   alias_type: full_name
   language: en
 - surface_form: BFD Session
-  canonical_node_id: IP.BFD
+  canonical_node_id: IP.BFD_SESSION
   alias_type: alternate_spelling
   language: en
 - surface_form: 双向转发检测
-  canonical_node_id: IP.BFD
+  canonical_node_id: IP.BFD_SESSION
   alias_type: full_name
   language: zh
 - surface_form: Spanning Tree Protocol
-  canonical_node_id: IP.STP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 802.1D
-  canonical_node_id: IP.STP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: 生成树协议
-  canonical_node_id: IP.STP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Rapid Spanning Tree Protocol
-  canonical_node_id: IP.RSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 802.1w
-  canonical_node_id: IP.RSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: 快速生成树
-  canonical_node_id: IP.RSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Multiple Spanning Tree Protocol
-  canonical_node_id: IP.MSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 802.1s
-  canonical_node_id: IP.MSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: 多生成树
-  canonical_node_id: IP.MSTP
+  canonical_node_id: IP.STP_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Link Aggregation Control Protocol
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: full_name
   language: en
 - surface_form: 802.3ad
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: abbreviation
   language: en
 - surface_form: LAG
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: abbreviation
   language: en
 - surface_form: Etherchannel
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: vendor_term
   vendor: Cisco
   language: en
 - surface_form: Eth-Trunk
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: vendor_term
   vendor: Huawei
   language: en
 - surface_form: 链路聚合
-  canonical_node_id: IP.LACP
+  canonical_node_id: IP.LAG_INTERFACE
   alias_type: full_name
   language: zh
 - surface_form: Network Configuration Protocol
-  canonical_node_id: IP.NETCONF
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: full_name
   language: en
 - surface_form: NETCONF/YANG
-  canonical_node_id: IP.NETCONF
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: alternate_spelling
   language: en
 - surface_form: 网络配置协议
-  canonical_node_id: IP.NETCONF
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: full_name
   language: zh
 - surface_form: YANG Data Model
-  canonical_node_id: IP.YANG
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: full_name
   language: en
 - surface_form: YANG Model
-  canonical_node_id: IP.YANG
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: alternate_spelling
   language: en
 - surface_form: YANG模型
-  canonical_node_id: IP.YANG
+  canonical_node_id: IP.NETCONF_CONFIG
   alias_type: full_name
   language: zh
 - surface_form: Model-driven Telemetry
-  canonical_node_id: IP.TELEMETRY
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
   alias_type: full_name
   language: en
 - surface_form: gRPC Telemetry
-  canonical_node_id: IP.TELEMETRY
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
   alias_type: alternate_spelling
   language: en
 - surface_form: gNMI Telemetry
-  canonical_node_id: IP.TELEMETRY
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
   alias_type: alternate_spelling
   language: en
 - surface_form: MDT
-  canonical_node_id: IP.TELEMETRY
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
   alias_type: abbreviation
   language: en
 - surface_form: 网络遥测
-  canonical_node_id: IP.TELEMETRY
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
   alias_type: full_name
   language: zh
 - surface_form: Quality of Service
@@ -422,91 +422,91 @@ aliases:
   alias_type: full_name
   language: zh
 - surface_form: Dynamic Host Configuration Protocol
-  canonical_node_id: IP.DHCP
+  canonical_node_id: IP.DHCP_SERVER_POOL
   alias_type: full_name
   language: en
 - surface_form: DHCPv6
-  canonical_node_id: IP.DHCP
+  canonical_node_id: IP.DHCP_SERVER_POOL
   alias_type: abbreviation
   language: en
 - surface_form: 动态主机配置协议
-  canonical_node_id: IP.DHCP
+  canonical_node_id: IP.DHCP_SERVER_POOL
   alias_type: full_name
   language: zh
 - surface_form: Simple Network Management Protocol
-  canonical_node_id: IP.SNMP
+  canonical_node_id: IP.SNMP_AGENT
   alias_type: full_name
   language: en
 - surface_form: SNMPv2c
-  canonical_node_id: IP.SNMP
+  canonical_node_id: IP.SNMP_AGENT
   alias_type: abbreviation
   language: en
 - surface_form: SNMPv3
-  canonical_node_id: IP.SNMP
+  canonical_node_id: IP.SNMP_AGENT
   alias_type: abbreviation
   language: en
 - surface_form: 简单网络管理协议
-  canonical_node_id: IP.SNMP
+  canonical_node_id: IP.SNMP_AGENT
   alias_type: full_name
   language: zh
 - surface_form: IEEE 802.3
-  canonical_node_id: IP.ETHERNET
+  canonical_node_id: IP.PHYSICAL_INTERFACE
   alias_type: abbreviation
   language: en
 - surface_form: 以太网
-  canonical_node_id: IP.ETHERNET
+  canonical_node_id: IP.PHYSICAL_INTERFACE
   alias_type: full_name
   language: zh
 - surface_form: Virtual LAN
-  canonical_node_id: IP.VLAN
+  canonical_node_id: IP.VLAN_INSTANCE
   alias_type: full_name
   language: en
 - surface_form: 802.1Q VLAN
-  canonical_node_id: IP.VLAN
+  canonical_node_id: IP.VLAN_INSTANCE
   alias_type: abbreviation
   language: en
 - surface_form: 虚拟局域网
-  canonical_node_id: IP.VLAN
+  canonical_node_id: IP.VLAN_INSTANCE
   alias_type: full_name
   language: zh
 - surface_form: Internet Control Message Protocol
-  canonical_node_id: IP.ICMP
+  canonical_node_id: IP.ICMP_CONFIG
   alias_type: full_name
   language: en
 - surface_form: ICMPv6
-  canonical_node_id: IP.ICMP
+  canonical_node_id: IP.ICMP_CONFIG
   alias_type: abbreviation
   language: en
 - surface_form: 互联网控制报文协议
-  canonical_node_id: IP.ICMP
+  canonical_node_id: IP.ICMP_CONFIG
   alias_type: full_name
   language: zh
 - surface_form: Generic Routing Encapsulation
-  canonical_node_id: IP.GRE
+  canonical_node_id: IP.GRE_TUNNEL
   alias_type: full_name
   language: en
 - surface_form: GRE tunnel
-  canonical_node_id: IP.GRE
+  canonical_node_id: IP.GRE_TUNNEL
   alias_type: alternate_spelling
   language: en
 - surface_form: 通用路由封装
-  canonical_node_id: IP.GRE
+  canonical_node_id: IP.GRE_TUNNEL
   alias_type: full_name
   language: zh
 - surface_form: SR Policy
-  canonical_node_id: IP.TE_POLICY
+  canonical_node_id: IP.SR_POLICY
   alias_type: alternate_spelling
   language: en
 - surface_form: SR TE Policy
-  canonical_node_id: IP.TE_POLICY
+  canonical_node_id: IP.SR_POLICY
   alias_type: alternate_spelling
   language: en
 - surface_form: Traffic Engineering Policy
-  canonical_node_id: IP.TE_POLICY
+  canonical_node_id: IP.SR_POLICY
   alias_type: full_name
   language: en
 - surface_form: 流量工程策略
-  canonical_node_id: IP.TE_POLICY
+  canonical_node_id: IP.SR_POLICY
   alias_type: full_name
   language: zh
 - surface_form: Route Map
@@ -527,72 +527,12 @@ aliases:
   canonical_node_id: IP.ROUTE_POLICY
   alias_type: full_name
   language: zh
-- surface_form: TCP
-  canonical_node_id: IP.TCP
-  alias_type: abbreviation
-  language: en
-- surface_form: Transmission Control Protocol
-  canonical_node_id: IP.TCP
-  alias_type: full_name
-  language: en
-- surface_form: 传输控制协议
-  canonical_node_id: IP.TCP
-  alias_type: full_name
-  language: zh
-- surface_form: UDP
-  canonical_node_id: IP.UDP
-  alias_type: abbreviation
-  language: en
-- surface_form: User Datagram Protocol
-  canonical_node_id: IP.UDP
-  alias_type: full_name
-  language: en
-- surface_form: 用户数据报协议
-  canonical_node_id: IP.UDP
-  alias_type: full_name
-  language: zh
-- surface_form: IP
-  canonical_node_id: IP.IP
-  alias_type: abbreviation
-  language: en
-- surface_form: Internet Protocol
-  canonical_node_id: IP.IP
-  alias_type: full_name
-  language: en
-- surface_form: 互联网协议
-  canonical_node_id: IP.IP
-  alias_type: full_name
-  language: zh
-- surface_form: HTTP
-  canonical_node_id: IP.HTTP
-  alias_type: abbreviation
-  language: en
-- surface_form: Hypertext Transfer Protocol
-  canonical_node_id: IP.HTTP
-  alias_type: full_name
-  language: en
-- surface_form: TLS
-  canonical_node_id: IP.TLS
-  alias_type: abbreviation
-  language: en
-- surface_form: SSL
-  canonical_node_id: IP.TLS
-  alias_type: alternate_spelling
-  language: en
-- surface_form: Transport Layer Security
-  canonical_node_id: IP.TLS
-  alias_type: full_name
-  language: en
-- surface_form: HTTPS
-  canonical_node_id: IP.TLS
-  alias_type: alternate_spelling
-  language: en
 - surface_form: SSH
-  canonical_node_id: IP.SSH
+  canonical_node_id: IP.SSH_SERVER
   alias_type: abbreviation
   language: en
 - surface_form: Secure Shell
-  canonical_node_id: IP.SSH
+  canonical_node_id: IP.SSH_SERVER
   alias_type: full_name
   language: en
 - surface_form: L2 Switching
@@ -604,15 +544,15 @@ aliases:
   alias_type: full_name
   language: zh
 - surface_form: L3 Routing
-  canonical_node_id: IP.L3_ROUTING
+  canonical_node_id: IP.ROUTING
   alias_type: full_name
   language: en
 - surface_form: 三层路由
-  canonical_node_id: IP.L3_ROUTING
+  canonical_node_id: IP.ROUTING
   alias_type: full_name
   language: zh
 - surface_form: IP routing
-  canonical_node_id: IP.L3_ROUTING
+  canonical_node_id: IP.ROUTING
   alias_type: abbreviation
   language: en
 - surface_form: L2 switching
@@ -631,36 +571,6 @@ aliases:
   canonical_node_id: IP.QOS
   alias_type: full_name
   language: zh
-- surface_form: ce
-  canonical_node_id: IP.CE
-  alias_type: evolved
-  language: en
-  confidence: 0.9
-  version_introduced: v0.1.2
-- surface_form: CE
-  canonical_node_id: IP.CE
-  alias_type: evolved
-  language: en
-  confidence: 0.9
-  version_introduced: v0.1.2
-- surface_form: AS
-  canonical_node_id: IP.AS
-  alias_type: evolved
-  language: en
-  confidence: 0.9
-  version_introduced: v0.1.3
-- surface_form: as
-  canonical_node_id: IP.AS
-  alias_type: evolved
-  language: en
-  confidence: 0.9
-  version_introduced: v0.1.3
-- surface_form: interior gateway protocol
-  canonical_node_id: IP.INTERIOR_GATEWAY_PROTOCOL
-  alias_type: evolved
-  language: en
-  confidence: 0.9
-  version_introduced: v0.1.4
 - surface_form: SD-WAN
   canonical_node_id: IP.SD_WAN
   alias_type: evolved
@@ -1759,3 +1669,1743 @@ aliases:
   language: en
   confidence: 0.9
   version_introduced: v0.1.76
+- surface_form: physical
+  canonical_node_id: IP.PHYSICAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: physical-interface
+  canonical_node_id: IP.PHYSICAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: physical interface
+  canonical_node_id: IP.PHYSICAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: physical_interface
+  canonical_node_id: IP.PHYSICAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 物理接口
+  canonical_node_id: IP.PHYSICAL_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: Loopback Interface
+  canonical_node_id: IP.LOOPBACK_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 环回接口
+  canonical_node_id: IP.LOOPBACK_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: loopback_interface
+  canonical_node_id: IP.LOOPBACK_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: loopback
+  canonical_node_id: IP.LOOPBACK_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: loopback-interface
+  canonical_node_id: IP.LOOPBACK_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: VLANIF
+  canonical_node_id: IP.VLANIF
+  alias_type: full_name
+  language: en
+- surface_form: VLAN接口
+  canonical_node_id: IP.VLANIF
+  alias_type: full_name
+  language: zh
+- surface_form: Sub-interface
+  canonical_node_id: IP.SUBINTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 子接口
+  canonical_node_id: IP.SUBINTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: tunnel
+  canonical_node_id: IP.TUNNEL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: tunnel interface
+  canonical_node_id: IP.TUNNEL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: tunnel-interface
+  canonical_node_id: IP.TUNNEL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: tunnel_interface
+  canonical_node_id: IP.TUNNEL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 隧道接口
+  canonical_node_id: IP.TUNNEL_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: lag_interface
+  canonical_node_id: IP.LAG_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: lag interface
+  canonical_node_id: IP.LAG_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 链路聚合接口
+  canonical_node_id: IP.LAG_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: lag-interface
+  canonical_node_id: IP.LAG_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: lag-member
+  canonical_node_id: IP.LAG_MEMBER
+  alias_type: full_name
+  language: en
+- surface_form: lag member
+  canonical_node_id: IP.LAG_MEMBER
+  alias_type: full_name
+  language: en
+- surface_form: 链路聚合成员
+  canonical_node_id: IP.LAG_MEMBER
+  alias_type: full_name
+  language: zh
+- surface_form: lag_member
+  canonical_node_id: IP.LAG_MEMBER
+  alias_type: full_name
+  language: en
+- surface_form: null-interface
+  canonical_node_id: IP.NULL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: null_interface
+  canonical_node_id: IP.NULL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 'null'
+  canonical_node_id: IP.NULL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: Null Interface
+  canonical_node_id: IP.NULL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: Null接口
+  canonical_node_id: IP.NULL_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: nve-interface
+  canonical_node_id: IP.NVE_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: NVE Interface
+  canonical_node_id: IP.NVE_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: NVE接口
+  canonical_node_id: IP.NVE_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: nve
+  canonical_node_id: IP.NVE_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: nve_interface
+  canonical_node_id: IP.NVE_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: vbdif
+  canonical_node_id: IP.VBDIF
+  alias_type: full_name
+  language: en
+- surface_form: VBDIF接口
+  canonical_node_id: IP.VBDIF
+  alias_type: full_name
+  language: zh
+- surface_form: management interface
+  canonical_node_id: IP.MANAGEMENT_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: management
+  canonical_node_id: IP.MANAGEMENT_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: management_interface
+  canonical_node_id: IP.MANAGEMENT_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: management-interface
+  canonical_node_id: IP.MANAGEMENT_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 管理接口
+  canonical_node_id: IP.MANAGEMENT_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: serial
+  canonical_node_id: IP.SERIAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: 串口
+  canonical_node_id: IP.SERIAL_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: serial-interface
+  canonical_node_id: IP.SERIAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: serial_interface
+  canonical_node_id: IP.SERIAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: Serial Interface
+  canonical_node_id: IP.SERIAL_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: interface-ip-address
+  canonical_node_id: IP.INTERFACE_IP_ADDRESS
+  alias_type: full_name
+  language: en
+- surface_form: 接口IP地址
+  canonical_node_id: IP.INTERFACE_IP_ADDRESS
+  alias_type: full_name
+  language: zh
+- surface_form: interface_ip_address
+  canonical_node_id: IP.INTERFACE_IP_ADDRESS
+  alias_type: full_name
+  language: en
+- surface_form: interface ip address
+  canonical_node_id: IP.INTERFACE_IP_ADDRESS
+  alias_type: full_name
+  language: en
+- surface_form: vlan
+  canonical_node_id: IP.VLAN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: vlan-instance
+  canonical_node_id: IP.VLAN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: vlan_instance
+  canonical_node_id: IP.VLAN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: VLAN Instance
+  canonical_node_id: IP.VLAN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: VLAN实例
+  canonical_node_id: IP.VLAN_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: vlan_trunk_port
+  canonical_node_id: IP.VLAN_TRUNK_PORT
+  alias_type: full_name
+  language: en
+- surface_form: VLAN Trunk Port
+  canonical_node_id: IP.VLAN_TRUNK_PORT
+  alias_type: full_name
+  language: en
+- surface_form: vlan-trunk-port
+  canonical_node_id: IP.VLAN_TRUNK_PORT
+  alias_type: full_name
+  language: en
+- surface_form: VLAN Trunk端口
+  canonical_node_id: IP.VLAN_TRUNK_PORT
+  alias_type: full_name
+  language: zh
+- surface_form: stp_instance
+  canonical_node_id: IP.STP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: stp-instance
+  canonical_node_id: IP.STP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: stp
+  canonical_node_id: IP.STP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: STP实例
+  canonical_node_id: IP.STP_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: stp instance
+  canonical_node_id: IP.STP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: STP Port Config
+  canonical_node_id: IP.STP_PORT_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: stp-port-config
+  canonical_node_id: IP.STP_PORT_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: stp port
+  canonical_node_id: IP.STP_PORT_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: STP端口配置
+  canonical_node_id: IP.STP_PORT_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: stp_port_config
+  canonical_node_id: IP.STP_PORT_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: mac-address-table-entry
+  canonical_node_id: IP.MAC_ADDRESS_TABLE_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: mac_address_table_entry
+  canonical_node_id: IP.MAC_ADDRESS_TABLE_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: mac address table entry
+  canonical_node_id: IP.MAC_ADDRESS_TABLE_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: mac address table
+  canonical_node_id: IP.MAC_ADDRESS_TABLE_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: MAC地址表项
+  canonical_node_id: IP.MAC_ADDRESS_TABLE_ENTRY
+  alias_type: full_name
+  language: zh
+- surface_form: lldp-config
+  canonical_node_id: IP.LLDP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: lldp config
+  canonical_node_id: IP.LLDP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: lldp
+  canonical_node_id: IP.LLDP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: lldp_config
+  canonical_node_id: IP.LLDP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: LLDP配置
+  canonical_node_id: IP.LLDP_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: Storm Control
+  canonical_node_id: IP.STORM_CONTROL
+  alias_type: full_name
+  language: en
+- surface_form: storm_control
+  canonical_node_id: IP.STORM_CONTROL
+  alias_type: full_name
+  language: en
+- surface_form: 风暴抑制
+  canonical_node_id: IP.STORM_CONTROL
+  alias_type: full_name
+  language: zh
+- surface_form: storm-control
+  canonical_node_id: IP.STORM_CONTROL
+  alias_type: full_name
+  language: en
+- surface_form: vrf-instance
+  canonical_node_id: IP.VRF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: vrf_instance
+  canonical_node_id: IP.VRF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: vrf
+  canonical_node_id: IP.VRF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: VRF实例
+  canonical_node_id: IP.VRF_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: 静态路由
+  canonical_node_id: IP.STATIC_ROUTE
+  alias_type: full_name
+  language: zh
+- surface_form: static-route
+  canonical_node_id: IP.STATIC_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: Static Route
+  canonical_node_id: IP.STATIC_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: static_route
+  canonical_node_id: IP.STATIC_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: route table
+  canonical_node_id: IP.ROUTE_TABLE
+  alias_type: full_name
+  language: en
+- surface_form: 路由表
+  canonical_node_id: IP.ROUTE_TABLE
+  alias_type: full_name
+  language: zh
+- surface_form: route_table
+  canonical_node_id: IP.ROUTE_TABLE
+  alias_type: full_name
+  language: en
+- surface_form: route-table
+  canonical_node_id: IP.ROUTE_TABLE
+  alias_type: full_name
+  language: en
+- surface_form: policy-based_route
+  canonical_node_id: IP.POLICY_BASED_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: policy-based-route
+  canonical_node_id: IP.POLICY_BASED_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: 策略路由
+  canonical_node_id: IP.POLICY_BASED_ROUTE
+  alias_type: full_name
+  language: zh
+- surface_form: Policy-Based Route
+  canonical_node_id: IP.POLICY_BASED_ROUTE
+  alias_type: full_name
+  language: en
+- surface_form: OSPF Instance
+  canonical_node_id: IP.OSPF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ospf_instance
+  canonical_node_id: IP.OSPF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ospf
+  canonical_node_id: IP.OSPF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ospf-instance
+  canonical_node_id: IP.OSPF_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: OSPF实例
+  canonical_node_id: IP.OSPF_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: OSPF Area
+  canonical_node_id: IP.OSPF_AREA
+  alias_type: full_name
+  language: en
+- surface_form: ospf_area
+  canonical_node_id: IP.OSPF_AREA
+  alias_type: full_name
+  language: en
+- surface_form: OSPF区域
+  canonical_node_id: IP.OSPF_AREA
+  alias_type: full_name
+  language: zh
+- surface_form: ospf-area
+  canonical_node_id: IP.OSPF_AREA
+  alias_type: full_name
+  language: en
+- surface_form: ospf-interface
+  canonical_node_id: IP.OSPF_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: ospf_interface
+  canonical_node_id: IP.OSPF_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: OSPF Interface
+  canonical_node_id: IP.OSPF_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: OSPF接口
+  canonical_node_id: IP.OSPF_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: ospf
+  canonical_node_id: IP.OSPF_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: ospf_neighbor
+  canonical_node_id: IP.OSPF_NEIGHBOR
+  alias_type: full_name
+  language: en
+- surface_form: OSPF邻居
+  canonical_node_id: IP.OSPF_NEIGHBOR
+  alias_type: full_name
+  language: zh
+- surface_form: ospf neighbor
+  canonical_node_id: IP.OSPF_NEIGHBOR
+  alias_type: full_name
+  language: en
+- surface_form: ospf-neighbor
+  canonical_node_id: IP.OSPF_NEIGHBOR
+  alias_type: full_name
+  language: en
+- surface_form: OSPF路由引入
+  canonical_node_id: IP.OSPF_ROUTE_IMPORT
+  alias_type: full_name
+  language: zh
+- surface_form: OSPF Route Import
+  canonical_node_id: IP.OSPF_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: ospf-route-import
+  canonical_node_id: IP.OSPF_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: ospf_route_import
+  canonical_node_id: IP.OSPF_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: IS-IS Instance
+  canonical_node_id: IP.ISIS_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: is-is
+  canonical_node_id: IP.ISIS_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: is-is-instance
+  canonical_node_id: IP.ISIS_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: is-is_instance
+  canonical_node_id: IP.ISIS_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: IS-IS实例
+  canonical_node_id: IP.ISIS_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: IS-IS接口
+  canonical_node_id: IP.ISIS_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: is-is
+  canonical_node_id: IP.ISIS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: is-is interface
+  canonical_node_id: IP.ISIS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: is-is-interface
+  canonical_node_id: IP.ISIS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: is-is_interface
+  canonical_node_id: IP.ISIS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: IS-IS级别
+  canonical_node_id: IP.ISIS_LEVEL
+  alias_type: full_name
+  language: zh
+- surface_form: is-is_level
+  canonical_node_id: IP.ISIS_LEVEL
+  alias_type: full_name
+  language: en
+- surface_form: IS-IS Level
+  canonical_node_id: IP.ISIS_LEVEL
+  alias_type: full_name
+  language: en
+- surface_form: is-is-level
+  canonical_node_id: IP.ISIS_LEVEL
+  alias_type: full_name
+  language: en
+- surface_form: is-is route import
+  canonical_node_id: IP.ISIS_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: IS-IS路由引入
+  canonical_node_id: IP.ISIS_ROUTE_IMPORT
+  alias_type: full_name
+  language: zh
+- surface_form: is-is_route_import
+  canonical_node_id: IP.ISIS_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: is-is-route-import
+  canonical_node_id: IP.ISIS_ROUTE_IMPORT
+  alias_type: full_name
+  language: en
+- surface_form: bgp instance
+  canonical_node_id: IP.BGP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: BGP实例
+  canonical_node_id: IP.BGP_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: bgp_instance
+  canonical_node_id: IP.BGP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: bgp
+  canonical_node_id: IP.BGP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: bgp-instance
+  canonical_node_id: IP.BGP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: bgp_peer
+  canonical_node_id: IP.BGP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: bgp peer
+  canonical_node_id: IP.BGP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: bgp-peer
+  canonical_node_id: IP.BGP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: BGP邻居
+  canonical_node_id: IP.BGP_PEER
+  alias_type: full_name
+  language: zh
+- surface_form: bgp_peer_group
+  canonical_node_id: IP.BGP_PEER_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: bgp peer
+  canonical_node_id: IP.BGP_PEER_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: bgp peer group
+  canonical_node_id: IP.BGP_PEER_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: BGP对等体组
+  canonical_node_id: IP.BGP_PEER_GROUP
+  alias_type: full_name
+  language: zh
+- surface_form: bgp-peer-group
+  canonical_node_id: IP.BGP_PEER_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: BGP地址族
+  canonical_node_id: IP.BGP_ADDRESS_FAMILY
+  alias_type: full_name
+  language: zh
+- surface_form: bgp_address_family
+  canonical_node_id: IP.BGP_ADDRESS_FAMILY
+  alias_type: full_name
+  language: en
+- surface_form: bgp-address-family
+  canonical_node_id: IP.BGP_ADDRESS_FAMILY
+  alias_type: full_name
+  language: en
+- surface_form: BGP Address Family
+  canonical_node_id: IP.BGP_ADDRESS_FAMILY
+  alias_type: full_name
+  language: en
+- surface_form: BGP路由策略绑定
+  canonical_node_id: IP.BGP_ROUTE_POLICY_BINDING
+  alias_type: full_name
+  language: zh
+- surface_form: bgp_route_policy_binding
+  canonical_node_id: IP.BGP_ROUTE_POLICY_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: bgp route policy binding
+  canonical_node_id: IP.BGP_ROUTE_POLICY_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: bgp-route-policy-binding
+  canonical_node_id: IP.BGP_ROUTE_POLICY_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: BGP Community属性
+  canonical_node_id: IP.BGP_COMMUNITY_ATTR
+  alias_type: full_name
+  language: zh
+- surface_form: bgp community attribute
+  canonical_node_id: IP.BGP_COMMUNITY_ATTR
+  alias_type: full_name
+  language: en
+- surface_form: bgp_community_attribute
+  canonical_node_id: IP.BGP_COMMUNITY_ATTR
+  alias_type: full_name
+  language: en
+- surface_form: bgp-community-attribute
+  canonical_node_id: IP.BGP_COMMUNITY_ATTR
+  alias_type: full_name
+  language: en
+- surface_form: bgp route reflector config
+  canonical_node_id: IP.BGP_ROUTE_REFLECTOR_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: bgp_route_reflector_config
+  canonical_node_id: IP.BGP_ROUTE_REFLECTOR_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: bgp route reflector
+  canonical_node_id: IP.BGP_ROUTE_REFLECTOR_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: bgp-route-reflector-config
+  canonical_node_id: IP.BGP_ROUTE_REFLECTOR_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: BGP路由反射器配置
+  canonical_node_id: IP.BGP_ROUTE_REFLECTOR_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: bgp-confederation
+  canonical_node_id: IP.BGP_CONFEDERATION
+  alias_type: full_name
+  language: en
+- surface_form: bgp_confederation
+  canonical_node_id: IP.BGP_CONFEDERATION
+  alias_type: full_name
+  language: en
+- surface_form: BGP联邦
+  canonical_node_id: IP.BGP_CONFEDERATION
+  alias_type: full_name
+  language: zh
+- surface_form: BGP Confederation
+  canonical_node_id: IP.BGP_CONFEDERATION
+  alias_type: full_name
+  language: en
+- surface_form: Route Policy
+  canonical_node_id: IP.ROUTE_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: route_policy
+  canonical_node_id: IP.ROUTE_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: route-policy
+  canonical_node_id: IP.ROUTE_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: prefix list
+  canonical_node_id: IP.PREFIX_LIST
+  alias_type: full_name
+  language: en
+- surface_form: 前缀列表
+  canonical_node_id: IP.PREFIX_LIST
+  alias_type: full_name
+  language: zh
+- surface_form: prefix-list
+  canonical_node_id: IP.PREFIX_LIST
+  alias_type: full_name
+  language: en
+- surface_form: prefix_list
+  canonical_node_id: IP.PREFIX_LIST
+  alias_type: full_name
+  language: en
+- surface_form: community-list
+  canonical_node_id: IP.COMMUNITY_LIST
+  alias_type: full_name
+  language: en
+- surface_form: Community List
+  canonical_node_id: IP.COMMUNITY_LIST
+  alias_type: full_name
+  language: en
+- surface_form: community_list
+  canonical_node_id: IP.COMMUNITY_LIST
+  alias_type: full_name
+  language: en
+- surface_form: 团体列表
+  canonical_node_id: IP.COMMUNITY_LIST
+  alias_type: full_name
+  language: zh
+- surface_form: as_path_filter
+  canonical_node_id: IP.AS_PATH_FILTER
+  alias_type: full_name
+  language: en
+- surface_form: AS路径过滤器
+  canonical_node_id: IP.AS_PATH_FILTER
+  alias_type: full_name
+  language: zh
+- surface_form: as path filter
+  canonical_node_id: IP.AS_PATH_FILTER
+  alias_type: full_name
+  language: en
+- surface_form: as-path-filter
+  canonical_node_id: IP.AS_PATH_FILTER
+  alias_type: full_name
+  language: en
+- surface_form: route_redistribution
+  canonical_node_id: IP.ROUTE_REDISTRIBUTION
+  alias_type: full_name
+  language: en
+- surface_form: route-redistribution
+  canonical_node_id: IP.ROUTE_REDISTRIBUTION
+  alias_type: full_name
+  language: en
+- surface_form: route redistribution
+  canonical_node_id: IP.ROUTE_REDISTRIBUTION
+  alias_type: full_name
+  language: en
+- surface_form: 路由重分布
+  canonical_node_id: IP.ROUTE_REDISTRIBUTION
+  alias_type: full_name
+  language: zh
+- surface_form: mpls global config
+  canonical_node_id: IP.MPLS_GLOBAL
+  alias_type: full_name
+  language: en
+- surface_form: mpls-global-config
+  canonical_node_id: IP.MPLS_GLOBAL
+  alias_type: full_name
+  language: en
+- surface_form: MPLS全局配置
+  canonical_node_id: IP.MPLS_GLOBAL
+  alias_type: full_name
+  language: zh
+- surface_form: mpls global
+  canonical_node_id: IP.MPLS_GLOBAL
+  alias_type: full_name
+  language: en
+- surface_form: mpls_global_config
+  canonical_node_id: IP.MPLS_GLOBAL
+  alias_type: full_name
+  language: en
+- surface_form: mpls interface
+  canonical_node_id: IP.MPLS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: mpls_interface
+  canonical_node_id: IP.MPLS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: mpls-interface
+  canonical_node_id: IP.MPLS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: MPLS接口
+  canonical_node_id: IP.MPLS_INTERFACE
+  alias_type: full_name
+  language: zh
+- surface_form: mpls
+  canonical_node_id: IP.MPLS_INTERFACE
+  alias_type: full_name
+  language: en
+- surface_form: ldp instance
+  canonical_node_id: IP.LDP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ldp
+  canonical_node_id: IP.LDP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ldp_instance
+  canonical_node_id: IP.LDP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: LDP实例
+  canonical_node_id: IP.LDP_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: ldp-instance
+  canonical_node_id: IP.LDP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: ldp peer
+  canonical_node_id: IP.LDP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: LDP对端
+  canonical_node_id: IP.LDP_PEER
+  alias_type: full_name
+  language: zh
+- surface_form: ldp_peer
+  canonical_node_id: IP.LDP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: ldp-peer
+  canonical_node_id: IP.LDP_PEER
+  alias_type: full_name
+  language: en
+- surface_form: RSVP-TE实例
+  canonical_node_id: IP.RSVP_TE_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: RSVP-TE Instance
+  canonical_node_id: IP.RSVP_TE_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te
+  canonical_node_id: IP.RSVP_TE_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te-instance
+  canonical_node_id: IP.RSVP_TE_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te_instance
+  canonical_node_id: IP.RSVP_TE_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te tunnel
+  canonical_node_id: IP.RSVP_TE_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te_tunnel
+  canonical_node_id: IP.RSVP_TE_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: rsvp-te-tunnel
+  canonical_node_id: IP.RSVP_TE_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: RSVP-TE隧道
+  canonical_node_id: IP.RSVP_TE_TUNNEL
+  alias_type: full_name
+  language: zh
+- surface_form: sr_policy
+  canonical_node_id: IP.SR_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: SR策略
+  canonical_node_id: IP.SR_POLICY
+  alias_type: full_name
+  language: zh
+- surface_form: sr-policy
+  canonical_node_id: IP.SR_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: SR段列表
+  canonical_node_id: IP.SR_SEGMENT_LIST
+  alias_type: full_name
+  language: zh
+- surface_form: sr segment list
+  canonical_node_id: IP.SR_SEGMENT_LIST
+  alias_type: full_name
+  language: en
+- surface_form: sr_segment_list
+  canonical_node_id: IP.SR_SEGMENT_LIST
+  alias_type: full_name
+  language: en
+- surface_form: sr-segment-list
+  canonical_node_id: IP.SR_SEGMENT_LIST
+  alias_type: full_name
+  language: en
+- surface_form: srv6_locator
+  canonical_node_id: IP.SRV6_LOCATOR
+  alias_type: full_name
+  language: en
+- surface_form: srv6-locator
+  canonical_node_id: IP.SRV6_LOCATOR
+  alias_type: full_name
+  language: en
+- surface_form: SRv6 Locator
+  canonical_node_id: IP.SRV6_LOCATOR
+  alias_type: full_name
+  language: en
+- surface_form: l3vpn
+  canonical_node_id: IP.L3VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: l3vpn-instance
+  canonical_node_id: IP.L3VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: l3vpn instance
+  canonical_node_id: IP.L3VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: L3VPN实例
+  canonical_node_id: IP.L3VPN_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: l3vpn_instance
+  canonical_node_id: IP.L3VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: l2vpn instance
+  canonical_node_id: IP.L2VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: L2VPN实例
+  canonical_node_id: IP.L2VPN_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: l2vpn_instance
+  canonical_node_id: IP.L2VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: l2vpn-instance
+  canonical_node_id: IP.L2VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: l2vpn
+  canonical_node_id: IP.L2VPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: evpn
+  canonical_node_id: IP.EVPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: EVPN实例
+  canonical_node_id: IP.EVPN_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: evpn_instance
+  canonical_node_id: IP.EVPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: evpn instance
+  canonical_node_id: IP.EVPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: evpn-instance
+  canonical_node_id: IP.EVPN_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: vxlan_vni
+  canonical_node_id: IP.VXLAN_VNI
+  alias_type: full_name
+  language: en
+- surface_form: vxlan vni
+  canonical_node_id: IP.VXLAN_VNI
+  alias_type: full_name
+  language: en
+- surface_form: vxlan-vni
+  canonical_node_id: IP.VXLAN_VNI
+  alias_type: full_name
+  language: en
+- surface_form: vxlan tunnel
+  canonical_node_id: IP.VXLAN_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: VXLAN隧道
+  canonical_node_id: IP.VXLAN_TUNNEL
+  alias_type: full_name
+  language: zh
+- surface_form: vxlan-tunnel
+  canonical_node_id: IP.VXLAN_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: vxlan_tunnel
+  canonical_node_id: IP.VXLAN_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: bridge_domain
+  canonical_node_id: IP.BRIDGE_DOMAIN
+  alias_type: full_name
+  language: en
+- surface_form: Bridge Domain
+  canonical_node_id: IP.BRIDGE_DOMAIN
+  alias_type: full_name
+  language: en
+- surface_form: 桥域
+  canonical_node_id: IP.BRIDGE_DOMAIN
+  alias_type: full_name
+  language: zh
+- surface_form: bridge-domain
+  canonical_node_id: IP.BRIDGE_DOMAIN
+  alias_type: full_name
+  language: en
+- surface_form: gre_tunnel
+  canonical_node_id: IP.GRE_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: gre-tunnel
+  canonical_node_id: IP.GRE_TUNNEL
+  alias_type: full_name
+  language: en
+- surface_form: GRE隧道
+  canonical_node_id: IP.GRE_TUNNEL
+  alias_type: full_name
+  language: zh
+- surface_form: evpn-vxlan binding
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: evpn-vxlan_binding
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: evpn-vxlan-binding
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
+  alias_type: full_name
+  language: en
+- surface_form: EVPN-VXLAN绑定
+  canonical_node_id: IP.EVPN_VXLAN_BINDING
+  alias_type: full_name
+  language: zh
+- surface_form: 伪线
+  canonical_node_id: IP.PSEUDOWIRE
+  alias_type: full_name
+  language: zh
+- surface_form: pseudowire
+  canonical_node_id: IP.PSEUDOWIRE
+  alias_type: full_name
+  language: en
+- surface_form: 路由目标
+  canonical_node_id: IP.ROUTE_TARGET
+  alias_type: full_name
+  language: zh
+- surface_form: route_target
+  canonical_node_id: IP.ROUTE_TARGET
+  alias_type: full_name
+  language: en
+- surface_form: 流分类器
+  canonical_node_id: IP.QOS_CLASSIFIER
+  alias_type: full_name
+  language: zh
+- surface_form: Qo S Classifier
+  canonical_node_id: IP.QOS_CLASSIFIER
+  alias_type: full_name
+  language: en
+- surface_form: qos classifier
+  canonical_node_id: IP.QOS_CLASSIFIER
+  alias_type: full_name
+  language: en
+- surface_form: qos-classifier
+  canonical_node_id: IP.QOS_CLASSIFIER
+  alias_type: full_name
+  language: en
+- surface_form: qos_classifier
+  canonical_node_id: IP.QOS_CLASSIFIER
+  alias_type: full_name
+  language: en
+- surface_form: QoS Behavior
+  canonical_node_id: IP.QOS_BEHAVIOR
+  alias_type: full_name
+  language: en
+- surface_form: Qo S Behavior
+  canonical_node_id: IP.QOS_BEHAVIOR
+  alias_type: full_name
+  language: en
+- surface_form: qos-behavior
+  canonical_node_id: IP.QOS_BEHAVIOR
+  alias_type: full_name
+  language: en
+- surface_form: qos_behavior
+  canonical_node_id: IP.QOS_BEHAVIOR
+  alias_type: full_name
+  language: en
+- surface_form: 流行为
+  canonical_node_id: IP.QOS_BEHAVIOR
+  alias_type: full_name
+  language: zh
+- surface_form: 流量策略
+  canonical_node_id: IP.QOS_TRAFFIC_POLICY
+  alias_type: full_name
+  language: zh
+- surface_form: qos_traffic_policy
+  canonical_node_id: IP.QOS_TRAFFIC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: qos traffic policy
+  canonical_node_id: IP.QOS_TRAFFIC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: qos-traffic-policy
+  canonical_node_id: IP.QOS_TRAFFIC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: qo s traffic policy
+  canonical_node_id: IP.QOS_TRAFFIC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: qos_queue_profile
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qos-queue-profile
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qo s queue profile
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qos queue profile
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qos queue
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: 队列调度模板
+  canonical_node_id: IP.QOS_QUEUE_PROFILE
+  alias_type: full_name
+  language: zh
+- surface_form: qo s policer
+  canonical_node_id: IP.QOS_POLICER
+  alias_type: full_name
+  language: en
+- surface_form: QoS Policer
+  canonical_node_id: IP.QOS_POLICER
+  alias_type: full_name
+  language: en
+- surface_form: qos-policer
+  canonical_node_id: IP.QOS_POLICER
+  alias_type: full_name
+  language: en
+- surface_form: 限速器
+  canonical_node_id: IP.QOS_POLICER
+  alias_type: full_name
+  language: zh
+- surface_form: qos_policer
+  canonical_node_id: IP.QOS_POLICER
+  alias_type: full_name
+  language: en
+- surface_form: 整形器
+  canonical_node_id: IP.QOS_SHAPER
+  alias_type: full_name
+  language: zh
+- surface_form: qos-shaper
+  canonical_node_id: IP.QOS_SHAPER
+  alias_type: full_name
+  language: en
+- surface_form: qo s shaper
+  canonical_node_id: IP.QOS_SHAPER
+  alias_type: full_name
+  language: en
+- surface_form: QoS Shaper
+  canonical_node_id: IP.QOS_SHAPER
+  alias_type: full_name
+  language: en
+- surface_form: qos_shaper
+  canonical_node_id: IP.QOS_SHAPER
+  alias_type: full_name
+  language: en
+- surface_form: Qo S Drop Profile
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qos drop
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: QoS Drop Profile
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: 丢弃策略
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: zh
+- surface_form: qos_drop_profile
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: qos-drop-profile
+  canonical_node_id: IP.QOS_DROP_PROFILE
+  alias_type: full_name
+  language: en
+- surface_form: ACL规则组
+  canonical_node_id: IP.ACL_RULE_GROUP
+  alias_type: full_name
+  language: zh
+- surface_form: acl-rule-group
+  canonical_node_id: IP.ACL_RULE_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: acl rule group
+  canonical_node_id: IP.ACL_RULE_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: acl_rule_group
+  canonical_node_id: IP.ACL_RULE_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: acl rule
+  canonical_node_id: IP.ACL_RULE_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: acl
+  canonical_node_id: IP.ACL_RULE
+  alias_type: full_name
+  language: en
+- surface_form: acl-rule
+  canonical_node_id: IP.ACL_RULE
+  alias_type: full_name
+  language: en
+- surface_form: ACL Rule
+  canonical_node_id: IP.ACL_RULE
+  alias_type: full_name
+  language: en
+- surface_form: acl_rule
+  canonical_node_id: IP.ACL_RULE
+  alias_type: full_name
+  language: en
+- surface_form: ACL规则
+  canonical_node_id: IP.ACL_RULE
+  alias_type: full_name
+  language: zh
+- surface_form: ACL Application
+  canonical_node_id: IP.ACL_APPLICATION
+  alias_type: full_name
+  language: en
+- surface_form: ACL应用
+  canonical_node_id: IP.ACL_APPLICATION
+  alias_type: full_name
+  language: zh
+- surface_form: acl_application
+  canonical_node_id: IP.ACL_APPLICATION
+  alias_type: full_name
+  language: en
+- surface_form: acl-application
+  canonical_node_id: IP.ACL_APPLICATION
+  alias_type: full_name
+  language: en
+- surface_form: nat_pool
+  canonical_node_id: IP.NAT_POOL
+  alias_type: full_name
+  language: en
+- surface_form: nat pool
+  canonical_node_id: IP.NAT_POOL
+  alias_type: full_name
+  language: en
+- surface_form: nat-pool
+  canonical_node_id: IP.NAT_POOL
+  alias_type: full_name
+  language: en
+- surface_form: NAT地址池
+  canonical_node_id: IP.NAT_POOL
+  alias_type: full_name
+  language: zh
+- surface_form: nat rule
+  canonical_node_id: IP.NAT_RULE
+  alias_type: full_name
+  language: en
+- surface_form: nat
+  canonical_node_id: IP.NAT_RULE
+  alias_type: full_name
+  language: en
+- surface_form: nat-rule
+  canonical_node_id: IP.NAT_RULE
+  alias_type: full_name
+  language: en
+- surface_form: nat_rule
+  canonical_node_id: IP.NAT_RULE
+  alias_type: full_name
+  language: en
+- surface_form: NAT规则
+  canonical_node_id: IP.NAT_RULE
+  alias_type: full_name
+  language: zh
+- surface_form: nat-server
+  canonical_node_id: IP.NAT_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: nat_server
+  canonical_node_id: IP.NAT_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: nat server
+  canonical_node_id: IP.NAT_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: ipsec_proposal
+  canonical_node_id: IP.IPSEC_PROPOSAL
+  alias_type: full_name
+  language: en
+- surface_form: ipsec-proposal
+  canonical_node_id: IP.IPSEC_PROPOSAL
+  alias_type: full_name
+  language: en
+- surface_form: IPsec提议
+  canonical_node_id: IP.IPSEC_PROPOSAL
+  alias_type: full_name
+  language: zh
+- surface_form: IPsec Proposal
+  canonical_node_id: IP.IPSEC_PROPOSAL
+  alias_type: full_name
+  language: en
+- surface_form: ipsec_policy
+  canonical_node_id: IP.IPSEC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: IPsec策略
+  canonical_node_id: IP.IPSEC_POLICY
+  alias_type: full_name
+  language: zh
+- surface_form: ipsec policy
+  canonical_node_id: IP.IPSEC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: ipsec-policy
+  canonical_node_id: IP.IPSEC_POLICY
+  alias_type: full_name
+  language: en
+- surface_form: ike_peer
+  canonical_node_id: IP.IKE_PEER
+  alias_type: full_name
+  language: en
+- surface_form: IKE对端
+  canonical_node_id: IP.IKE_PEER
+  alias_type: full_name
+  language: zh
+- surface_form: ike-peer
+  canonical_node_id: IP.IKE_PEER
+  alias_type: full_name
+  language: en
+- surface_form: ike peer
+  canonical_node_id: IP.IKE_PEER
+  alias_type: full_name
+  language: en
+- surface_form: aaa-config
+  canonical_node_id: IP.AAA_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: AAA Config
+  canonical_node_id: IP.AAA_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: aaa
+  canonical_node_id: IP.AAA_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: AAA配置
+  canonical_node_id: IP.AAA_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: aaa_config
+  canonical_node_id: IP.AAA_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: 本地用户
+  canonical_node_id: IP.LOCAL_USER
+  alias_type: full_name
+  language: zh
+- surface_form: local-user
+  canonical_node_id: IP.LOCAL_USER
+  alias_type: full_name
+  language: en
+- surface_form: local_user
+  canonical_node_id: IP.LOCAL_USER
+  alias_type: full_name
+  language: en
+- surface_form: local user
+  canonical_node_id: IP.LOCAL_USER
+  alias_type: full_name
+  language: en
+- surface_form: vrrp_group
+  canonical_node_id: IP.VRRP_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: vrrp-group
+  canonical_node_id: IP.VRRP_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: vrrp group
+  canonical_node_id: IP.VRRP_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: VRRP组
+  canonical_node_id: IP.VRRP_GROUP
+  alias_type: full_name
+  language: zh
+- surface_form: vrrp
+  canonical_node_id: IP.VRRP_GROUP
+  alias_type: full_name
+  language: en
+- surface_form: bfd_session
+  canonical_node_id: IP.BFD_SESSION
+  alias_type: full_name
+  language: en
+- surface_form: bfd-session
+  canonical_node_id: IP.BFD_SESSION
+  alias_type: full_name
+  language: en
+- surface_form: bfd
+  canonical_node_id: IP.BFD_SESSION
+  alias_type: full_name
+  language: en
+- surface_form: BFD会话
+  canonical_node_id: IP.BFD_SESSION
+  alias_type: full_name
+  language: zh
+- surface_form: dhcp_server_pool
+  canonical_node_id: IP.DHCP_SERVER_POOL
+  alias_type: full_name
+  language: en
+- surface_form: DHCP地址池
+  canonical_node_id: IP.DHCP_SERVER_POOL
+  alias_type: full_name
+  language: zh
+- surface_form: DHCP Server Pool
+  canonical_node_id: IP.DHCP_SERVER_POOL
+  alias_type: full_name
+  language: en
+- surface_form: dhcp-server-pool
+  canonical_node_id: IP.DHCP_SERVER_POOL
+  alias_type: full_name
+  language: en
+- surface_form: DHCP Relay
+  canonical_node_id: IP.DHCP_RELAY
+  alias_type: full_name
+  language: en
+- surface_form: DHCP中继
+  canonical_node_id: IP.DHCP_RELAY
+  alias_type: full_name
+  language: zh
+- surface_form: dhcp-relay
+  canonical_node_id: IP.DHCP_RELAY
+  alias_type: full_name
+  language: en
+- surface_form: dhcp_relay
+  canonical_node_id: IP.DHCP_RELAY
+  alias_type: full_name
+  language: en
+- surface_form: DNS配置
+  canonical_node_id: IP.DNS_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: dns_config
+  canonical_node_id: IP.DNS_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: DNS Config
+  canonical_node_id: IP.DNS_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: dns
+  canonical_node_id: IP.DNS_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: dns-config
+  canonical_node_id: IP.DNS_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: ntp_config
+  canonical_node_id: IP.NTP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: NTP配置
+  canonical_node_id: IP.NTP_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: ntp
+  canonical_node_id: IP.NTP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: NTP Config
+  canonical_node_id: IP.NTP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: ntp-config
+  canonical_node_id: IP.NTP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: ARP表项
+  canonical_node_id: IP.ARP_ENTRY
+  alias_type: full_name
+  language: zh
+- surface_form: arp_entry
+  canonical_node_id: IP.ARP_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: arp entry
+  canonical_node_id: IP.ARP_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: arp-entry
+  canonical_node_id: IP.ARP_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: arp
+  canonical_node_id: IP.ARP_ENTRY
+  alias_type: full_name
+  language: en
+- surface_form: arp_security
+  canonical_node_id: IP.ARP_SECURITY
+  alias_type: full_name
+  language: en
+- surface_form: arp-security
+  canonical_node_id: IP.ARP_SECURITY
+  alias_type: full_name
+  language: en
+- surface_form: ARP安全
+  canonical_node_id: IP.ARP_SECURITY
+  alias_type: full_name
+  language: zh
+- surface_form: ARP Security
+  canonical_node_id: IP.ARP_SECURITY
+  alias_type: full_name
+  language: en
+- surface_form: proxy arp
+  canonical_node_id: IP.PROXY_ARP
+  alias_type: full_name
+  language: en
+- surface_form: proxy_arp
+  canonical_node_id: IP.PROXY_ARP
+  alias_type: full_name
+  language: en
+- surface_form: 代理ARP
+  canonical_node_id: IP.PROXY_ARP
+  alias_type: full_name
+  language: zh
+- surface_form: proxy-arp
+  canonical_node_id: IP.PROXY_ARP
+  alias_type: full_name
+  language: en
+- surface_form: RIP Instance
+  canonical_node_id: IP.RIP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: RIP实例
+  canonical_node_id: IP.RIP_INSTANCE
+  alias_type: full_name
+  language: zh
+- surface_form: rip-instance
+  canonical_node_id: IP.RIP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rip_instance
+  canonical_node_id: IP.RIP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: rip
+  canonical_node_id: IP.RIP_INSTANCE
+  alias_type: full_name
+  language: en
+- surface_form: syslog_config
+  canonical_node_id: IP.SYSLOG_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: Syslog Config
+  canonical_node_id: IP.SYSLOG_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: syslog-config
+  canonical_node_id: IP.SYSLOG_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: syslog
+  canonical_node_id: IP.SYSLOG_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: Syslog配置
+  canonical_node_id: IP.SYSLOG_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: snmp_agent
+  canonical_node_id: IP.SNMP_AGENT
+  alias_type: full_name
+  language: en
+- surface_form: snmp agent
+  canonical_node_id: IP.SNMP_AGENT
+  alias_type: full_name
+  language: en
+- surface_form: SNMP代理
+  canonical_node_id: IP.SNMP_AGENT
+  alias_type: full_name
+  language: zh
+- surface_form: snmp-agent
+  canonical_node_id: IP.SNMP_AGENT
+  alias_type: full_name
+  language: en
+- surface_form: telemetry_subscription
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
+  alias_type: full_name
+  language: en
+- surface_form: Telemetry Subscription
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
+  alias_type: full_name
+  language: en
+- surface_form: 遥测订阅
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
+  alias_type: full_name
+  language: zh
+- surface_form: telemetry-subscription
+  canonical_node_id: IP.TELEMETRY_SUBSCRIPTION
+  alias_type: full_name
+  language: en
+- surface_form: telemetry-destination
+  canonical_node_id: IP.TELEMETRY_DESTINATION
+  alias_type: full_name
+  language: en
+- surface_form: telemetry_destination
+  canonical_node_id: IP.TELEMETRY_DESTINATION
+  alias_type: full_name
+  language: en
+- surface_form: telemetry destination
+  canonical_node_id: IP.TELEMETRY_DESTINATION
+  alias_type: full_name
+  language: en
+- surface_form: 遥测目标
+  canonical_node_id: IP.TELEMETRY_DESTINATION
+  alias_type: full_name
+  language: zh
+- surface_form: netconf-config
+  canonical_node_id: IP.NETCONF_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: NETCONF配置
+  canonical_node_id: IP.NETCONF_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: NETCONF Config
+  canonical_node_id: IP.NETCONF_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: netconf_config
+  canonical_node_id: IP.NETCONF_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: netconf
+  canonical_node_id: IP.NETCONF_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: ssh server
+  canonical_node_id: IP.SSH_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: SSH服务
+  canonical_node_id: IP.SSH_SERVER
+  alias_type: full_name
+  language: zh
+- surface_form: ssh_server
+  canonical_node_id: IP.SSH_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: ssh-server
+  canonical_node_id: IP.SSH_SERVER
+  alias_type: full_name
+  language: en
+- surface_form: icmp-config
+  canonical_node_id: IP.ICMP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: icmp
+  canonical_node_id: IP.ICMP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: ICMP配置
+  canonical_node_id: IP.ICMP_CONFIG
+  alias_type: full_name
+  language: zh
+- surface_form: ICMP Config
+  canonical_node_id: IP.ICMP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: icmp_config
+  canonical_node_id: IP.ICMP_CONFIG
+  alias_type: full_name
+  language: en
+- surface_form: NQA Test
+  canonical_node_id: IP.NQA_TEST
+  alias_type: full_name
+  language: en
+- surface_form: NQA测试
+  canonical_node_id: IP.NQA_TEST
+  alias_type: full_name
+  language: zh
+- surface_form: nqa-test
+  canonical_node_id: IP.NQA_TEST
+  alias_type: full_name
+  language: en
+- surface_form: nqa_test
+  canonical_node_id: IP.NQA_TEST
+  alias_type: full_name
+  language: en

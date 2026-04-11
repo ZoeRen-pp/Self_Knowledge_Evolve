@@ -1,4 +1,4 @@
-version: v0.1.6
+version: v0.3.0
 domain: IP / Data Communication Network (Evolved)
 domain_id: IP
 nodes:
@@ -20,7 +20,7 @@ nodes:
 - id: IP.IGP
   canonical_name: IGP
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -33,7 +33,7 @@ nodes:
 - id: IP.LOC_RIB
   canonical_name: LOC-RIB
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -47,7 +47,7 @@ nodes:
 - id: IP.AUTONOMOUS_SYSTEMS_ASES
   canonical_name: autonomous systems (ASes)
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -61,7 +61,7 @@ nodes:
 - id: IP.EXTERNAL_PEER
   canonical_name: external peer
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -74,7 +74,7 @@ nodes:
 - id: IP.NETWORK_LAYER_REACHABILITY_INFORMATION
   canonical_name: network layer reachability information
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -102,7 +102,7 @@ nodes:
 - id: IP.VIRTUAL_LINK
   canonical_name: virtual link
   display_name_zh: ''
-  parent_id: IP.VRRP
+  parent_id: IP.NETWORK_SERVICES
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -129,7 +129,7 @@ nodes:
 - id: IP.HELLO_PROTOCOL
   canonical_name: hello protocol
   display_name_zh: ''
-  parent_id: IP.ROUTING_PROTOCOL
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -155,7 +155,7 @@ nodes:
 - id: IP.FORWARDING_TABLE
   canonical_name: forwarding table
   display_name_zh: ''
-  parent_id: IP.LABEL
+  parent_id: IP.MPLS_SR
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -168,7 +168,7 @@ nodes:
 - id: IP.DESIGNATED_ROUTER
   canonical_name: designated router
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -182,7 +182,7 @@ nodes:
 - id: IP.ROUTER_LSA
   canonical_name: router-lsa
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -197,7 +197,7 @@ nodes:
 - id: IP.LINK_STATE_ID
   canonical_name: link state id
   display_name_zh: ''
-  parent_id: IP.TELEMETRY
+  parent_id: IP.OAM_MGMT
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -223,7 +223,7 @@ nodes:
 - id: IP.NETWORK_LSA
   canonical_name: network-lsa
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -236,7 +236,7 @@ nodes:
 - id: IP.AS_EXTERNAL_LSAS
   canonical_name: AS-external-LSAs
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -250,7 +250,7 @@ nodes:
 - id: IP.ADVERTISING_ROUTER
   canonical_name: advertising router
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -262,7 +262,7 @@ nodes:
 - id: IP.PE_ROUTER
   canonical_name: PE router
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -279,7 +279,7 @@ nodes:
 - id: IP.ROUTER_ID
   canonical_name: router id
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -293,7 +293,7 @@ nodes:
 - id: IP.LINK_STATE_DATABASE
   canonical_name: link-state database
   display_name_zh: ''
-  parent_id: IP.TELEMETRY
+  parent_id: IP.OAM_MGMT
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -306,7 +306,7 @@ nodes:
 - id: IP.MOSPF
   canonical_name: mospf
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -319,7 +319,7 @@ nodes:
 - id: IP.ROUTER_LSAS
   canonical_name: router-lsas
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -333,7 +333,7 @@ nodes:
 - id: IP.SRH
   canonical_name: srh
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -346,7 +346,7 @@ nodes:
 - id: IP.SEGMENT_ROUTING
   canonical_name: segment routing
   display_name_zh: ''
-  parent_id: IP.SR_MPLS
+  parent_id: IP.MPLS_SR
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -360,7 +360,7 @@ nodes:
 - id: IP.IGMP
   canonical_name: IGMP
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -374,7 +374,7 @@ nodes:
 - id: IP.RESTCONF
   canonical_name: RESTCONF
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -388,37 +388,11 @@ nodes:
   - RESTCONF
   - restconf client
   allowed_relations: []
-- id: IP.ROUTE_TARGET
-  canonical_name: route target
-  display_name_zh: ''
-  parent_id: IP.ROUTE_POLICY
-  knowledge_layer: concept
-  maturity_level: evolved
-  lifecycle_state: active
-  version_introduced: v0.1.51
-  description: A BGP extended community attribute used in MPLS VPNs to control the
-    import and export of VPN routes between provider edge (PE) routers.
-  aliases:
-  - route target extended community
-  - export target
-  - route-target
-  - route target
-  - route target (rt)
-  - export targets
-  - export route target
-  - route targets
-  - import target
-  - es-import route target
-  - Import targets
-  - route-targets
-  - import route target
-  - Export targets
-  - route target community
-  allowed_relations: []
+# IP.ROUTE_TARGET removed — now defined in ip_network.yaml v0.3.0
 - id: IP.ALL_ACTIVE_REDUNDANCY_MODE
   canonical_name: all-active redundancy mode
   display_name_zh: ''
-  parent_id: IP.VRRP
+  parent_id: IP.NETWORK_SERVICES
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -432,7 +406,7 @@ nodes:
 - id: IP.MULTI_HOMED
   canonical_name: multi-homed
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -463,7 +437,7 @@ nodes:
 - id: IP.NVE
   canonical_name: NVE
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -499,7 +473,7 @@ nodes:
 - id: IP.INGRESS_REPLICATION
   canonical_name: ingress replication
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -513,7 +487,7 @@ nodes:
 - id: IP.PATH_MTU_DISCOVERY
   canonical_name: Path MTU Discovery
   display_name_zh: ''
-  parent_id: IP.TUNNEL
+  parent_id: IP.INTERFACE
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -534,7 +508,7 @@ nodes:
 - id: IP.ROUTE_DISTINGUISHER
   canonical_name: Route Distinguisher
   display_name_zh: ''
-  parent_id: IP.ROUTE_POLICY
+  parent_id: IP.ROUTE_POLICY_FILTER
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -557,7 +531,7 @@ nodes:
 - id: IP.TCP_AO
   canonical_name: TCP-AO
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -572,7 +546,7 @@ nodes:
 - id: IP.PEER_GROUP
   canonical_name: peer group
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -589,7 +563,7 @@ nodes:
 - id: IP.BGP_LS
   canonical_name: BGP-LS
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -603,7 +577,7 @@ nodes:
 - id: IP.INTER_AREA_MULTICAST_FORWARDER
   canonical_name: inter-area multicast forwarder
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -625,7 +599,7 @@ nodes:
 - id: IP.CONTROL_PLANE
   canonical_name: control plane
   display_name_zh: ''
-  parent_id: IP.EVPN_VXLAN
+  parent_id: IP.VPN_OVERLAY
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -650,7 +624,7 @@ nodes:
 - id: IP.AUTONOMOUS_SYSTEMS
   canonical_name: autonomous systems
   display_name_zh: ''
-  parent_id: IP.DNS
+  parent_id: IP.NETWORK_SERVICES
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -665,7 +639,7 @@ nodes:
 - id: IP.FEC
   canonical_name: fec
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -682,7 +656,7 @@ nodes:
 - id: IP.LSR
   canonical_name: LSR
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -698,7 +672,7 @@ nodes:
 - id: IP.NAT64
   canonical_name: nat64
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -728,7 +702,7 @@ nodes:
 - id: IP.PIM_SM
   canonical_name: PIM-SM
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active
@@ -744,7 +718,7 @@ nodes:
 - id: IP.RPKI
   canonical_name: rpki
   display_name_zh: ''
-  parent_id: IP.L3_ROUTING
+  parent_id: IP.ROUTING
   knowledge_layer: concept
   maturity_level: evolved
   lifecycle_state: active

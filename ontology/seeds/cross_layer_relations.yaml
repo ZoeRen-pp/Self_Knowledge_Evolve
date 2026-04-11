@@ -1,132 +1,137 @@
 # Cross-layer seed relations: connect the five-layer knowledge model.
 # These are definitional — not extracted from documents.
 # confidence: 1.0 (axiom), source: ontology_seed
+#
+# v0.3.0: concept IDs remapped to YANG-level configurable objects
 
 # ══════════════════════════════════════════════════════════════
 # concept → mechanism (explains: mechanism explains how concept works)
 # ══════════════════════════════════════════════════════════════
 relations:
 
-  # ── Routing ──
-  - subject: IP.OSPF
+  # ── OSPF ──
+  - subject: IP.OSPF_INSTANCE
     predicate: explains
     object: MECH.LinkStateFlooding
-    note: OSPF uses link-state flooding to distribute topology
+    note: OSPF instance uses link-state flooding to distribute topology
 
-  - subject: IP.OSPF
+  - subject: IP.OSPF_INTERFACE
     predicate: explains
     object: MECH.NeighborAdjacencyFormation
-    note: OSPF forms adjacencies with neighbors
+    note: OSPF interface forms adjacencies with neighbors
 
-  - subject: IP.IS_IS
+  # ── IS-IS ──
+  - subject: IP.ISIS_INSTANCE
     predicate: explains
     object: MECH.LinkStateFlooding
-    note: IS-IS also uses link-state flooding
+    note: IS-IS instance also uses link-state flooding
 
-  - subject: IP.BGP
+  # ── BGP ──
+  - subject: IP.BGP_INSTANCE
     predicate: explains
     object: MECH.PathVectorPropagation
-    note: BGP propagates paths via AS-Path attribute
+    note: BGP instance propagates paths via AS-Path attribute
 
-  - subject: IP.BGP
+  - subject: IP.BGP_INSTANCE
     predicate: explains
     object: MECH.BestPathSelection
-    note: BGP selects best path from multiple candidates
+    note: BGP instance selects best path from multiple candidates
 
-  - subject: IP.BGP
+  - subject: IP.BGP_INSTANCE
     predicate: explains
     object: MECH.RecursiveNextHopResolution
     note: BGP resolves next-hop recursively via IGP
 
-  - subject: IP.ROUTE_REFLECTOR
+  - subject: IP.BGP_ROUTE_REFLECTOR_CONFIG
     predicate: explains
     object: MECH.ReflectionAndReAdvertisement
-    note: Route reflectors re-advertise iBGP routes
+    note: Route reflector config enables iBGP route re-advertisement
 
-  - subject: IP.ROUTING_PROTOCOL
+  # ── Routing general ──
+  - subject: IP.ROUTE_REDISTRIBUTION
     predicate: explains
     object: MECH.ECMPSelection
-    note: Routing protocols enable ECMP load balancing
+    note: Route redistribution and routing tables enable ECMP load balancing
 
-  - subject: IP.ROUTING_PROTOCOL
+  - subject: IP.ROUTE_REDISTRIBUTION
     predicate: explains
     object: MECH.RouteRedistribution
-    note: Routes can be redistributed between protocols
+    note: Routes can be redistributed between protocol instances
 
   # ── MPLS / SR ──
-  - subject: IP.MPLS
+  - subject: IP.MPLS_GLOBAL
     predicate: explains
     object: MECH.LabelSwitching
-    note: MPLS forwards packets based on labels
+    note: MPLS global config enables label-based forwarding
 
-  - subject: IP.MPLS
+  - subject: IP.MPLS_GLOBAL
     predicate: explains
     object: MECH.EncapsulationDecapsulation
     note: MPLS pushes/pops label headers
 
-  - subject: IP.VXLAN
+  - subject: IP.VXLAN_VNI
     predicate: explains
     object: MECH.VxlanOverlayForwarding
-    note: VXLAN encapsulates L2 frames in UDP
+    note: VXLAN VNI defines overlay segment for L2 frame encapsulation
 
-  - subject: IP.VXLAN
+  - subject: IP.VXLAN_TUNNEL
     predicate: explains
     object: MECH.EncapsulationDecapsulation
-    note: VXLAN performs encap/decap at VTEP
+    note: VXLAN tunnel performs encap/decap at VTEP
 
   # ── Redundancy / OAM ──
-  - subject: IP.VRRP
+  - subject: IP.VRRP_GROUP
     predicate: explains
     object: MECH.FirstHopRedundancy
-    note: VRRP provides gateway redundancy
+    note: VRRP group provides gateway redundancy
 
-  - subject: IP.BFD
+  - subject: IP.BFD_SESSION
     predicate: explains
     object: MECH.FastFailureDetection
-    note: BFD detects link/path failures sub-second
+    note: BFD session detects link/path failures sub-second
 
   # ── VPN / Overlay ──
-  - subject: IP.VRF
+  - subject: IP.VRF_INSTANCE
     predicate: explains
     object: MECH.VRFIsolation
-    note: VRF isolates routing tables per tenant
+    note: VRF instance isolates routing tables per tenant
 
-  - subject: IP.L3VPN
+  - subject: IP.L3VPN_INSTANCE
     predicate: explains
     object: MECH.RouteTargetBasedIsolation
-    note: L3VPN uses RT for VPN membership control
+    note: L3VPN instance uses RT for VPN membership control
 
-  - subject: IP.EVPN
+  - subject: IP.EVPN_INSTANCE
     predicate: explains
     object: MECH.OverlayTenantIsolation
-    note: EVPN isolates tenants via VNI/EVI
+    note: EVPN instance isolates tenants via VNI/EVI
 
-  - subject: IP.EVPN
+  - subject: IP.EVPN_INSTANCE
     predicate: explains
     object: MECH.RouteImportExport
     note: EVPN imports/exports routes between VPN instances
 
   # ── QoS ──
-  - subject: IP.QOS
+  - subject: IP.QOS_CLASSIFIER
     predicate: explains
     object: MECH.ClassificationMarking
-    note: QoS classifies and marks traffic flows
+    note: QoS classifier classifies and marks traffic flows
 
-  - subject: IP.QOS
+  - subject: IP.QOS_QUEUE_PROFILE
     predicate: explains
     object: MECH.QueueScheduling
-    note: QoS schedules queues for bandwidth allocation
+    note: QoS queue profile schedules queues for bandwidth allocation
 
   # ── Forwarding ──
-  - subject: IP.L3_ROUTING
+  - subject: IP.ROUTE_TABLE
     predicate: explains
     object: MECH.LongestPrefixMatch
-    note: IP routing uses longest prefix match for forwarding
+    note: IP routing table uses longest prefix match for forwarding
 
-  - subject: IP.ACL
+  - subject: IP.ACL_RULE_GROUP
     predicate: explains
     object: MECH.PolicyBasedForwarding
-    note: ACLs enable policy-based routing/filtering
+    note: ACL rule groups enable policy-based routing/filtering
 
   # ══════════════════════════════════════════════════════════════
   # mechanism → method (implemented_by: method implements mechanism)
