@@ -312,3 +312,151 @@ relations:
     predicate: depends_on
     object: IP.VLAN_INSTANCE
     note: Trunk port allowed-VLAN list references existing VLANs
+
+  # ══════════════════════════════════════════════════════════════
+  # 5G Cloud Core Network (CN5G) — Intra-layer dependencies
+  # v0.4.0
+  # ══════════════════════════════════════════════════════════════
+
+  # ── SBA infrastructure dependencies ──
+  - subject: CN5G.AMF
+    predicate: depends_on
+    object: CN5G.NRF
+    note: AMF registers with and discovers other NFs via NRF
+
+  - subject: CN5G.SMF
+    predicate: depends_on
+    object: CN5G.NRF
+    note: SMF registers with and discovers UPF/PCF via NRF
+
+  - subject: CN5G.SCP
+    predicate: depends_on
+    object: CN5G.NRF
+    note: SCP performs delegated discovery via NRF (Model C/D)
+
+  # ── Authentication chain ──
+  - subject: CN5G.AMF
+    predicate: depends_on
+    object: CN5G.AUSF
+    note: AMF initiates authentication via AUSF (N12)
+
+  - subject: CN5G.AUSF
+    predicate: depends_on
+    object: CN5G.UDM
+    note: AUSF retrieves auth vectors from UDM/ARPF (N13)
+
+  - subject: CN5G.UDM
+    predicate: depends_on
+    object: CN5G.UDR
+    note: UDM stores/retrieves subscription data in UDR
+
+  # ── Session management chain ──
+  - subject: CN5G.SMF
+    predicate: depends_on
+    object: CN5G.AMF
+    note: SMF receives PDU session requests relayed by AMF (N11)
+
+  - subject: CN5G.UPF
+    predicate: depends_on
+    object: CN5G.SMF
+    note: UPF is controlled by SMF via N4/PFCP
+
+  - subject: CN5G.SMF
+    predicate: depends_on
+    object: CN5G.PCF
+    note: SMF obtains PCC rules from PCF via N7
+
+  - subject: CN5G.PCF
+    predicate: depends_on
+    object: CN5G.UDR
+    note: PCF retrieves policy data from UDR
+
+  # ── Slice selection ──
+  - subject: CN5G.AMF
+    predicate: depends_on
+    object: CN5G.NSSF
+    note: AMF queries NSSF for slice selection (N22)
+
+  - subject: CN5G.NSI
+    predicate: depends_on
+    object: CN5G.S_NSSAI
+    note: NSI is instantiated for a specific S-NSSAI
+
+  # ── QoS/Session hierarchy ──
+  - subject: CN5G.QOS_FLOW
+    predicate: part_of
+    object: CN5G.PDU_SESSION
+    note: QoS Flows are contained within a PDU Session
+
+  - subject: CN5G.PFCP_SESSION
+    predicate: depends_on
+    object: CN5G.N4_INTERFACE
+    note: PFCP session is established over N4 interface
+
+  - subject: CN5G.PCC_RULE
+    predicate: depends_on
+    object: CN5G.PCF
+    note: PCC rules are provisioned by PCF
+
+  # ── Interface termination ──
+  - subject: CN5G.N1_INTERFACE
+    predicate: terminates_on
+    object: CN5G.AMF
+    note: N1 NAS signaling terminates at AMF
+
+  - subject: CN5G.N2_INTERFACE
+    predicate: terminates_on
+    object: CN5G.AMF
+    note: N2 NG-AP terminates at AMF
+
+  - subject: CN5G.N3_INTERFACE
+    predicate: terminates_on
+    object: CN5G.UPF
+    note: N3 GTP-U terminates at UPF
+
+  - subject: CN5G.N4_INTERFACE
+    predicate: terminates_on
+    object: CN5G.UPF
+    note: N4 PFCP terminates at UPF (controlled by SMF)
+
+  - subject: CN5G.N6_INTERFACE
+    predicate: terminates_on
+    object: CN5G.UPF
+    note: N6 connects UPF to Data Network
+
+  - subject: CN5G.N32_INTERFACE
+    predicate: terminates_on
+    object: CN5G.SEPP
+    note: N32 inter-PLMN interface terminates at SEPP
+
+  # ── Cloud-native dependencies ──
+  - subject: CN5G.CNF
+    predicate: depends_on
+    object: CN5G.VIM
+    note: CNF pods run on VIM-managed infrastructure (Kubernetes)
+
+  - subject: CN5G.VNFM
+    predicate: depends_on
+    object: CN5G.NFVO
+    note: VNFM is orchestrated by NFVO
+
+  - subject: CN5G.HELM_CHART
+    predicate: depends_on
+    object: CN5G.CNF
+    note: Helm chart packages CNF deployment configuration
+
+  # ── Roaming ──
+  - subject: CN5G.SEPP
+    predicate: depends_on
+    object: CN5G.NRF
+    note: SEPP uses NRF for inter-PLMN NF discovery (N27)
+
+  - subject: CN5G.N3IWF
+    predicate: depends_on
+    object: CN5G.AMF
+    note: N3IWF connects to AMF via N2 for non-3GPP access
+
+  - subject: CN5G.TNGF
+    predicate: depends_on
+    object: CN5G.AMF
+    note: TNGF connects to AMF via N2 for trusted non-3GPP access

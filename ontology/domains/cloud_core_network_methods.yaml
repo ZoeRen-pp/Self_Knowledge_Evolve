@@ -1,0 +1,217 @@
+version: v0.4.0
+domain: 5G Cloud Core Network
+knowledge_layer: method
+
+nodes:
+
+  # ════════════════════════════════════════════
+  # Design & Planning
+  # ════════════════════════════════════════════
+  - id: METHOD.SlicePlanningMethod
+    canonical_name: SlicePlanningMethod
+    display_name_zh: 切片规划方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      规划网络切片：确定SST/SD组合，定义每个切片的NF实例分配策略（专用/共享），
+      规划切片间资源隔离粒度（NF级/资源级），设计Allowed NSSAI分配策略。
+    aliases:
+      - slice planning
+      - 切片规划
+      - network slice design
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.UPFPlacementMethod
+    canonical_name: UPFPlacementMethod
+    display_name_zh: UPF部署规划方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      规划UPF部署位置：中心站点PSA UPF、边缘站点本地PSA、中间UPF (I-UPF) 的选址；
+      考虑时延要求、数据本地化、MEC需求、SSC模式选择。
+    aliases:
+      - UPF placement
+      - UPF部署
+      - user plane deployment
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  # ════════════════════════════════════════════
+  # Configuration & Provisioning
+  # ════════════════════════════════════════════
+  - id: METHOD.AMFConfigurationMethod
+    canonical_name: AMFConfigurationMethod
+    display_name_zh: AMF配置方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      AMF实例配置：设置GUAMI、支持的NSSAI列表、PLMN ID、N2/NAS参数、
+      NRF注册信息、AMF Set/Region配置、过载控制策略。
+    aliases:
+      - AMF configuration
+      - AMF配置
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.SMFProvisioningMethod
+    canonical_name: SMFProvisioningMethod
+    display_name_zh: SMF配置方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      SMF实例配置：绑定DNN和切片、配置IP地址池、关联UPF选择策略、
+      设置N4/PFCP参数、配置N7策略关联。
+    aliases:
+      - SMF provisioning
+      - SMF配置
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.UPFProvisioningMethod
+    canonical_name: UPFProvisioningMethod
+    display_name_zh: UPF配置方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      UPF实例配置：设置N3/N9/N6接口、配置PFCP关联、设定QoS处理能力、
+      配置UL CL规则（MEC场景）、设置DL缓存参数。
+    aliases:
+      - UPF provisioning
+      - UPF配置
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.NRFRegistrationMethod
+    canonical_name: NRFRegistrationMethod
+    display_name_zh: NRF注册配置方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NF向NRF注册配置：设置NF Profile（NF类型、服务列表、IP端点、容量、切片信息），
+      配置心跳间隔、NF状态订阅通知。
+    aliases:
+      - NRF registration
+      - NF registration
+      - NRF注册
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.PCFPolicyProvisioningMethod
+    canonical_name: PCFPolicyProvisioningMethod
+    display_name_zh: PCF策略配置方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      PCF策略规则配置：定义PCC规则集（SDF过滤器、QoS参数、计费键、门控状态），
+      配置AM策略（N15）、UE策略、应用级策略（N5），关联UDR中的策略数据。
+    aliases:
+      - PCF policy configuration
+      - PCC配置
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.CNFDeploymentMethod
+    canonical_name: CNFDeploymentMethod
+    display_name_zh: CNF部署方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      云原生NF容器化部署：编写Helm Chart、配置资源限额和副本数、设置Readiness/Liveness探针、
+      配置HPA自动伸缩、通过CI/CD流水线发布、支持灰度/蓝绿升级。
+    aliases:
+      - CNF deployment
+      - CNF部署
+      - container deployment
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  # ════════════════════════════════════════════
+  # Verification
+  # ════════════════════════════════════════════
+  - id: METHOD.RegistrationVerificationMethod
+    canonical_name: RegistrationVerificationMethod
+    display_name_zh: 注册验证方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      验证UE注册流程：检查AMF日志确认Registration Accept、验证NAS安全激活、
+      检查UDM中的registration context、确认切片选择结果。
+    aliases:
+      - registration verification
+      - 注册验证
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.PDUSessionVerificationMethod
+    canonical_name: PDUSessionVerificationMethod
+    display_name_zh: PDU会话验证方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      验证PDU会话建立：检查SMF中Session状态、确认PFCP Session在UPF中创建、
+      验证GTP-U隧道（N3/N9）连通、测试端到端数据通路和QoS。
+    aliases:
+      - PDU session verification
+      - 会话验证
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.SliceVerificationMethod
+    canonical_name: SliceVerificationMethod
+    display_name_zh: 切片验证方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      验证网络切片：确认NSSF返回正确的Allowed NSSAI、验证切片内NF实例隔离、
+      测试切片间资源隔离、验证SLA满足情况。
+    aliases:
+      - slice verification
+      - 切片验证
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  # ════════════════════════════════════════════
+  # Troubleshooting
+  # ════════════════════════════════════════════
+  - id: METHOD.RegistrationFailureTroubleshootingMethod
+    canonical_name: RegistrationFailureTroubleshootingMethod
+    display_name_zh: 注册失败排障方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      排查UE注册失败：检查N1/N2信令、分析NAS Reject原因码（5GMM cause）、
+      验证AUSF/UDM认证向量、检查NSSF切片选择、确认NRF中AMF注册状态。
+    aliases:
+      - registration troubleshooting
+      - 注册排障
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.SessionFailureTroubleshootingMethod
+    canonical_name: SessionFailureTroubleshootingMethod
+    display_name_zh: 会话建立失败排障方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      排查PDU会话建立失败：检查N11信令（AMF→SMF）、分析5GSM cause拒绝原因、
+      验证SMF→UPF的N4/PFCP连接、检查PCF策略获取（N7）、确认DNN/切片配置。
+    aliases:
+      - session troubleshooting
+      - 会话排障
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]
+
+  - id: METHOD.CNFHealthCheckMethod
+    canonical_name: CNFHealthCheckMethod
+    display_name_zh: CNF健康检查方法
+    knowledge_layer: method
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      云原生NF健康检查：检查Pod状态和重启次数、验证Readiness/Liveness探针、
+      检查NRF中NF注册状态、分析SBI接口连通性、检查UDSF状态存储。
+    aliases:
+      - CNF health check
+      - CNF健康检查
+    allowed_relations: [operates_on, produces, precedes, validated_by, governed_by]

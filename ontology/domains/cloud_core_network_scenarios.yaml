@@ -1,0 +1,124 @@
+version: v0.4.0
+domain: 5G Cloud Core Network
+knowledge_layer: scenario
+
+nodes:
+
+  - id: SCENE.eMBBSliceProvisioningScenario
+    canonical_name: eMBBSliceProvisioningScenario
+    display_name_zh: eMBB切片开通场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      部署eMBB网络切片（SST=1）提供高带宽服务。规划切片S-NSSAI、配置共享AMF/SMF/UPF，
+      设置Non-GBR QoS流、配置NRF注册和NSSF切片映射、验证端到端吞吐量。
+    aliases:
+      - eMBB slice deployment
+      - eMBB切片部署
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.URLLCSliceProvisioningScenario
+    canonical_name: URLLCSliceProvisioningScenario
+    display_name_zh: URLLC切片开通场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      部署URLLC网络切片（SST=2）提供低时延高可靠服务（工业自动���、远程手术）。
+      专用AMF/SMF/UPF实例、边缘UPF部署、Delay-Critical GBR QoS流（5QI 82-86）、
+      严格准入控制、端到端时延 < 10ms验证。
+    aliases:
+      - URLLC slice deployment
+      - URLLC切片部署
+      - 低时延切片场景
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.MECEdgeComputingScenario
+    canonical_name: MECEdgeComputingScenario
+    display_name_zh: MEC边缘计算场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      在边缘站点部署本地UPF实现低时延数据处理。配置UL CL分流规则将匹配流量
+      导向本地PSA UPF；AF通过NEF/PCF影响流量导向；支持LADN和SSC Mode 2/3。
+    aliases:
+      - MEC edge computing
+      - 边缘计算场景
+      - edge UPF deployment
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.VoNRCallScenario
+    canonical_name: VoNRCallScenario
+    display_name_zh: VoNR语音通话场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      基于NR的语音通话。UE通过IMS DNN建立PDU Session（5QI=5 SIP信令），
+      IMS发起呼叫后PCF下发PCC规则创建专用GBR QoS Flow（5QI=1 语音RTP），
+      端到端Voice over NR通路建立。
+    aliases:
+      - VoNR call
+      - VoNR语音
+      - voice over NR
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.HomeRoutedRoamingScenario
+    canonical_name: HomeRoutedRoamingScenario
+    display_name_zh: Home-Routed漫游场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      用户数据经VPLMN回送HPLMN出网。VPLMN提供AMF和V-UPF，HPLMN提供SMF/UPF/PCF/UDM；
+      SEPP间N32保护信令；N9隧道连接V-UPF和H-UPF。
+    aliases:
+      - home-routed roaming
+      - 归属路由漫游
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.LocalBreakoutRoamingScenario
+    canonical_name: LocalBreakoutRoamingScenario
+    display_name_zh: Local Breakout漫游场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      用户数据在VPLMN本地出网，降低时延。VPLMN提供AMF/V-SMF/V-UPF/V-PCF；
+      HPLMN通过N24向V-PCF提供策略。无数据回传HPLMN。
+    aliases:
+      - local breakout
+      - 本地疏通漫游
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.NonThreeGPPAccessScenario
+    canonical_name: NonThreeGPPAccessScenario
+    display_name_zh: 非3GPP接入场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      UE通过WiFi等非3GPP网络接入5GC。不可信接入经N3IWF（IPsec/IKEv2隧道），
+      可信接入经TNGF（无需IPsec）。均通过EAP-AKA'认证，N2/N3接口连接核心网。
+    aliases:
+      - non-3GPP access
+      - WiFi接入5GC
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]
+
+  - id: SCENE.CNFRollingUpgradeScenario
+    canonical_name: CNFRollingUpgradeScenario
+    display_name_zh: CNF滚��升级场景
+    knowledge_layer: scenario
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      云原生NF无损升级。通过Kubernetes Rolling Update或蓝绿部署逐步替换Pod；
+      利用UDSF外部状态存储保证状态不丢失；通过SCP实现流量无感切换；
+      升级失败自动回滚。
+    aliases:
+      - CNF rolling upgrade
+      - CNF滚动升级
+      - 无损升级
+    allowed_relations: [composed_of, validated_by, instantiated_as, applicable_when]

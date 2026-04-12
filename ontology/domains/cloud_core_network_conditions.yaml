@@ -1,0 +1,186 @@
+version: v0.4.0
+domain: 5G Cloud Core Network
+knowledge_layer: condition
+
+nodes:
+
+  # ════════════════════════════════════════════
+  # Applicability Conditions
+  # ════════════════════════════════════════════
+  - id: COND.URLLCSliceApplicability
+    canonical_name: URLLCSliceApplicability
+    display_name_zh: URLLC切片适用条件
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      当业务要求端到端时延 < 10ms 且可靠性 > 99.999% 时适用URLLC切片（SST=2）；
+      需要专用AMF/SMF/UPF、边缘部署UPF、Delay-Critical GBR QoS流（5QI 82-86）。
+    aliases:
+      - URLLC applicability
+      - 低时延高可靠条件
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.eMBBSliceApplicability
+    canonical_name: eMBBSliceApplicability
+    display_name_zh: eMBB切片适用条件
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      高带宽业务（视频流、AR/VR、大文件下载）适用eMBB切片（SST=1）；
+      可共享UPF池、使用Non-GBR QoS流（5QI=6/8/9）；不要求严格时延保证。
+    aliases:
+      - eMBB applicability
+      - 大带宽条件
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.mMTCSliceApplicability
+    canonical_name: mMTCSliceApplicability
+    display_name_zh: mMTC切片适用条件
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      海量物联网终端（> 100万设备/km²）适用mMTC切片（SST=3）；
+      轻量化控制面、简化会话管理、小数据包低频传输、低功耗优化。
+    aliases:
+      - mMTC applicability
+      - 海量物联条件
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.EdgeDeploymentApplicability
+    canonical_name: EdgeDeploymentApplicability
+    display_name_zh: 边缘部署适用条件
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      当业务需要数据本地化处理或低时延接入时，在边缘站点部署本地PSA UPF；
+      需配合UL CL或多PDU Session方案；考虑SSC Mode 2/3的会话连续性。
+    aliases:
+      - edge deployment condition
+      - MEC适用条件
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  # ════════════════════════════════════════════
+  # Constraint Conditions
+  # ════════════════════════════════════════════
+  - id: COND.StatelessNFConstraint
+    canonical_name: StatelessNFConstraint
+    display_name_zh: 无状态NF约束
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      云原生部署要求NF Pod无状态设计；UE/Session上下文必须外部化到UDSF或数据库；
+      违反此约束将导致Pod漂移或重启时丢失用户状态。
+    aliases:
+      - stateless constraint
+      - 无状态约束
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.N4PFCPCapacityConstraint
+    canonical_name: N4PFCPCapacityConstraint
+    display_name_zh: N4/PFCP容量约束
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      单个UPF支持的PFCP Session数量有上限（取决于硬件/软件实现）；
+      超过容量需水平扩展UPF实例并调整SMF的UPF选择策略。
+    aliases:
+      - PFCP capacity
+      - PFCP容量约束
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.InterPLMNSecurityConstraint
+    canonical_name: InterPLMNSecurityConstraint
+    display_name_zh: PLMN间安全约束
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      漫游场景下所有PLMN间SBI信令必须经SEPP（N32）保护；
+      必须启用TLS和ALS（JOSE/JWE）；必须配置拓扑隐藏。
+    aliases:
+      - inter-PLMN security
+      - 漫游安全约束
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  # ════════════════════════════════════════════
+  # Risk Conditions
+  # ════════════════════════════════════════════
+  - id: COND.NRFSinglePointOfFailureRisk
+    canonical_name: NRFSinglePointOfFailureRisk
+    display_name_zh: NRF单点故障风险
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NRF是SBA服务发现的中心节点；若NRF不可用，新NF无法注册，消费者无法发现生产者；
+      需部署NRF高可用集群或SCP本地缓存兜底。
+    aliases:
+      - NRF SPOF
+      - NRF单点故障
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.SliceIsolationBreachRisk
+    canonical_name: SliceIsolationBreachRisk
+    display_name_zh: 切片隔离失效风险
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      共享NF实例的切片间可能因资源争抢导致隔离失效；URLLC切片不应与eMBB切片
+      共享SMF/UPF实例；需在NF和基础设施层面分别保障资源隔离。
+    aliases:
+      - slice isolation risk
+      - 切片隔离风险
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.UPFPathSwitchLatencyRisk
+    canonical_name: UPFPathSwitchLatencyRisk
+    display_name_zh: UPF路径切换时延风险
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      UE移动导致UPF重选时，SSC Mode 1保持锚点但增加回传时延；SSC Mode 2
+      先断后连有业务中断；SSC Mode 3 make-before-break复杂度高。需根据业务
+      连续性要求选择合适的SSC模式。
+    aliases:
+      - UPF path switch risk
+      - 锚点切换风险
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  # ════════════════════════════════════════════
+  # Decision Rules
+  # ════════════════════════════════════════════
+  - id: COND.PreferDedicatedNFForURLLCRule
+    canonical_name: PreferDedicatedNFForURLLCRule
+    display_name_zh: URLLC优先专用NF规则
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      URLLC切片应使用专用AMF/SMF/UPF实例，不与其他切片共享，以保障确定性时延；
+      仅在设备资源不足时退化为共享+优先级隔离方案。
+    aliases:
+      - dedicated NF for URLLC
+      - URLLC专用NF规则
+    allowed_relations: [applies_to, selects, contraindicates]
+
+  - id: COND.PreferSCPModelDForLargeScaleRule
+    canonical_name: PreferSCPModelDForLargeScaleRule
+    display_name_zh: 大规模场景优选SCP Model D规则
+    knowledge_layer: condition
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      当NF实例数量 > 50 或跨多个NRF域时，优选SCP Communication Model D
+      （全委托模式），由SCP承担服务发现和路由，减轻NF侧复杂度。
+    aliases:
+      - SCP Model D rule
+      - Model D优选规则
+    allowed_relations: [applies_to, selects, contraindicates]

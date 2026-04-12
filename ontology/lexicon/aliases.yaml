@@ -3409,3 +3409,282 @@ aliases:
   canonical_node_id: IP.NQA_TEST
   alias_type: full_name
   language: en
+
+# 5G Cloud Core Network (CN5G) v0.4.0
+
+- surface_form: Access and Mobility Management Function
+  canonical_node_id: CN5G.AMF
+  alias_type: full_name
+  language: en
+- surface_form: AMF
+  canonical_node_id: CN5G.AMF
+  alias_type: abbreviation
+  language: en
+- surface_form: 接入和移动性管理功能
+  canonical_node_id: CN5G.AMF
+  alias_type: full_name
+  language: zh
+- surface_form: Session Management Function
+  canonical_node_id: CN5G.SMF
+  alias_type: full_name
+  language: en
+- surface_form: SMF
+  canonical_node_id: CN5G.SMF
+  alias_type: abbreviation
+  language: en
+- surface_form: 会话管理功能
+  canonical_node_id: CN5G.SMF
+  alias_type: full_name
+  language: zh
+- surface_form: User Plane Function
+  canonical_node_id: CN5G.UPF
+  alias_type: full_name
+  language: en
+- surface_form: UPF
+  canonical_node_id: CN5G.UPF
+  alias_type: abbreviation
+  language: en
+- surface_form: 用户面功能
+  canonical_node_id: CN5G.UPF
+  alias_type: full_name
+  language: zh
+- surface_form: Policy Control Function
+  canonical_node_id: CN5G.PCF
+  alias_type: full_name
+  language: en
+- surface_form: PCF
+  canonical_node_id: CN5G.PCF
+  alias_type: abbreviation
+  language: en
+- surface_form: 策略控制功能
+  canonical_node_id: CN5G.PCF
+  alias_type: full_name
+  language: zh
+- surface_form: Network Repository Function
+  canonical_node_id: CN5G.NRF
+  alias_type: full_name
+  language: en
+- surface_form: NRF
+  canonical_node_id: CN5G.NRF
+  alias_type: abbreviation
+  language: en
+- surface_form: 网络存储功能
+  canonical_node_id: CN5G.NRF
+  alias_type: full_name
+  language: zh
+- surface_form: Network Slice Selection Function
+  canonical_node_id: CN5G.NSSF
+  alias_type: full_name
+  language: en
+- surface_form: NSSF
+  canonical_node_id: CN5G.NSSF
+  alias_type: abbreviation
+  language: en
+- surface_form: 网络切片选择功能
+  canonical_node_id: CN5G.NSSF
+  alias_type: full_name
+  language: zh
+- surface_form: Authentication Server Function
+  canonical_node_id: CN5G.AUSF
+  alias_type: full_name
+  language: en
+- surface_form: AUSF
+  canonical_node_id: CN5G.AUSF
+  alias_type: abbreviation
+  language: en
+- surface_form: 鉴权服务功能
+  canonical_node_id: CN5G.AUSF
+  alias_type: full_name
+  language: zh
+- surface_form: Unified Data Management
+  canonical_node_id: CN5G.UDM
+  alias_type: full_name
+  language: en
+- surface_form: UDM
+  canonical_node_id: CN5G.UDM
+  alias_type: abbreviation
+  language: en
+- surface_form: 统一数据管理
+  canonical_node_id: CN5G.UDM
+  alias_type: full_name
+  language: zh
+- surface_form: Unified Data Repository
+  canonical_node_id: CN5G.UDR
+  alias_type: full_name
+  language: en
+- surface_form: UDR
+  canonical_node_id: CN5G.UDR
+  alias_type: abbreviation
+  language: en
+- surface_form: 统一数据仓库
+  canonical_node_id: CN5G.UDR
+  alias_type: full_name
+  language: zh
+- surface_form: Network Exposure Function
+  canonical_node_id: CN5G.NEF
+  alias_type: full_name
+  language: en
+- surface_form: NEF
+  canonical_node_id: CN5G.NEF
+  alias_type: abbreviation
+  language: en
+- surface_form: 网络开放功能
+  canonical_node_id: CN5G.NEF
+  alias_type: full_name
+  language: zh
+- surface_form: Network Data Analytics Function
+  canonical_node_id: CN5G.NWDAF
+  alias_type: full_name
+  language: en
+- surface_form: NWDAF
+  canonical_node_id: CN5G.NWDAF
+  alias_type: abbreviation
+  language: en
+- surface_form: 网络数据分析功能
+  canonical_node_id: CN5G.NWDAF
+  alias_type: full_name
+  language: zh
+- surface_form: Service Communication Proxy
+  canonical_node_id: CN5G.SCP
+  alias_type: full_name
+  language: en
+- surface_form: SCP
+  canonical_node_id: CN5G.SCP
+  alias_type: abbreviation
+  language: en
+- surface_form: 服务通信代理
+  canonical_node_id: CN5G.SCP
+  alias_type: full_name
+  language: zh
+- surface_form: Security Edge Protection Proxy
+  canonical_node_id: CN5G.SEPP
+  alias_type: full_name
+  language: en
+- surface_form: SEPP
+  canonical_node_id: CN5G.SEPP
+  alias_type: abbreviation
+  language: en
+- surface_form: 安全边缘保护代理
+  canonical_node_id: CN5G.SEPP
+  alias_type: full_name
+  language: zh
+- surface_form: Charging Function
+  canonical_node_id: CN5G.CHF
+  alias_type: full_name
+  language: en
+- surface_form: CHF
+  canonical_node_id: CN5G.CHF
+  alias_type: abbreviation
+  language: en
+- surface_form: 计费功能
+  canonical_node_id: CN5G.CHF
+  alias_type: full_name
+  language: zh
+- surface_form: Binding Support Function
+  canonical_node_id: CN5G.BSF
+  alias_type: full_name
+  language: en
+- surface_form: BSF
+  canonical_node_id: CN5G.BSF
+  alias_type: abbreviation
+  language: en
+- surface_form: Unstructured Data Storage Function
+  canonical_node_id: CN5G.UDSF
+  alias_type: full_name
+  language: en
+- surface_form: UDSF
+  canonical_node_id: CN5G.UDSF
+  alias_type: abbreviation
+  language: en
+- surface_form: Non-3GPP InterWorking Function
+  canonical_node_id: CN5G.N3IWF
+  alias_type: full_name
+  language: en
+- surface_form: N3IWF
+  canonical_node_id: CN5G.N3IWF
+  alias_type: abbreviation
+  language: en
+- surface_form: Trusted Non-3GPP Gateway Function
+  canonical_node_id: CN5G.TNGF
+  alias_type: full_name
+  language: en
+- surface_form: TNGF
+  canonical_node_id: CN5G.TNGF
+  alias_type: abbreviation
+  language: en
+- surface_form: S-NSSAI
+  canonical_node_id: CN5G.S_NSSAI
+  alias_type: abbreviation
+  language: en
+- surface_form: 单网络切片选择辅助信息
+  canonical_node_id: CN5G.S_NSSAI
+  alias_type: full_name
+  language: zh
+- surface_form: PDU Session
+  canonical_node_id: CN5G.PDU_SESSION
+  alias_type: full_name
+  language: en
+- surface_form: PDU会话
+  canonical_node_id: CN5G.PDU_SESSION
+  alias_type: full_name
+  language: zh
+- surface_form: QoS Flow
+  canonical_node_id: CN5G.QOS_FLOW
+  alias_type: full_name
+  language: en
+- surface_form: QoS流
+  canonical_node_id: CN5G.QOS_FLOW
+  alias_type: full_name
+  language: zh
+- surface_form: PCC Rule
+  canonical_node_id: CN5G.PCC_RULE
+  alias_type: full_name
+  language: en
+- surface_form: PFCP Session
+  canonical_node_id: CN5G.PFCP_SESSION
+  alias_type: full_name
+  language: en
+- surface_form: Cloud-Native Network Function
+  canonical_node_id: CN5G.CNF
+  alias_type: full_name
+  language: en
+- surface_form: CNF
+  canonical_node_id: CN5G.CNF
+  alias_type: abbreviation
+  language: en
+- surface_form: 云原生网络功能
+  canonical_node_id: CN5G.CNF
+  alias_type: full_name
+  language: zh
+- surface_form: NFV Orchestrator
+  canonical_node_id: CN5G.NFVO
+  alias_type: full_name
+  language: en
+- surface_form: NFVO
+  canonical_node_id: CN5G.NFVO
+  alias_type: abbreviation
+  language: en
+- surface_form: VNF Manager
+  canonical_node_id: CN5G.VNFM
+  alias_type: full_name
+  language: en
+- surface_form: VNFM
+  canonical_node_id: CN5G.VNFM
+  alias_type: abbreviation
+  language: en
+- surface_form: Virtualized Infrastructure Manager
+  canonical_node_id: CN5G.VIM
+  alias_type: full_name
+  language: en
+- surface_form: VIM
+  canonical_node_id: CN5G.VIM
+  alias_type: abbreviation
+  language: en
+- surface_form: Helm Chart
+  canonical_node_id: CN5G.HELM_CHART
+  alias_type: full_name
+  language: en
+- surface_form: Helm部署包
+  canonical_node_id: CN5G.HELM_CHART
+  alias_type: full_name
+  language: zh

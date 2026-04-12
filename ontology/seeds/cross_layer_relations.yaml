@@ -276,3 +276,223 @@ relations:
   - subject: SCENE.IncrementalMigrationScenario
     predicate: composed_of
     object: METHOD.RollbackMethod
+
+  # ══════════════════════════════════════════════════════════════
+  # 5G Cloud Core Network (CN5G) — Cross-layer relations
+  # v0.4.0
+  # ══════════════════════════════════════════════════════════════
+
+  # ── concept → mechanism (explains) ──
+  - subject: CN5G.AMF
+    predicate: explains
+    object: MECH.5G_AKA
+    note: AMF initiates 5G-AKA authentication procedure
+
+  - subject: CN5G.AMF
+    predicate: explains
+    object: MECH.NASSecuritySetup
+    note: AMF performs NAS security mode setup
+
+  - subject: CN5G.SMF
+    predicate: explains
+    object: MECH.PDUSessionEstablishment
+    note: SMF drives PDU session establishment procedure
+
+  - subject: CN5G.SMF
+    predicate: explains
+    object: MECH.QoSFlowManagement
+    note: SMF manages QoS flow lifecycle within PDU sessions
+
+  - subject: CN5G.SMF
+    predicate: explains
+    object: MECH.PFCPSessionControl
+    note: SMF controls UPF via PFCP session management
+
+  - subject: CN5G.UPF
+    predicate: explains
+    object: MECH.UplinkClassification
+    note: UPF performs uplink traffic classification for MEC/edge
+
+  - subject: CN5G.NSSF
+    predicate: explains
+    object: MECH.NetworkSliceSelection
+    note: NSSF performs network slice selection
+
+  - subject: CN5G.NRF
+    predicate: explains
+    object: MECH.SBAServiceDiscovery
+    note: NRF enables SBA service discovery
+
+  - subject: CN5G.PCF
+    predicate: explains
+    object: MECH.PCCPolicyEnforcement
+    note: PCF provides PCC rules for policy enforcement
+
+  - subject: CN5G.NWDAF
+    predicate: explains
+    object: MECH.NWDAFAnalytics
+    note: NWDAF provides network data analytics
+
+  - subject: CN5G.SEPP
+    predicate: explains
+    object: MECH.InterPLMNSignalingProtection
+    note: SEPP performs inter-PLMN signaling protection
+
+  - subject: CN5G.CNF
+    predicate: explains
+    object: MECH.CNFLifecycleManagement
+    note: CNF lifecycle managed by MANO framework
+
+  # ── mechanism → method (implemented_by) ──
+  - subject: MECH.5G_AKA
+    predicate: implemented_by
+    object: METHOD.RegistrationVerificationMethod
+    note: 5G-AKA verification is part of registration verification
+
+  - subject: MECH.PDUSessionEstablishment
+    predicate: implemented_by
+    object: METHOD.SMFProvisioningMethod
+    note: PDU session establishment requires SMF configuration
+
+  - subject: MECH.PDUSessionEstablishment
+    predicate: implemented_by
+    object: METHOD.PDUSessionVerificationMethod
+    note: PDU session establishment verified by session verification
+
+  - subject: MECH.QoSFlowManagement
+    predicate: implemented_by
+    object: METHOD.PCFPolicyProvisioningMethod
+    note: QoS flow management requires PCF policy configuration
+
+  - subject: MECH.PFCPSessionControl
+    predicate: implemented_by
+    object: METHOD.UPFProvisioningMethod
+    note: PFCP session control requires UPF configuration
+
+  - subject: MECH.NetworkSliceSelection
+    predicate: implemented_by
+    object: METHOD.SlicePlanningMethod
+    note: Slice selection requires slice planning
+
+  - subject: MECH.SBAServiceDiscovery
+    predicate: implemented_by
+    object: METHOD.NRFRegistrationMethod
+    note: Service discovery requires NRF registration
+
+  - subject: MECH.CNFLifecycleManagement
+    predicate: implemented_by
+    object: METHOD.CNFDeploymentMethod
+    note: CNF lifecycle managed through deployment methods
+
+  # ── method → condition (governed_by / applies_to) ──
+  - subject: METHOD.SlicePlanningMethod
+    predicate: applies_to
+    object: COND.URLLCSliceApplicability
+    note: Slice planning must consider URLLC requirements
+
+  - subject: METHOD.SlicePlanningMethod
+    predicate: applies_to
+    object: COND.eMBBSliceApplicability
+    note: Slice planning must consider eMBB requirements
+
+  - subject: METHOD.UPFPlacementMethod
+    predicate: applies_to
+    object: COND.EdgeDeploymentApplicability
+    note: UPF placement considers edge deployment conditions
+
+  - subject: METHOD.UPFProvisioningMethod
+    predicate: applies_to
+    object: COND.N4PFCPCapacityConstraint
+    note: UPF provisioning must respect PFCP capacity limits
+
+  - subject: METHOD.CNFDeploymentMethod
+    predicate: applies_to
+    object: COND.StatelessNFConstraint
+    note: CNF deployment must follow stateless design constraint
+
+  - subject: METHOD.AMFConfigurationMethod
+    predicate: applies_to
+    object: COND.PreferSCPModelDForLargeScaleRule
+    note: AMF communication model selection guided by scale rule
+
+  # ── scenario → composed_of ──
+  - subject: SCENE.eMBBSliceProvisioningScenario
+    predicate: composed_of
+    object: METHOD.SlicePlanningMethod
+
+  - subject: SCENE.eMBBSliceProvisioningScenario
+    predicate: composed_of
+    object: METHOD.SMFProvisioningMethod
+
+  - subject: SCENE.eMBBSliceProvisioningScenario
+    predicate: composed_of
+    object: COND.eMBBSliceApplicability
+
+  - subject: SCENE.URLLCSliceProvisioningScenario
+    predicate: composed_of
+    object: METHOD.SlicePlanningMethod
+
+  - subject: SCENE.URLLCSliceProvisioningScenario
+    predicate: composed_of
+    object: METHOD.UPFPlacementMethod
+
+  - subject: SCENE.URLLCSliceProvisioningScenario
+    predicate: composed_of
+    object: COND.URLLCSliceApplicability
+
+  - subject: SCENE.URLLCSliceProvisioningScenario
+    predicate: composed_of
+    object: COND.PreferDedicatedNFForURLLCRule
+
+  - subject: SCENE.MECEdgeComputingScenario
+    predicate: composed_of
+    object: METHOD.UPFPlacementMethod
+
+  - subject: SCENE.MECEdgeComputingScenario
+    predicate: composed_of
+    object: COND.EdgeDeploymentApplicability
+
+  - subject: SCENE.VoNRCallScenario
+    predicate: composed_of
+    object: METHOD.PCFPolicyProvisioningMethod
+
+  - subject: SCENE.HomeRoutedRoamingScenario
+    predicate: composed_of
+    object: COND.InterPLMNSecurityConstraint
+
+  - subject: SCENE.NonThreeGPPAccessScenario
+    predicate: composed_of
+    object: METHOD.RegistrationVerificationMethod
+
+  - subject: SCENE.CNFRollingUpgradeScenario
+    predicate: composed_of
+    object: METHOD.CNFDeploymentMethod
+
+  - subject: SCENE.CNFRollingUpgradeScenario
+    predicate: composed_of
+    object: METHOD.CNFHealthCheckMethod
+
+  - subject: SCENE.CNFRollingUpgradeScenario
+    predicate: composed_of
+    object: COND.StatelessNFConstraint
+
+  # ── scenario → validated_by ──
+  - subject: SCENE.eMBBSliceProvisioningScenario
+    predicate: validated_by
+    object: METHOD.SliceVerificationMethod
+
+  - subject: SCENE.URLLCSliceProvisioningScenario
+    predicate: validated_by
+    object: METHOD.SliceVerificationMethod
+
+  - subject: SCENE.MECEdgeComputingScenario
+    predicate: validated_by
+    object: METHOD.PDUSessionVerificationMethod
+
+  - subject: SCENE.VoNRCallScenario
+    predicate: validated_by
+    object: METHOD.PDUSessionVerificationMethod
+
+  - subject: SCENE.CNFRollingUpgradeScenario
+    predicate: validated_by
+    object: METHOD.CNFHealthCheckMethod

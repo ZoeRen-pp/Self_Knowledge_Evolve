@@ -1,0 +1,226 @@
+version: v0.4.0
+domain: 5G Cloud Core Network
+knowledge_layer: mechanism
+
+nodes:
+
+  # ════════════════════════════════════════════
+  # Registration & Authentication
+  # ════════════════════════════════════════════
+  - id: MECH.5G_AKA
+    canonical_name: 5G-AKA
+    display_name_zh: 5G认证与密钥协商
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      5G Authentication and Key Agreement. Challenge-response mutual authentication
+      based on symmetric key in USIM; AUSF verifies RES* from UE; derives anchor key KAUSF.
+      SUPI concealed as SUCI using ECIES public-key encryption, decrypted by SIDF in UDM.
+    aliases:
+      - 5G AKA
+      - 5G authentication
+      - 5G-AKA authentication
+      - 5G认证
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.EAP_AKA_PRIME
+    canonical_name: EAP-AKA'
+    display_name_zh: EAP-AKA'认证
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      EAP-based authentication method for 5G. AUSF acts as EAP server;
+      supports non-3GPP access authentication. Provides key binding
+      to prevent key reuse across different access networks.
+    aliases:
+      - EAP-AKA prime
+      - EAP-AKA'
+      - EAP认证
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.NASSecuritySetup
+    canonical_name: NAS Security Setup
+    display_name_zh: NAS安全建立
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NAS Security Mode Command procedure. AMF selects integrity and ciphering algorithms;
+      derives NAS security keys from KAMF; activates NAS integrity protection and encryption
+      between UE and AMF.
+    aliases:
+      - NAS security
+      - NAS SMC
+      - NAS安全模式
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  # ════════════════════════════════════════════
+  # Session & QoS
+  # ════════════════════════════════════════════
+  - id: MECH.PDUSessionEstablishment
+    canonical_name: PDU Session Establishment
+    display_name_zh: PDU会话建立
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      UE-initiated signaling procedure to establish a PDU session. AMF selects SMF;
+      SMF obtains PCC rules from PCF, selects UPF, installs PFCP rules via N4,
+      establishes GTP-U tunnel on N3. UE receives IP address and QoS rules.
+    aliases:
+      - PDU session setup
+      - session establishment
+      - PDU会话建立流程
+    allowed_relations: [participates_in, explains, implemented_by, depends_on, causes]
+
+  - id: MECH.QoSFlowManagement
+    canonical_name: QoS Flow Management
+    display_name_zh: QoS流管理
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      SMF creates, modifies, and releases QoS Flows within a PDU session.
+      Each QoS Flow is identified by QFI, characterized by 5QI;
+      SMF maps PCC rules to QoS Flows and installs QER in UPF via PFCP.
+    aliases:
+      - QoS flow control
+      - 5QI mapping
+      - QoS管理
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.PFCPSessionControl
+    canonical_name: PFCP Session Control
+    display_name_zh: PFCP会话控制
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      SMF controls UPF packet processing via PFCP on N4. Installs PDR (packet detection),
+      FAR (forwarding action), QER (QoS enforcement), URR (usage reporting) rules.
+      Supports session establishment, modification, deletion, and heartbeat.
+    aliases:
+      - PFCP control
+      - N4 session management
+      - PFCP会话管理
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.UplinkClassification
+    canonical_name: Uplink Classification
+    display_name_zh: 上行分类
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      UL CL (Uplink Classifier) in intermediate UPF. Classifies uplink traffic based on
+      IP 5-tuple or DNN; steers matching flows to local PSA UPF (e.g., MEC edge) while
+      forwarding remaining traffic to central PSA.
+    aliases:
+      - UL CL
+      - uplink classifier
+      - 上行流量分类
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  # ════════════════════════════════════════════
+  # Network Slicing & SBA
+  # ════════════════════════════════════════════
+  - id: MECH.NetworkSliceSelection
+    canonical_name: Network Slice Selection
+    display_name_zh: 网络切片选择
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NSSF selects network slice instances for UE based on Requested NSSAI, subscription data,
+      and local policy. Returns Allowed NSSAI and target AMF set. UE can be served by up to
+      8 slices simultaneously.
+    aliases:
+      - slice selection
+      - NSSAI selection
+      - 切片选择
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.SBAServiceDiscovery
+    canonical_name: SBA Service Discovery
+    display_name_zh: SBA服务发现
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NFs register profiles with NRF via Nnrf_NFManagement; consumers discover producers
+      via Nnrf_NFDiscovery (query by NF type, service name, slice, DNN). Four communication
+      models: A (direct), B (SCP route), C (SCP-assisted discovery), D (full SCP delegation).
+    aliases:
+      - service discovery
+      - NRF discovery
+      - 服务发现
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.PCCPolicyEnforcement
+    canonical_name: PCC Policy Enforcement
+    display_name_zh: PCC策略执行
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      PCF provides PCC rules (service flow filter, QoS params, charging key, gate status)
+      to SMF via N7. SMF translates PCC rules into PFCP rules for UPF. CHF handles converged
+      online/offline charging based on URR reports.
+    aliases:
+      - PCC enforcement
+      - policy enforcement
+      - 策略执行
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  - id: MECH.NWDAFAnalytics
+    canonical_name: NWDAF Analytics
+    display_name_zh: NWDAF数据分析
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      NWDAF collects data from NFs and OAM; AnLF performs statistical/predictive analytics
+      (slice load, NF load, UE mobility, service experience, abnormal behavior);
+      MTLF trains ML models. Consumers: PCF, NSSF, AMF, SMF.
+    aliases:
+      - network analytics
+      - NWDAF analysis
+      - 网络分析
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
+
+  # ════════════════════════════════════════════
+  # Roaming & Security
+  # ════════════════════════════════════════════
+  - id: MECH.InterPLMNSignalingProtection
+    canonical_name: Inter-PLMN Signaling Protection
+    display_name_zh: PLMN间信令保护
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      SEPP-to-SEPP N32 signaling protection. N32-c for TLS handshake and capability negotiation;
+      N32-f for message forwarding with JOSE/JWE Application Level Security (ALS).
+      Provides topology hiding by replacing internal NF addresses.
+    aliases:
+      - SEPP protection
+      - N32 security
+      - PLMN间安全
+    allowed_relations: [participates_in, explains, implemented_by, depends_on, protects]
+
+  - id: MECH.CNFLifecycleManagement
+    canonical_name: CNF Lifecycle Management
+    display_name_zh: CNF生命周期管理
+    knowledge_layer: mechanism
+    maturity_level: core
+    lifecycle_state: active
+    description: >
+      ETSI NFV MANO framework for cloud-native NFs. NFVO orchestrates network services;
+      VNFM manages individual CNF lifecycle (instantiate, scale, heal, terminate);
+      VIM/CaaS (Kubernetes) provides compute/storage/network resources.
+    aliases:
+      - CNF lifecycle
+      - MANO lifecycle
+      - 云原生生命周期
+    allowed_relations: [participates_in, explains, implemented_by, depends_on]
