@@ -576,6 +576,21 @@ if not re.match(r"^[A-Z][A-Z0-9_]*$", rel_type):
 
 **文档状态更新**：Stage 6 完成后 `documents.status = 'indexed'`，这是最终状态。
 
+**Neo4j 节点类型与关系完整清单**：
+
+Stage 6 写入 Neo4j 的节点和关系分为两个逻辑层面（详见架构设计文档 §6.2.1）：
+
+| 层面 | 节点标签 | 关系类型 | 说明 |
+|------|---------|---------|------|
+| 本体推理层 | `OntologyNode`, `MechanismNode`, `MethodNode`, `ConditionRuleNode`, `ScenarioPatternNode` | 动态（`DEPENDS_ON`, `EXPLAINS`, `IMPLEMENTED_BY` 等 77 种） | Fact 聚合产生的本体边，用于图遍历推理 |
+| 本体推理层 | `Alias` | `ALIAS_OF` → 本体节点 | 跨厂商/中英文术语归一化 |
+| 知识溯源层 | `Fact` | 无边指向本体节点（通过 `f.subject`/`f.object` 属性引用） | 原始三元组，保留生命周期状态 |
+| 知识溯源层 | `Evidence` | `Fact` →`SUPPORTED_BY`→ `Evidence` | 引用凭证：来源等级、抽取方法、原文片段 |
+| 知识溯源层 | `KnowledgeSegment` | `Evidence` →`EXTRACTED_FROM`→ `KnowledgeSegment` | 文档切分后的知识片段 |
+| 知识溯源层 | `SourceDocument` | `KnowledgeSegment` →`BELONGS_TO`→ `SourceDocument` | 原始文档元数据 |
+
+**两层分离的设计意图**：Fact 不通过图边连接到 OntologyNode，是为了保持本体推理层的图结构干净（只有语义关系边，无溯源噪声），让依赖闭包、影响传播等深度遍历查询不受 Fact 生命周期干扰。溯源查询通过属性匹配（`f.subject = node.node_id`）桥接两层。
+
 ---
 
 ## 6. 候选词治理详细规格

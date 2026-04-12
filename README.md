@@ -37,10 +37,10 @@ python scripts/load_ontology.py   # YAML → Neo4j + PG lexicon
 python worker.py
 
 # 启动 API + Dashboard
-uvicorn src.app:app --host 0.0.0.0 --port 8000
+uvicorn src.app:app --host 0.0.0.0 --port 8001
 ```
 
-Dashboard：http://localhost:8000/dashboard
+Dashboard：http://localhost:8001/dashboard
 
 ### 完全重置
 
@@ -87,29 +87,56 @@ docker-compose up -d              # PostgreSQL + Neo4j
     └──────────────────────────────────────────────────────────┘
 ```
 
+## Neo4j 图数据模型
+
+Neo4j 中存在两个逻辑分离的层面：
+
+```
+本体推理层（用于图遍历：依赖闭包、影响传播、跨层推理）
+────────────────────────────────────────────────────
+  OntologyNode ──[DEPENDS_ON]──> OntologyNode
+       │                              │
+  [EXPLAINS]                     [IMPLEMENTED_BY]
+       │                              │
+  MechanismNode ──→ MethodNode ──→ ConditionRuleNode ──→ ScenarioPatternNode
+       ▲
+  Alias ──[:ALIAS_OF]──> (任意本体节点)
+
+  本体边 = 多条 Fact 聚合后的结论（fact_count + max confidence）
+
+
+知识溯源层（用于证据追溯：这个结论从哪来）
+────────────────────────────────────────────────────
+  Fact ──[:SUPPORTED_BY]──> Evidence ──[:EXTRACTED_FROM]──> KnowledgeSegment ──[:BELONGS_TO]──> SourceDocument
+
+  Fact 通过属性引用（f.subject = node_id）桥接到本体节点，无图边
+```
+
+**为什么 Fact 不直接连接到 OntologyNode**：本体推理层只保留语义关系边（聚合结论），不被 Fact 生命周期（active/conflicted/superseded/merged）干扰。两层通过属性松耦合，推理查询和溯源查询各走各的路径，互不影响。
+
 ## 七阶段 Pipeline
 
 ```
 Stage 1: Ingest    → 文本提取、降噪、质量门控、文档类型检测
-Stage 2: Segment   → 三级切分（段落→句子→滑动窗口）、21种RST关系、语义角色分类
+Stage 2: Segment   → 三级切分（结构分割→语义角色→长度控制）、20种RST关系、discourse marker感知、滑动窗口512/64
 Stage 3: Align     → 别名匹配 + Embedding模糊匹配、五层标签、LLM候选词发现（带分类）
 Stage 3b: Evolve   → 五维评分、六道门控、自动晋升/待审核
-Stage 4: Extract   → LLM优先抽取(S,P,O)三元组、合并上下文重试、共现兜底
+Stage 4: Extract   → LLM优先抽取(S,P,O)三元组 → 合并上文重试（RST连续关系触发）→ 双节点共现兜底
 Stage 5: Dedup     → SimHash + Embedding语义去重、事实合并、冲突检测
 Stage 6: Index     → 置信度门控、Neo4j写入（动态关系类型）、向量索引
 ```
 
 ## 五层本体模型
 
-| 层 | YAML 文件 | Neo4j 标签 | 数量 |
-|----|-----------|------------|------|
-| concept | `ip_network.yaml` | `OntologyNode` | 100 |
-| mechanism | `ip_network_mechanisms.yaml` | `MechanismNode` | 24 |
-| method | `ip_network_methods.yaml` | `MethodNode` | 22 |
-| condition | `ip_network_conditions.yaml` | `ConditionRuleNode` | 20 |
-| scenario | `ip_network_scenarios.yaml` | `ScenarioPatternNode` | 13 |
+| 层 | YAML 文件 | Neo4j 标签 | 数量 | 定义 |
+|----|-----------|------------|------|------|
+| concept | `ip_network.yaml` | `OntologyNode` | 114 | YANG 模型参考的可配置对象（接口、协议实例、策略、VPN 等，可通过 CLI 操作） |
+| mechanism | `ip_network_mechanisms.yaml` | `MechanismNode` | 24 | 协议算法与转发机制（如何工作） |
+| method | `ip_network_methods.yaml` | `MethodNode` | 22 | 配置与排障流程（如何操作） |
+| condition | `ip_network_conditions.yaml` | `ConditionRuleNode` | 20 | 适用条件、约束与决策规则（何时适用） |
+| scenario | `ip_network_scenarios.yaml` | `ScenarioPatternNode` | 13 | 部署模式与业务场景（真实场景） |
 
-关系：71 种（`ontology/top/relations.yaml`）。别名：871 条（`ontology/lexicon/aliases.yaml`）。种子关系：104 条。
+关系：77 种（`ontology/top/relations.yaml`）。别名：759 条（`ontology/lexicon/aliases.yaml`）。种子关系：114 条（axiom 58 + cross-layer 56）。
 
 ## 21 语义算子
 

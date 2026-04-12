@@ -186,6 +186,52 @@ Neo4j 的原生图存储在节点的物理层面保存了邻居指针（adjacenc
 
 另一个原因：**动态关系类型**。本系统的关系类型来自 LLM 抽取，是开放集合。PostgreSQL 没有"动态关系类型"的概念，每种类型需要一条 facts 记录加 predicate 字段区分；Neo4j 的关系类型是图的一等公民，可以直接在 MATCH 里过滤。
 
+### 6.2.1 Neo4j 图数据模型——双层分离设计
+
+Neo4j 中存在两个逻辑上分离的层面：**本体推理层**和**知识溯源层**。两层通过属性引用（而非图边）松耦合，这是刻意的架构决策。
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    本体推理层                              │
+│  用于图遍历（依赖闭包、影响传播、跨层推理）                    │
+│                                                         │
+│  OntologyNode ──[DEPENDS_ON]──> OntologyNode            │
+│       │                              │                  │
+│  [EXPLAINS]                     [IMPLEMENTED_BY]        │
+│       │                              │                  │
+│  MechanismNode ──[r]──> MethodNode ──[r]──> ...         │
+│       ▲                                                 │
+│  Alias ──[:ALIAS_OF]──> (任意本体节点)                    │
+│                                                         │
+│  边 = 多条 Fact 聚合的结论                                 │
+│      属性：predicate, confidence(取最高), fact_count       │
+└─────────────────────────────────────────────────────────┘
+            ▲ 通过属性引用（f.subject = node.node_id），无图边
+┌─────────────────────────────────────────────────────────┐
+│                    知识溯源层                              │
+│  用于证据追溯（这个结论从哪来）                              │
+│                                                         │
+│  Fact ──[:SUPPORTED_BY]──> Evidence                      │
+│                              │                          │
+│                    [:EXTRACTED_FROM]                     │
+│                              │                          │
+│                    KnowledgeSegment                      │
+│                              │                          │
+│                       [:BELONGS_TO]                      │
+│                              │                          │
+│                       SourceDocument                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**为什么 Fact 不直接连接到 OntologyNode（无 ABOUT_SUBJECT/ABOUT_OBJECT 边）：**
+
+1. **本体图保持干净**：OntologyNode 之间只有语义关系边（DEPENDS_ON、EXPLAINS 等），是多条 Fact 蒸馏后的聚合结论。图遍历（故障传播、依赖闭包）直接走本体边，不会被 Fact 节点打断路径。
+2. **聚合语义**：3 条 Fact 说同一件事，在本体图上只产生 1 条边（`fact_count=3, confidence=max`）。如果每条 Fact 都有 ABOUT 边，647 个 Fact 会多出 1294 条边，本体图退化为 Fact 图。
+3. **生命周期独立**：Fact 经历 `active → conflicted → superseded → merged` 状态流转，如果有边指向 OntologyNode，每次状态变更都要维护图边。属性引用让 Fact 生命周期管理完全在 PostgreSQL 侧完成，Neo4j 本体图不受影响。
+4. **关注点分离**：推理查询（"BGP 故障影响什么"）只走本体推理层；溯源查询（"这个结论从哪来"）只走知识溯源层。两者互不干扰。
+
+**查询示范**（`scripts/neo4j_queries.cypher` §2-B）：从一个本体节点出发，贯穿五层，展示链上每个节点的 Alias + Fact→Evidence→Segment→Document 完整证据链。
+
 ### 6.3 为什么用 MinIO
 
 原始 HTML 和清洗后文本可能很大（单个 RFC 文档超过 1MB）。把这些内容存入 PostgreSQL 的 TEXT 字段会导致表膨胀、Vacuum 开销增大、备份体积过大。

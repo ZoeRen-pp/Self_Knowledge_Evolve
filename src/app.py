@@ -2,12 +2,19 @@
 FastAPI application entry point.
 
 Run:
-    uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+    uvicorn src.app:app --host 0.0.0.0 --port 8001 --reload
 """
 
 from __future__ import annotations
 
 import logging
+
+# Use Windows system certificate store (needed for DeepSeek API and similar services)
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
 
 from pathlib import Path
 

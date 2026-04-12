@@ -10,6 +10,14 @@ import threading
 import time
 from pathlib import Path
 
+# Use Windows system certificate store so Python's OpenSSL trusts the same CAs
+# as the OS (needed for api.deepseek.com and other services not in certifi).
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 # Ensure semcore is importable
 _semcore_path = str(Path(__file__).parent / "semcore")
 if _semcore_path not in sys.path:
@@ -599,7 +607,7 @@ def main() -> None:
         t.start()
         log.info("  Started thread: %s", t.name)
 
-    log.info("Worker started: all 3 threads running")
+    log.info("Worker started: all 4 threads running")
 
     try:
         # Main thread waits for KeyboardInterrupt

@@ -482,7 +482,7 @@ async function doSearch() {
         if (chain.length) {
           html += `<div class="panel"><h3>五层推理链</h3>
             <div class="desc">概念 &rarr; 机制 &rarr; 方法 &rarr; 条件 &rarr; 场景</div>`;
-          const layerNames = {concept:'概念',mechanism:'机制',method:'方法',condition:'条件',scenario:'场景'};
+          const layerNames = {concept:'可配置对象',mechanism:'协议机制',method:'操作方法',condition:'适用条件',scenario:'业务场景'};
           const layerColors = {concept:'#4fc3f7',mechanism:'#ff9800',method:'#81c784',condition:'#ce93d8',scenario:'#f44336'};
           for (const item of chain) {
             const seed = item.seed || '';
@@ -573,11 +573,12 @@ function renderShowcase(d) {
       html += `<div class="card" style="margin:10px 0;">
         <div style="font-size:0.85rem;font-weight:600;color:#fff;margin-bottom:6px;">
           ${c.subject} — ${c.predicate}
+          <span style="font-size:0.75rem;color:#aaa;margin-left:8px;">[${c.conflict_type||'unknown'}] ${c.resolution==='open'?'待裁决':'已裁决'}</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
           <div style="border-left:3px solid ${c.verdict==='A'?'#4caf50':'#f44336'};padding-left:10px;">
             <div style="color:${c.verdict==='A'?'#4caf50':'#f44336'};font-weight:600;">
-              说法 A: ${c.claim_a.object} (置信度 ${c.claim_a.confidence.toFixed(2)})
+              说法 A: ${c.claim_a.object} (置信度 ${c.claim_a.confidence.toFixed(2)}, ${c.claim_a.lifecycle_state||'unknown'})
               ${c.verdict==='A'?' — 采信':''}
             </div>
             ${(c.claim_a.evidence||[]).map(e =>
@@ -587,7 +588,7 @@ function renderShowcase(d) {
           </div>
           <div style="border-left:3px solid ${c.verdict==='B'?'#4caf50':'#f44336'};padding-left:10px;">
             <div style="color:${c.verdict==='B'?'#4caf50':'#f44336'};font-weight:600;">
-              说法 B: ${c.claim_b.object} (置信度 ${c.claim_b.confidence.toFixed(2)})
+              说法 B: ${c.claim_b.object} (置信度 ${c.claim_b.confidence.toFixed(2)}, ${c.claim_b.lifecycle_state||'unknown'})
               ${c.verdict==='B'?' — 采信':''}
             </div>
             ${(c.claim_b.evidence||[]).map(e =>
@@ -615,15 +616,15 @@ function renderShowcase(d) {
     for (const c of (d.chains||[])) {
       html += `<div class="card" style="margin:8px 0;">
         <div style="font-size:0.82rem;">
-          <span style="color:${layerColors.concept};font-weight:600;">[概念]</span> ${c.concept}
+          <span style="color:${layerColors.concept};font-weight:600;">[配置对象]</span> ${c.concept}
           <span style="color:#555;"> — ${c.rel1} &rarr;</span>
           <span style="color:${layerColors.mechanism};font-weight:600;">[机制]</span> ${c.mechanism}
           <span style="color:#555;"> — ${c.rel2} &rarr;</span>
           <span style="color:${layerColors.method};font-weight:600;">[方法]</span> ${c.method}
-          <span style="color:#555;"> — ${c.rel3} &rarr;</span>
-          <span style="color:${layerColors.condition};font-weight:600;">[条件]</span> ${c.condition}
-          <span style="color:#555;"> — ${c.rel4} &rarr;</span>
-          <span style="color:${layerColors.scenario};font-weight:600;">[场景]</span> ${c.scenario}
+          ${c.condition ? `<span style="color:#555;"> — ${c.rel3} &rarr;</span>
+          <span style="color:${layerColors.condition};font-weight:600;">[条件]</span> ${c.condition}` : ''}
+          ${c.scenario ? `<span style="color:#555;"> — ${c.rel4} &rarr;</span>
+          <span style="color:${layerColors.scenario};font-weight:600;">[场景]</span> ${c.scenario}` : ''}
         </div>
         ${c.mech_desc?`<div style="font-size:0.75rem;color:#666;margin-top:4px;">机制: ${c.mech_desc.substring(0,150)}</div>`:''}
         ${c.method_desc?`<div style="font-size:0.75rem;color:#666;">方法: ${c.method_desc.substring(0,150)}</div>`:''}
@@ -758,7 +759,7 @@ function renderQuality(q) {
   // Structural — global metrics + per-layer connectivity
   const gl = s.global_connectivity || {};
   const lc = s.layer_connectivity || {};
-  const layerNames = {concept:'概念',mechanism:'机制',method:'方法',condition:'条件',scenario:'场景'};
+  const layerNames = {concept:'可配置对象',mechanism:'协议机制',method:'操作方法',condition:'适用条件',scenario:'业务场景'};
 
   let layerRows = '';
   for (const [layer, zh] of Object.entries(layerNames)) {

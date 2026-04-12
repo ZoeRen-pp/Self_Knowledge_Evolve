@@ -26,6 +26,9 @@ readability-lxml>=0.8
 pyyaml>=6.0
 simhash>=2.1
 
+# ── TLS / Certificates ────────────────────────────
+truststore>=0.10       # Windows/macOS/Linux system cert store (fixes certifi CA gaps)
+
 # ── Retry / Logging ───────────────────────────────
 tenacity>=8.3
 

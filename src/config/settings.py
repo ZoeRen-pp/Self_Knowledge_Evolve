@@ -99,6 +99,8 @@ class Settings(BaseSettings):
     LOG_FILE_MAX_MB: int = 5
     LOG_FILE_ENABLED: bool = True
     STARTUP_HEALTH_REQUIRED: bool = True
+    APP_PORT: int = 8001
+    APP_HOST: str = "0.0.0.0"
 
     WORKER_CRAWL_LIMIT: int = 10
     WORKER_PIPELINE_LIMIT: int = 10

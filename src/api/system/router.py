@@ -123,21 +123,35 @@ def showcase(case_id: str, _app=Depends(get_app)):
 
 
 def _case_fault_impact(store, graph):
-    """Case 1: 故障全链路推演 — OSPF 邻居断了，影响什么？怎么排查？"""
-    # Graph: OSPF impact propagation
+    """Case 1: 故障全链路推演 — OSPF Instance 故障，影响什么？怎么排查？"""
+    target = "IP.OSPF_INSTANCE"
+    # Graph: OSPF impact propagation — start from OSPF Instance, traverse all
+    # direct neighbours and then walk DEPENDS_ON reverse to find affected objects
     affected = graph.read(
-        """MATCH (n:OntologyNode {node_id: 'IP.OSPF'})-[r]-(m)
-           WHERE m:OntologyNode OR m:MechanismNode OR m:ScenarioPatternNode OR m:MethodNode
+        """MATCH (n:OntologyNode {node_id: $target})-[r]-(m)
+           WHERE m:OntologyNode OR m:MechanismNode OR m:ScenarioPatternNode
+                 OR m:MethodNode OR m:ConditionRuleNode
            RETURN m.node_id AS node_id, m.canonical_name AS name,
                   labels(m)[0] AS layer, type(r) AS relation, r.predicate AS predicate
-           ORDER BY labels(m)[0]"""
+           ORDER BY labels(m)[0]""",
+        target=target,
     )
+    # Also find objects that transitively depend on OSPF
+    upstream = graph.read(
+        """MATCH path = (upstream:OntologyNode)-[:DEPENDS_ON*1..3]->(n:OntologyNode {node_id: $target})
+           RETURN upstream.node_id AS node_id, upstream.canonical_name AS name,
+                  'OntologyNode' AS layer, 'DEPENDS_ON' AS relation,
+                  'depends_on (transitive)' AS predicate
+           ORDER BY length(path)""",
+        target=target,
+    )
+    all_affected = [dict(r) for r in affected] + [dict(r) for r in upstream]
     # PG: related segments with troubleshooting content
     segments = store.fetchall(
         """SELECT s.raw_text, s.segment_type, s.section_title, st.tag_value
            FROM segments s
            JOIN segment_tags st ON s.segment_id = st.segment_id
-           WHERE st.ontology_node_id = 'IP.OSPF'
+           WHERE st.ontology_node_id LIKE 'IP.OSPF%%'
              AND (s.segment_type IN ('troubleshooting', 'fault', 'mechanism', 'definition')
                   OR s.raw_text ILIKE '%%neighbor%%' OR s.raw_text ILIKE '%%adjacen%%'
                   OR s.raw_text ILIKE '%%failure%%' OR s.raw_text ILIKE '%%down%%')
@@ -145,19 +159,19 @@ def _case_fault_impact(store, graph):
            ORDER BY s.token_count DESC
            LIMIT 8"""
     )
-    # PG: related facts
+    # PG: related facts (match any OSPF-family node)
     facts = store.fetchall(
         """SELECT f.subject, f.predicate, f.object, f.confidence
            FROM facts f WHERE f.lifecycle_state = 'active'
-             AND (f.subject = 'IP.OSPF' OR f.object = 'IP.OSPF')
+             AND (f.subject LIKE 'IP.OSPF%%' OR f.object LIKE 'IP.OSPF%%')
            ORDER BY f.confidence DESC LIMIT 15"""
     )
     return {
         "case": "fault_impact",
         "title": "故障全链路推演",
-        "question": "OSPF 邻居关系断了，哪些业务受影响？每个环节该怎么排查？",
-        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统通过图遍历找到所有受影响的机制、方法、场景，并从 PG 中检索对应的排障原文。",
-        "affected_nodes": [dict(r) for r in affected],
+        "question": "OSPF Instance 发生故障，哪些接口、路由策略、业务场景受影响？每个环节该怎么排查？",
+        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统从 OSPF Instance 出发，通过图遍历找到所有直接关联和传递依赖的对象（接口、Area、路由导入等），并从 PG 中检索对应的排障原文。",
+        "affected_nodes": all_affected,
         "related_facts": [dict(r) for r in facts],
         "source_segments": [dict(r) for r in segments],
     }
@@ -165,20 +179,19 @@ def _case_fault_impact(store, graph):
 
 def _case_multi_source(store, graph):
     """Case 2: 多源矛盾裁决 — 不同来源说法不一，听谁的？"""
-    # Find facts with same subject+predicate but different objects (conflicts)
+    # Use governance.conflict_records for real conflict pairs
     conflicts = store.fetchall(
-        """WITH conflict_pairs AS (
-             SELECT f1.fact_id AS fid1, f2.fact_id AS fid2,
-                    f1.subject, f1.predicate,
-                    f1.object AS object_a, f2.object AS object_b,
-                    f1.confidence AS conf_a, f2.confidence AS conf_b
-             FROM facts f1 JOIN facts f2
-               ON f1.subject = f2.subject AND f1.predicate = f2.predicate
-             WHERE f1.object != f2.object AND f1.fact_id < f2.fact_id
-               AND f1.lifecycle_state = 'active' AND f2.lifecycle_state = 'active'
-             LIMIT 10
-           )
-           SELECT * FROM conflict_pairs"""
+        """SELECT cr.conflict_id, cr.conflict_type, cr.resolution,
+                  cr.fact_id_a AS fid1, cr.fact_id_b AS fid2,
+                  f1.subject, f1.predicate,
+                  f1.object AS object_a, f2.object AS object_b,
+                  f1.confidence AS conf_a, f2.confidence AS conf_b,
+                  f1.lifecycle_state AS state_a, f2.lifecycle_state AS state_b
+           FROM governance.conflict_records cr
+           JOIN facts f1 ON cr.fact_id_a = f1.fact_id
+           JOIN facts f2 ON cr.fact_id_b = f2.fact_id
+           ORDER BY cr.created_at DESC
+           LIMIT 10"""
     )
     # For each conflict, get evidence with source authority
     detailed = []
@@ -201,13 +214,26 @@ def _case_multi_source(store, graph):
                LEFT JOIN documents d ON e.source_doc_id = d.source_doc_id
                WHERE e.fact_id = %s LIMIT 2""", (c["fid2"],)
         )
+        conf_a = float(c["conf_a"] or 0)
+        conf_b = float(c["conf_b"] or 0)
+        # Determine verdict: prefer active over conflicted, then higher confidence
+        if c.get("state_a") == "active" and c.get("state_b") != "active":
+            verdict = "A"
+        elif c.get("state_b") == "active" and c.get("state_a") != "active":
+            verdict = "B"
+        else:
+            verdict = "A" if conf_a >= conf_b else "B"
         detailed.append({
             "subject": c["subject"], "predicate": c["predicate"],
-            "claim_a": {"object": c["object_a"], "confidence": float(c["conf_a"]),
+            "conflict_type": c.get("conflict_type", "unknown"),
+            "resolution": c.get("resolution", "open"),
+            "claim_a": {"object": c["object_a"], "confidence": conf_a,
+                        "lifecycle_state": c.get("state_a", "unknown"),
                         "evidence": [dict(e) for e in ev_a]},
-            "claim_b": {"object": c["object_b"], "confidence": float(c["conf_b"]),
+            "claim_b": {"object": c["object_b"], "confidence": conf_b,
+                        "lifecycle_state": c.get("state_b", "unknown"),
                         "evidence": [dict(e) for e in ev_b]},
-            "verdict": "A" if (c["conf_a"] or 0) >= (c["conf_b"] or 0) else "B",
+            "verdict": verdict,
         })
     return {
         "case": "multi_source",
@@ -220,8 +246,8 @@ def _case_multi_source(store, graph):
 
 
 def _case_dependency_closure(store, graph):
-    """Case 3: 变更影响面评估 — 改一个组件，全网波及多少东西？"""
-    target = "IP.BGP"
+    """Case 3: 变更影响面评估 — 改 BGP Instance 配置，全网波及多少东西？"""
+    target = "IP.BGP_INSTANCE"
     # Graph: dependency closure (all transitive dependencies)
     deps = graph.read(
         """MATCH path = (n:OntologyNode {node_id: $target})
@@ -232,7 +258,7 @@ def _case_dependency_closure(store, graph):
            ORDER BY hops""",
         target=target,
     )
-    # Reverse: who depends on BGP?
+    # Reverse: who depends on BGP Instance?
     dependents = graph.read(
         """MATCH path = (m)-[:DEPENDS_ON|USES_PROTOCOL|REQUIRES*1..3]->
                   (n:OntologyNode {node_id: $target})
@@ -241,16 +267,16 @@ def _case_dependency_closure(store, graph):
            ORDER BY hops""",
         target=target,
     )
-    # PG: segments about BGP dependencies
+    # PG: segments about BGP dependencies (match any BGP-family node)
     segments = store.fetchall(
         """SELECT left(s.raw_text, 400) AS raw_text, s.section_title, s.segment_type
            FROM segments s
            JOIN segment_tags st ON s.segment_id = st.segment_id
-           WHERE st.ontology_node_id = %s
+           WHERE st.ontology_node_id LIKE 'IP.BGP%%'
              AND (s.raw_text ILIKE '%%depend%%' OR s.raw_text ILIKE '%%require%%'
                   OR s.raw_text ILIKE '%%prerequisite%%')
              AND s.lifecycle_state = 'active'
-           LIMIT 5""", (target,)
+           LIMIT 5"""
     )
     target_node = graph.read(
         "MATCH (n:OntologyNode {node_id: $t}) RETURN n.canonical_name AS name", t=target
@@ -259,8 +285,8 @@ def _case_dependency_closure(store, graph):
     return {
         "case": "dependency_closure",
         "title": "变更影响面评估",
-        "question": f"要修改 {name} 配置，全网有多少东西会被波及？",
-        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过图数据库的传递闭包，找到所有直接和间接依赖，量化影响面。",
+        "question": f"要修改 {name} 配置，哪些 Peer、Address Family、Route Policy 会被波及？",
+        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过图数据库的传递闭包，从 BGP Instance 出发找到所有直接和间接依赖的可配置对象，量化变更影响面。",
         "target": {"node_id": target, "name": name},
         "depends_on": [dict(r) for r in deps],
         "depended_by": [dict(r) for r in dependents],
@@ -269,11 +295,13 @@ def _case_dependency_closure(store, graph):
 
 
 def _case_cross_layer(store, graph):
-    """Case 4: 五层推理链还原 — 从概念到场景的完整推理路径"""
+    """Case 4: 五层推理链还原 — 从可配置对象到场景的完整推理路径"""
+    # Try full 5-layer chains first; fall back to partial chains if none found
     chains = graph.read(
-        """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode)
-                 -[r2]-(mt:MethodNode)-[r3]-(cn:ConditionRuleNode)
-                 -[r4]-(s:ScenarioPatternNode)
+        """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode),
+                 (m)-[r2]-(mt:MethodNode),
+                 (mt)-[r3]-(cn:ConditionRuleNode),
+                 (cn)-[r4]-(s:ScenarioPatternNode)
            WHERE c.lifecycle_state = 'active'
            RETURN c.node_id AS concept_id, c.canonical_name AS concept,
                   m.canonical_name AS mechanism, m.description AS mech_desc,
@@ -283,6 +311,21 @@ def _case_cross_layer(store, graph):
                   type(r1) AS rel1, type(r2) AS rel2, type(r3) AS rel3, type(r4) AS rel4
            LIMIT 10"""
     )
+    if not chains:
+        # Fall back to partial chains: concept → mechanism → method (3-layer)
+        chains = graph.read(
+            """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode)-[r2]-(mt:MethodNode)
+               WHERE c.lifecycle_state = 'active'
+               OPTIONAL MATCH (mt)-[r3]-(cn:ConditionRuleNode)
+               OPTIONAL MATCH (cn)-[r4]-(s:ScenarioPatternNode)
+               RETURN c.node_id AS concept_id, c.canonical_name AS concept,
+                      m.canonical_name AS mechanism, m.description AS mech_desc,
+                      mt.canonical_name AS method, mt.description AS method_desc,
+                      cn.canonical_name AS condition, cn.description AS cond_desc,
+                      s.canonical_name AS scenario, s.description AS scenario_desc,
+                      type(r1) AS rel1, type(r2) AS rel2, type(r3) AS rel3, type(r4) AS rel4
+               LIMIT 10"""
+        )
     # For each chain's concept, get source evidence
     enriched = []
     for chain in chains:
@@ -301,8 +344,8 @@ def _case_cross_layer(store, graph):
     return {
         "case": "cross_layer_reasoning",
         "title": "五层推理链还原",
-        "question": "为什么说某个技术适合某个场景？把从概念到场景的推理过程完整展示出来。",
-        "why_unique": "传统知识图谱只有概念和关系两层。本系统的五层模型（概念→机制→方法→条件→场景）能构建完整的推理路径，每一层都有原文证据支撑。",
+        "question": "为什么说某个可配置对象适合某个场景？把从配置对象到部署场景的推理过程完整展示出来。",
+        "why_unique": "传统知识图谱只有概念和关系两层。本系统的五层模型（YANG可配置对象→协议机制→操作方法→适用条件→业务场景）能构建完整的推理路径，每一层都有原文证据支撑。",
         "chains": enriched,
     }
 
@@ -323,8 +366,13 @@ def _case_knowledge_gap(store, graph):
              WHERE st.tag_type = 'canonical'
            ) tagged
            RIGHT JOIN (SELECT unnest(ARRAY[
-             'IP.BGP','IP.OSPF','IP.MPLS','IP.VXLAN','IP.EVPN','IP.SRV6',
-             'IP.ISIS','IP.BFD','IP.VRRP','IP.QOS','IP.NAT','IP.DHCP'
+             'IP.BGP_INSTANCE','IP.BGP_PEER','IP.BGP_ADDRESS_FAMILY',
+             'IP.OSPF_INSTANCE','IP.OSPF_AREA','IP.OSPF_INTERFACE',
+             'IP.ISIS_INSTANCE','IP.MPLS_GLOBAL','IP.MPLS_SR',
+             'IP.EVPN_INSTANCE','IP.VXLAN_VNI','IP.SRV6_LOCATOR',
+             'IP.BFD_SESSION','IP.VRRP_GROUP','IP.QOS',
+             'IP.NAT_RULE','IP.DHCP_RELAY','IP.INTERFACE',
+             'IP.ROUTE_POLICY','IP.ROUTE_TABLE'
            ]) AS node_id) core ON tagged.n_id = core.node_id
            WHERE tagged.n_id IS NULL"""
     )

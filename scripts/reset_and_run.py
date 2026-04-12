@@ -234,7 +234,64 @@ def verify_clean() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════
-# Step 5: Load ontology
+# Step 5: Apply schema migrations
+# ═══════════════════════════════════════════════════════════════
+
+def apply_migrations() -> None:
+    step("Applying schema migrations")
+
+    from src.config.settings import settings
+    import psycopg2
+
+    migrations_dir = PROJECT_ROOT / "scripts" / "migrations"
+    migration_files = sorted(migrations_dir.glob("*.sql"))
+
+    if not migration_files:
+        log("  No migration files found, skipping")
+        return
+
+    conn = psycopg2.connect(dsn=settings.postgres_dsn)
+    conn.autocommit = True
+    cur = conn.cursor()
+
+    applied = 0
+    for mf in migration_files:
+        sql = mf.read_text(encoding="utf-8")
+        try:
+            cur.execute(sql)
+            log(f"  OK: {mf.name}")
+            applied += 1
+        except Exception as exc:
+            log(f"  WARN: {mf.name} — {exc}")
+
+    conn.close()
+
+    # Ensure ON CONFLICT (normalized_form) works: replace partial index with
+    # a full unique constraint (partial indexes can't serve ON CONFLICT without
+    # an exact WHERE match in the query).
+    conn = psycopg2.connect(dsn=settings.postgres_dsn)
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("DROP INDEX IF EXISTS idx_evolution_candidates_normalized;")
+    cur.execute("""
+        ALTER TABLE governance.evolution_candidates
+        ADD CONSTRAINT uq_evolution_candidates_normalized_form
+        UNIQUE (normalized_form);
+    """) if not _constraint_exists(cur, "uq_evolution_candidates_normalized_form") else None
+    conn.close()
+
+    log(f"  Done: {applied}/{len(migration_files)} migrations applied")
+
+
+def _constraint_exists(cur, constraint_name: str) -> bool:
+    cur.execute(
+        "SELECT 1 FROM pg_constraint WHERE conname = %s", (constraint_name,)
+    )
+    return cur.fetchone() is not None
+
+
+# ═══════════════════════════════════════════════════════════════
+# Step 6: Load ontology
 # ═══════════════════════════════════════════════════════════════
 
 def load_ontology() -> None:
@@ -309,6 +366,10 @@ def start_worker() -> None:
 def start_api() -> None:
     step("Starting API + Dashboard")
 
+    from src.config.settings import settings
+    port = settings.APP_PORT
+    host = settings.APP_HOST
+
     api_log = PROJECT_ROOT / "logs" / "api.log"
     api_log.write_text("", encoding="utf-8")
 
@@ -316,7 +377,7 @@ def start_api() -> None:
     api_script = (
         f"import sys; sys.path.insert(0, {str(PROJECT_ROOT / 'semcore')!r}); "
         f"import uvicorn; from src.app import app; "
-        f"uvicorn.run(app, host='0.0.0.0', port=8000)"
+        f"uvicorn.run(app, host={host!r}, port={port})"
     )
 
     if sys.platform == "win32":
@@ -343,9 +404,9 @@ def start_api() -> None:
     for attempt in range(10):
         time.sleep(2)
         try:
-            resp = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
+            resp = urllib.request.urlopen(f"http://localhost:{port}/health", timeout=5)
             if resp.status == 200:
-                log("  OK: API healthy, dashboard at http://localhost:8000/dashboard")
+                log(f"  OK: API healthy, dashboard at http://localhost:{port}/dashboard")
                 return
         except Exception:
             pass
@@ -369,15 +430,17 @@ def main() -> None:
     purge_cache()
     clear_stores()
     verify_clean()
+    apply_migrations()
     load_ontology()
     start_worker()
     start_api()
 
     log("=" * 50)
     log("DONE — all services running, all stores fresh")
+    from src.config.settings import settings
     log("  Worker:    tail -f logs/worker.log")
     log("  API:       tail -f logs/api.log")
-    log("  Dashboard: http://localhost:8000/dashboard")
+    log(f"  Dashboard: http://localhost:{settings.APP_PORT}/dashboard")
     log("=" * 50)
 
 
