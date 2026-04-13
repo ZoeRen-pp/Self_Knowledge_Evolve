@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**Telecom Semantic Knowledge Base** — a governance-enabled, evolving, source-attributed knowledge infrastructure. **Not RAG, not a search engine.** Core value: cross-vendor term normalization, fault impact chain analysis, knowledge provenance with 5-dim confidence scoring, ontology drift prevention, and vector semantic search.
+**Telecom Semantic Knowledge Base** — a governance-enabled, evolving, source-attributed knowledge infrastructure for **network integration & delivery engineers**. **Not RAG, not a search engine.** Target users cover the full delivery lifecycle: pre-sales survey → greenfield network design → configuration → integration delivery → network change (move/add/change) design & delivery. Core value: cross-vendor term normalization, config dependency chain analysis, change impact assessment, knowledge provenance with 5-dim confidence scoring, design rationale traceability, ontology drift prevention, and vector semantic search.
 
 ## Commands
 

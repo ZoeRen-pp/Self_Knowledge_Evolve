@@ -123,10 +123,9 @@ def showcase(case_id: str, _app=Depends(get_app)):
 
 
 def _case_fault_impact(store, graph):
-    """Case 1: 故障全链路推演 — OSPF Instance 故障，影响什么？怎么排查？"""
+    """Case 1: 配置依赖链分析 — 新建 OSPF 网络，要先配什么、再配什么？"""
     target = "IP.OSPF_INSTANCE"
-    # Graph: OSPF impact propagation — start from OSPF Instance, traverse all
-    # direct neighbours and then walk DEPENDS_ON reverse to find affected objects
+    # Graph: dependency chain — what must be configured before OSPF Instance can work?
     affected = graph.read(
         """MATCH (n:OntologyNode {node_id: $target})-[r]-(m)
            WHERE m:OntologyNode OR m:MechanismNode OR m:ScenarioPatternNode
@@ -136,7 +135,7 @@ def _case_fault_impact(store, graph):
            ORDER BY labels(m)[0]""",
         target=target,
     )
-    # Also find objects that transitively depend on OSPF
+    # What depends on OSPF Instance — must be configured after it
     upstream = graph.read(
         """MATCH path = (upstream:OntologyNode)-[:DEPENDS_ON*1..3]->(n:OntologyNode {node_id: $target})
            RETURN upstream.node_id AS node_id, upstream.canonical_name AS name,
@@ -146,15 +145,15 @@ def _case_fault_impact(store, graph):
         target=target,
     )
     all_affected = [dict(r) for r in affected] + [dict(r) for r in upstream]
-    # PG: related segments with troubleshooting content
+    # PG: related segments with configuration/design content
     segments = store.fetchall(
         """SELECT s.raw_text, s.segment_type, s.section_title, st.tag_value
            FROM segments s
            JOIN segment_tags st ON s.segment_id = st.segment_id
            WHERE st.ontology_node_id LIKE 'IP.OSPF%%'
-             AND (s.segment_type IN ('troubleshooting', 'fault', 'mechanism', 'definition')
+             AND (s.segment_type IN ('configuration', 'mechanism', 'definition', 'design')
                   OR s.raw_text ILIKE '%%neighbor%%' OR s.raw_text ILIKE '%%adjacen%%'
-                  OR s.raw_text ILIKE '%%failure%%' OR s.raw_text ILIKE '%%down%%')
+                  OR s.raw_text ILIKE '%%configur%%' OR s.raw_text ILIKE '%%prerequisit%%')
              AND s.lifecycle_state = 'active'
            ORDER BY s.token_count DESC
            LIMIT 8"""
@@ -168,9 +167,9 @@ def _case_fault_impact(store, graph):
     )
     return {
         "case": "fault_impact",
-        "title": "故障全链路推演",
-        "question": "OSPF Instance 发生故障，哪些接口、路由策略、业务场景受影响？每个环节该怎么排查？",
-        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统从 OSPF Instance 出发，通过图遍历找到所有直接关联和传递依赖的对象（接口、Area、路由导入等），并从 PG 中检索对应的排障原文。",
+        "title": "配置依赖链分析",
+        "question": "新建 OSPF 网络，OSPF Instance 依赖哪些前置配置？配完 OSPF 后还需要配什么上层对象？",
+        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统从 OSPF Instance 出发，通过图遍历找到所有前置依赖（接口、IP地址等）和后置依赖（Area、路由导入等），呈现完整的配置顺序链。",
         "affected_nodes": all_affected,
         "related_facts": [dict(r) for r in facts],
         "source_segments": [dict(r) for r in segments],
@@ -246,7 +245,7 @@ def _case_multi_source(store, graph):
 
 
 def _case_dependency_closure(store, graph):
-    """Case 3: 变更影响面评估 — 改 BGP Instance 配置，全网波及多少东西？"""
+    """Case 3: 动网割接影响面 — 割接 BGP Instance，波及哪些对象？"""
     target = "IP.BGP_INSTANCE"
     # Graph: dependency closure (all transitive dependencies)
     deps = graph.read(
@@ -284,9 +283,9 @@ def _case_dependency_closure(store, graph):
     name = target_node[0]["name"] if target_node else target
     return {
         "case": "dependency_closure",
-        "title": "变更影响面评估",
-        "question": f"要修改 {name} 配置，哪些 Peer、Address Family、Route Policy 会被波及？",
-        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过图数据库的传递闭包，从 BGP Instance 出发找到所有直接和间接依赖的可配置对象，量化变更影响面。",
+        "title": "动网割接影响面",
+        "question": f"割接 {name} 时，哪些 Peer、Address Family、Route Policy 会被波及？需要同步调整什么？",
+        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过图数据库的传递闭包，从 BGP Instance 出发找到所有直接和间接依赖的可配置对象，让交付工程师在割接前完整评估影响面。",
         "target": {"node_id": target, "name": name},
         "depends_on": [dict(r) for r in deps],
         "depended_by": [dict(r) for r in dependents],
@@ -295,7 +294,7 @@ def _case_dependency_closure(store, graph):
 
 
 def _case_cross_layer(store, graph):
-    """Case 4: 五层推理链还原 — 从可配置对象到场景的完整推理路径"""
+    """Case 4: 方案设计依据追溯 — 从可配置对象到业务场景的完整设计依据"""
     # Try full 5-layer chains first; fall back to partial chains if none found
     chains = graph.read(
         """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode),
@@ -343,9 +342,9 @@ def _case_cross_layer(store, graph):
         })
     return {
         "case": "cross_layer_reasoning",
-        "title": "五层推理链还原",
-        "question": "为什么说某个可配置对象适合某个场景？把从配置对象到部署场景的推理过程完整展示出来。",
-        "why_unique": "传统知识图谱只有概念和关系两层。本系统的五层模型（YANG可配置对象→协议机制→操作方法→适用条件→业务场景）能构建完整的推理路径，每一层都有原文证据支撑。",
+        "title": "方案设计依据追溯",
+        "question": "为什么在这个场景下选择这个配置对象？把从业务场景到具体配置的设计依据完整展示出来。",
+        "why_unique": "传统知识图谱只有概念和关系两层。本系统的五层模型（业务场景→适用条件→操作方法→协议机制→YANG可配置对象）能为方案设计提供完整的决策依据链，每一层都有原文证据支撑。",
         "chains": enriched,
     }
 
@@ -394,9 +393,9 @@ def _case_knowledge_gap(store, graph):
     tagged = tagged_row["cnt"] if tagged_row else 0
     return {
         "case": "knowledge_gap",
-        "title": "知识空白发现（元认知）",
-        "question": "我们对哪些领域的知识是空白的？系统知道自己不知道什么。",
-        "why_unique": "这是传统系统完全做不到的。本系统通过对比本体定义和实际知识覆盖，精确定位哪些概念缺少知识、哪些关系类型从未被使用。",
+        "title": "知识盲区发现",
+        "question": "哪些技术领域的知识储备不足？交付方案设计中可能踩到哪些知识盲区？",
+        "why_unique": "这是传统系统完全做不到的。本系统通过对比本体定义和实际知识覆盖，精确定位哪些概念缺少知识、哪些关系类型从未被使用，帮助交付团队提前识别知识风险。",
         "coverage": {
             "total_ontology_nodes": total_nodes,
             "nodes_with_knowledge": tagged,

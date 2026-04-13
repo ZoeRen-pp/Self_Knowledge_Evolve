@@ -152,8 +152,9 @@ table.data tr:hover { background: #1e2130; }
 <div id="tab-overview" class="tab-content active">
   <div class="panel" style="text-align:center;padding:20px;">
     <p style="font-size:0.9rem;color:#8b95a5;max-width:700px;margin:0 auto;">
-      面向网络/电信领域的跨厂商语义知识系统。自动爬取标准文档（IETF RFC）和厂商文档，
-      提取结构化知识、归一化术语，维护五层本体模型，所有知识条目均可追溯至原始来源。
+      面向网络集成交付工程师的跨厂商语义知识系统。自动爬取标准文档（IETF RFC、3GPP TS）和厂商文档，
+      提取结构化知识、归一化术语，维护五层本体模型。支持新建/动网方案设计中的配置依赖分析、
+      割接影响面评估和设计依据追溯，所有知识条目均可追溯至原始来源。
     </p>
   </div>
 
@@ -202,11 +203,11 @@ table.data tr:hover { background: #1e2130; }
     <h3>深度案例 — 传统系统做不到的查询</h3>
     <div class="desc">图数据库 + 关系数据库联合检索，展示结构化知识的独特价值</div>
     <div class="quick-btns">
-      <button onclick="loadShowcase('fault_impact')" style="background:#f44336;color:#fff;border-color:#f44336;">故障全链路推演</button>
+      <button onclick="loadShowcase('fault_impact')" style="background:#f44336;color:#fff;border-color:#f44336;">配置依赖链分析</button>
       <button onclick="loadShowcase('multi_source')" style="background:#ff9800;color:#fff;border-color:#ff9800;">多源矛盾裁决</button>
-      <button onclick="loadShowcase('dependency_closure')" style="background:#2196f3;color:#fff;border-color:#2196f3;">变更影响面评估</button>
-      <button onclick="loadShowcase('cross_layer_reasoning')" style="background:#4caf50;color:#fff;border-color:#4caf50;">五层推理链还原</button>
-      <button onclick="loadShowcase('knowledge_gap')" style="background:#9c27b0;color:#fff;border-color:#9c27b0;">知识空白发现</button>
+      <button onclick="loadShowcase('dependency_closure')" style="background:#2196f3;color:#fff;border-color:#2196f3;">动网割接影响面</button>
+      <button onclick="loadShowcase('cross_layer_reasoning')" style="background:#4caf50;color:#fff;border-color:#4caf50;">方案设计依据追溯</button>
+      <button onclick="loadShowcase('knowledge_gap')" style="background:#9c27b0;color:#fff;border-color:#9c27b0;">知识盲区发现</button>
     </div>
   </div>
 
