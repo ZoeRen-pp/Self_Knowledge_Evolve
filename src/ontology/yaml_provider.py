@@ -105,10 +105,6 @@ class YAMLOntologyProvider(OntologyProvider):
         return self._reg.classification_fixes
 
     @property
-    def semantic_role_patterns(self):
-        return self._reg.semantic_role_patterns
-
-    @property
     def context_signal_patterns(self):
         return self._reg.context_signal_patterns
 

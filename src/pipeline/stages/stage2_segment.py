@@ -1,4 +1,4 @@
-"""Stage 2: Semantic segmentation - rules S1-S4 + EDU/RST population."""
+"""Stage 2: Semantic segmentation — structural split + LLM-based typing + RST."""
 
 from __future__ import annotations
 
@@ -17,69 +17,10 @@ from src.utils.llm_extract import LLMExtractor, RST_RELATION_TYPES
 
 log = logging.getLogger(__name__)
 
-# Rule-based RST fallback: (src_segment_type, dst_segment_type) -> relation_type
-# Uses the 20-type universal RST taxonomy (see RST_RELATION_TYPES in llm_extract.py)
-_RULE_RST: dict[tuple[str, str], str] = {
-    # definition → X
-    ("definition",      "definition"):      "Joint",
-    ("definition",      "mechanism"):       "Explanation",
-    ("definition",      "config"):          "Enablement",
-    ("definition",      "constraint"):      "Background",
-    # mechanism → X
-    ("mechanism",       "mechanism"):       "Joint",
-    ("mechanism",       "config"):          "Means",
-    ("mechanism",       "constraint"):      "Condition",
-    ("mechanism",       "troubleshooting"): "Problem-Solution",
-    ("mechanism",       "best_practice"):   "Justification",
-    ("mechanism",       "performance"):     "Cause-Result",
-    # config → X
-    ("config",          "config"):          "Joint",
-    ("config",          "troubleshooting"): "Problem-Solution",
-    ("config",          "best_practice"):   "Evaluation",
-    ("config",          "constraint"):      "Condition",
-    ("config",          "mechanism"):       "Purpose",
-    # constraint → X
-    ("constraint",      "config"):          "Condition",
-    ("constraint",      "constraint"):      "Joint",
-    ("constraint",      "troubleshooting"): "Enablement",
-    ("constraint",      "best_practice"):   "Concession",
-    # fault → X
-    ("fault",           "troubleshooting"): "Problem-Solution",
-    ("fault",           "mechanism"):       "Cause-Result",
-    ("fault",           "fault"):           "Joint",
-    ("fault",           "config"):          "Result-Cause",
-    # troubleshooting → X
-    ("troubleshooting", "best_practice"):   "Justification",
-    ("troubleshooting", "config"):          "Means",
-    ("troubleshooting", "troubleshooting"): "Sequence",
-    # best_practice → X
-    ("best_practice",   "best_practice"):   "Joint",
-    ("best_practice",   "config"):          "Means",
-    ("best_practice",   "constraint"):      "Concession",
-    # performance → X
-    ("performance",     "comparison"):      "Contrast",
-    ("performance",     "performance"):     "Joint",
-    ("performance",     "config"):          "Cause-Result",
-    # comparison → X
-    ("comparison",      "best_practice"):   "Evaluation",
-    ("comparison",      "comparison"):      "Joint",
-    # code / table → X (structural)
-    ("code",            "code"):            "Joint",
-    ("table",           "table"):           "Joint",
-    ("code",            "definition"):      "Evidence",
-    ("table",           "definition"):      "Evidence",
-}
-
-# Rule S2: semantic role patterns loaded from ontology/patterns/semantic_roles.yaml
-# (no hardcoded patterns — loaded at runtime via OntologyRegistry)
-
 _HEADING_RE = re.compile(r"^(#{1,4})\s+(.+)", re.M)
 _RFC_SECTION_RE = re.compile(r"^(\d+(?:\.\d+)*)\.?\s{2,}([A-Z].*)", re.M)
 _ALLCAPS_TITLE_RE = re.compile(r"^([A-Z][A-Z \-]{4,})$", re.M)
 _BLANK_BLOCK_RE = re.compile(r"\n{3,}")
-_TABLE_RE = re.compile(r"^\s*\|.+\|", re.M)
-_CODE_RE = re.compile(r"```[\s\S]*?```|^( {4}|\t)\S.+", re.M)
-_CONFIG_RE = re.compile(r"^[\w\-]+[>#]\s+\S", re.M)
 
 
 class SegmentStage(Stage):
@@ -94,7 +35,6 @@ class SegmentStage(Stage):
         self._objects = getattr(app, "objects", None)
         self._store = app.store
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
-        self._role_patterns = getattr(app.ontology, "semantic_role_patterns", [])
         if hasattr(app, "llm"):
             self.llm = app.llm
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
@@ -179,13 +119,34 @@ class SegmentStage(Stage):
         return saved
 
     def _segment_document(self, text: str, doc_type: str) -> list[dict]:
-        """Rules S1-S4: structural split then semantic refinement."""
+        """Structural split → length control → LLM segment_type classification."""
         raw_chunks = self._structural_split(text)
         segments: list[dict] = []
         for chunk in raw_chunks:
             sub = self._process_chunk(chunk)
             segments.extend(sub)
-        return segments
+        return self._classify_and_filter(segments)
+
+    def _classify_and_filter(self, segments: list[dict]) -> list[dict]:
+        """Batch-classify segment_type via LLM; drop noise; compute confidence."""
+        if not segments:
+            return []
+
+        types = self.llm.classify_segment_types(segments)
+        result: list[dict] = []
+        dropped = 0
+        for seg, seg_type in zip(segments, types):
+            if seg_type == "noise":
+                dropped += 1
+                continue
+            seg["segment_type"] = seg_type
+            seg["confidence"] = self._estimate_confidence(
+                seg["raw_text"], seg["token_count"], seg_type
+            )
+            result.append(seg)
+        if dropped:
+            log.info("Dropped %d noise segments (LLM classification)", dropped)
+        return result
 
     def _structural_split(self, text: str) -> list[dict]:
         """Rule S1: split on headings. Auto-detects markdown vs RFC/plain-text."""
@@ -284,38 +245,23 @@ class SegmentStage(Stage):
         ]
 
     def _process_chunk(self, chunk: dict) -> list[dict]:
-        """Rule S2 (semantic role) + Rule S3 (length control).
-
-        Split strategy for oversized chunks (>1024 tokens):
-          1. Paragraph boundaries (double newline)
-          2. Sentence boundaries (period + space)
-          3. Sliding window (last resort)
-        """
+        """Length control only. segment_type is assigned later via LLM batch."""
         text = chunk["raw_text"]
         tc = token_count(text)
-        seg_type = self._classify_semantic_role(text)
 
         if tc < 15:
             return []
 
-        conf = self._estimate_confidence(text, tc, seg_type)
-
         if tc <= 1024:
-            return [{**chunk, "segment_type": seg_type, "token_count": tc, "confidence": conf}]
+            return [{**chunk, "token_count": tc}]
 
-        # Oversized: try semantic-aware splitting
         sub_texts = self._split_oversized(text)
         results = []
         for sub in sub_texts:
             sub_tc = token_count(sub)
             if sub_tc < 15:
                 continue
-            sub_type = self._classify_semantic_role(sub)
-            sub_conf = self._estimate_confidence(sub, sub_tc, sub_type)
-            results.append({
-                **chunk, "raw_text": sub, "segment_type": sub_type,
-                "token_count": sub_tc, "confidence": sub_conf,
-            })
+            results.append({**chunk, "raw_text": sub, "token_count": sub_tc})
         return results
 
     def _split_oversized(self, text: str) -> list[str]:
@@ -423,14 +369,6 @@ class SegmentStage(Stage):
 
         return round(min(conf, 1.0), 2)
 
-    def _classify_semantic_role(self, text: str) -> str:
-        """Rule S2: match keyword patterns to assign segment type."""
-        sample = text[:1500]
-        for pattern, role in self._role_patterns:
-            if pattern.search(sample):
-                return role
-        return "unknown"
-
     def _load_clean_text(self, doc: dict) -> str:
         """Load cleaned text from object storage or fallback stub."""
         uri = doc.get("cleaned_storage_uri") or ""
@@ -485,27 +423,13 @@ class SegmentStage(Stage):
             for i in range(len(segments) - 1)
         ]
 
-        # LLM first, rule fallback — each relation tagged with its source
-        llm_types: list[str] | None = None
-        if self.llm.is_enabled():
-            llm_types = self.llm.extract_rst_relations(pairs)
-
-        rule_types = [
-            _RULE_RST.get(
-                (segments[i].get("segment_type", ""), segments[i + 1].get("segment_type", "")),
-                "Sequence",
-            )
-            for i in range(len(pairs))
-        ]
+        llm_enabled = self.llm.is_enabled()
+        llm_types = self.llm.extract_rst_relations(pairs) if llm_enabled else []
 
         rows = []
         for i, (src_id, _, dst_id, _) in enumerate(pairs):
-            if llm_types and i < len(llm_types) and llm_types[i] != "Sequence":
-                rel_type = llm_types[i]
-                source = "llm"
-            else:
-                rel_type = rule_types[i] if i < len(rule_types) else "Sequence"
-                source = "rule"
+            rel_type = llm_types[i] if i < len(llm_types) else "Sequence"
+            source = "llm" if llm_enabled else "fallback"
             src_type = segments[i].get("segment_type", "unknown")
             dst_type = segments[i + 1].get("segment_type", "unknown")
             rows.append((

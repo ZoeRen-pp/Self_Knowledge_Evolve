@@ -26,7 +26,6 @@ class OntologyRegistry:
         self.classification_fixes: list[dict] = []       # [{node_id, action, new_parent, ...}]
 
         # Compiled pattern lists loaded from ontology/patterns/*.yaml
-        self.semantic_role_patterns: list[tuple[re.Pattern, str]] = []
         self.context_signal_patterns: list[tuple[re.Pattern, str]] = []
         self.predicate_signal_patterns: list[tuple[re.Pattern, str]] = []
 
@@ -40,7 +39,6 @@ class OntologyRegistry:
         self._load_seeds(ontology_root / "seeds")
 
         pattern_counts = {
-            "semantic_roles": len(self.semantic_role_patterns),
             "context_signals": len(self.context_signal_patterns),
             "predicate_signals": len(self.predicate_signal_patterns),
         }
@@ -120,31 +118,12 @@ class OntologyRegistry:
             log.debug("No patterns directory at %s, using empty pattern sets", patterns_dir)
             return
 
-        self.semantic_role_patterns = self._compile_role_patterns(
-            patterns_dir / "semantic_roles.yaml"
-        )
         self.context_signal_patterns = self._compile_signal_patterns(
             patterns_dir / "context_signals.yaml"
         )
         self.predicate_signal_patterns = self._compile_signal_patterns(
             patterns_dir / "predicate_signals.yaml"
         )
-
-    def _compile_role_patterns(self, path: Path) -> list[tuple[re.Pattern, str]]:
-        """Load semantic_roles.yaml → [(compiled_regex, role_type)]."""
-        if not path.exists():
-            return []
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-        result = []
-        for role in data.get("roles", []):
-            role_type = role["type"]
-            flags = self._parse_flags(role.get("flags", ""))
-            for pattern_str in role.get("patterns", []):
-                try:
-                    result.append((re.compile(pattern_str, flags), role_type))
-                except re.error as exc:
-                    log.warning("Invalid regex in %s type=%s: %s", path.name, role_type, exc)
-        return result
 
     def _compile_signal_patterns(self, path: Path) -> list[tuple[re.Pattern, str]]:
         """Load signal YAML (context_signals or predicate_signals) → [(compiled_regex, label/predicate)]."""

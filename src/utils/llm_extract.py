@@ -116,6 +116,61 @@ Analyse the following EDU pairs and return RST relation types:
 Return JSON array:"""
 
 
+SEGMENT_TYPES = [
+    "definition",       # defines a concept, term, or data format
+    "mechanism",        # how a protocol/algorithm/process works
+    "config",           # configuration commands, syntax, procedural steps
+    "constraint",       # limitations, MUST/SHALL rules, applicability conditions
+    "fault",            # fault symptoms, error states, failures, alarms
+    "troubleshooting",  # diagnostic steps, debug procedures, verification
+    "best_practice",    # recommendations, design guidance, security considerations
+    "performance",      # performance metrics, throughput, latency, timers
+    "comparison",       # contrasts between two or more options
+    "table",            # tabular data (feature matrices, comparison tables)
+    "code",             # code blocks, CLI output, config snippets
+    "noise",            # document structure noise — TOC, RFC index, author page, boilerplate
+    "unknown",          # substantive but no clear type fits
+]
+
+_SEGTYPE_SYSTEM_PROMPT = """\
+You are a technical document analyst for a network engineering knowledge base.
+
+Classify each text segment into EXACTLY ONE type from this list:
+
+- definition: defines a concept/term/data format (e.g. packet header field descriptions).
+- mechanism: explains HOW a protocol/algorithm/process works.
+- config: configuration commands, CLI syntax, procedural steps to configure something.
+- constraint: limitations, requirements, MUST/SHALL rules, applicability conditions.
+- fault: fault symptoms, error states, failures, alarms.
+- troubleshooting: diagnostic steps, debug procedures, verification checks.
+- best_practice: recommendations, design guidance, security considerations.
+- performance: performance metrics, throughput, latency, timers, sizing.
+- comparison: contrasts between two or more options (vs, versus, compared to).
+- table: tabular data (feature matrices, comparison tables).
+- code: code blocks, CLI output, config snippets.
+- noise: DOCUMENT STRUCTURE NOISE — table of contents, RFC index listings, author
+  pages/bio, navigation menus, page headers/footers, copyright boilerplate, bare
+  reference lists, "on this page" sidebars. These are NOT substantive technical content
+  and should be dropped from the knowledge base.
+- unknown: substantive technical content that does not clearly fit any specific type above.
+
+Rules:
+- Be decisive about `noise`. RFC index pages ("| rfc 1234 | date | title | ..."), author
+  RFC lists ("yakov rekhter rfcs (78)"), and TOC lines ("section 4.1 . . . . 15") are noise.
+- `table` is for meaningful data tables; boilerplate formatted as a table is still noise.
+- Prefer `unknown` over a forced specific type when uncertain.
+
+Return ONLY a JSON array. Each element: {"idx": <int>, "type": "<type>"}.
+One element per input segment. No explanation outside the JSON array."""
+
+_SEGTYPE_USER_TEMPLATE = """\
+Classify the following segments:
+
+{segments_text}
+
+Return JSON array:"""
+
+
 class LLMExtractor:
     # Circuit breaker: after this many consecutive failures, auto-disable
     _CIRCUIT_BREAKER_THRESHOLD = 3
@@ -188,7 +243,14 @@ class LLMExtractor:
 
     def _get_http_client(self) -> httpx.Client:
         if self._http_client is None:
-            self._http_client = httpx.Client(timeout=180.0)
+            self._http_client = httpx.Client(
+                timeout=httpx.Timeout(
+                    connect=15.0,   # SSL handshake must complete in 15s
+                    read=120.0,     # LLM generation can be slow
+                    write=30.0,
+                    pool=30.0,
+                ),
+            )
         return self._http_client
 
     def _get_client(self):
@@ -231,6 +293,8 @@ class LLMExtractor:
             return None
 
     def _call_openai(self, system: str, prompt: str, max_tokens: int) -> str | None:
+        import time as _time
+
         from src.config.settings import settings
         url = self._openai_url()
         headers = {
@@ -247,20 +311,35 @@ class LLMExtractor:
             "max_tokens": max_tokens,
             "temperature": 0,
         }
-        try:
-            resp = self._get_http_client().post(url, headers=headers, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            choices = data.get("choices") or []
-            if not choices:
-                return ""
-            message = choices[0].get("message") or {}
-            self._record_success()
-            return (message.get("content") or "").strip()
-        except Exception as exc:
-            log.warning("LLM request failed: %s", exc)
-            self._record_failure()
-            return None
+
+        last_exc = None
+        for attempt in range(1, 4):  # up to 3 attempts
+            try:
+                resp = self._get_http_client().post(url, headers=headers, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                choices = data.get("choices") or []
+                if not choices:
+                    return ""
+                message = choices[0].get("message") or {}
+                self._record_success()
+                return (message.get("content") or "").strip()
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as exc:
+                # Transient network issue — retry after short backoff
+                last_exc = exc
+                if attempt < 3:
+                    log.debug("LLM request attempt %d/3 failed (%s), retrying...", attempt, type(exc).__name__)
+                    _time.sleep(2 * attempt)
+                    continue
+            except Exception as exc:
+                # Non-transient (auth error, 4xx, etc.) — fail immediately
+                log.warning("LLM request failed: %s", exc)
+                self._record_failure()
+                return None
+
+        log.warning("LLM request failed after 3 attempts: %s", last_exc)
+        self._record_failure()
+        return None
 
     def extract(
         self,
@@ -339,6 +418,85 @@ class LLMExtractor:
         if raw is None:
             return fallback
         return self._parse_rst_response(raw, len(edu_pairs))
+
+    def classify_segment_types(
+        self,
+        segments: list[dict],
+        batch_size: int = 20,
+    ) -> list[str]:
+        """Batch-classify segment_type for a list of segments.
+
+        Args:
+            segments: List of dicts, each with at least `raw_text` (optionally
+                `section_title` to provide context).
+            batch_size: How many segments to send per LLM request.
+
+        Returns:
+            A list of segment_type strings, parallel to `segments`.
+            Falls back to "unknown" for every entry if LLM is unavailable.
+        """
+        if not segments:
+            return []
+        if not self.is_enabled():
+            return ["unknown"] * len(segments)
+
+        results: list[str] = ["unknown"] * len(segments)
+        for start in range(0, len(segments), batch_size):
+            batch = segments[start : start + batch_size]
+            types = self._classify_segtype_batch(batch)
+            for i, t in enumerate(types):
+                results[start + i] = t
+        return results
+
+    def _classify_segtype_batch(self, batch: list[dict]) -> list[str]:
+        lines: list[str] = []
+        for i, seg in enumerate(batch):
+            title = (seg.get("section_title") or "").strip()
+            text = (seg.get("raw_text") or "").strip()[:600]
+            block = f"Segment {i}:"
+            if title:
+                block += f"\n  Title: {title[:120]}"
+            block += f"\n  Text: {text}"
+            lines.append(block)
+        prompt = _SEGTYPE_USER_TEMPLATE.format(segments_text="\n\n".join(lines))
+
+        raw = self._call_llm(
+            _SEGTYPE_SYSTEM_PROMPT,
+            prompt,
+            max_tokens=128 + 24 * len(batch),
+        )
+        if raw is None:
+            return ["unknown"] * len(batch)
+        return self._parse_segtype_response(raw, len(batch))
+
+    def _parse_segtype_response(self, raw: str, expected: int) -> list[str]:
+        """Parse segment_type JSON response; fill gaps with 'unknown'."""
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
+        raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE).strip()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            m = re.search(r"\[.*\]", raw, re.DOTALL)
+            if not m:
+                return ["unknown"] * expected
+            try:
+                data = json.loads(m.group())
+            except json.JSONDecodeError:
+                return ["unknown"] * expected
+
+        if not isinstance(data, list):
+            return ["unknown"] * expected
+
+        result = ["unknown"] * expected
+        valid = set(SEGMENT_TYPES)
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            idx = item.get("idx")
+            t = item.get("type", "unknown")
+            if isinstance(idx, int) and 0 <= idx < expected:
+                result[idx] = t if t in valid else "unknown"
+        return result
 
     def _parse_rst_response(self, raw: str, expected: int) -> list[str]:
         """Parse RST JSON response; fill gaps with 'Sequence'."""
