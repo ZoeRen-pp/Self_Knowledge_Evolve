@@ -138,22 +138,57 @@ def _get_pool() -> pg_pool.ThreadedConnectionPool:
             minconn=settings.POSTGRES_POOL_MIN,
             maxconn=settings.POSTGRES_POOL_MAX,
             dsn=settings.postgres_dsn,
+            # TCP keepalive: prevent NAT/firewall from killing idle connections
+            keepalives=1,
+            keepalives_idle=60,       # start probing after 60s idle
+            keepalives_interval=15,   # probe every 15s
+            keepalives_count=4,       # give up after 4 missed probes
         )
     return _pool
 
 
+def _is_conn_alive(conn: psycopg2.extensions.connection) -> bool:
+    """Check if a pooled connection is still usable."""
+    if conn.closed:
+        return False
+    try:
+        conn.cursor().execute("SELECT 1")
+        conn.rollback()  # discard the trivial result without affecting txn state
+        return True
+    except Exception:
+        return False
+
+
 @contextmanager
 def get_conn() -> Generator[psycopg2.extensions.connection, None, None]:
-    """Yield a connection from the pool; auto-commit or rollback on exit."""
-    conn = _get_pool().getconn()
+    """Yield a connection from the pool; auto-commit or rollback on exit.
+
+    Dead connections (server-side timeout, network drop) are detected and
+    replaced transparently so callers never see 'connection already closed'.
+    """
+    p = _get_pool()
+    conn = p.getconn()
+
+    if not _is_conn_alive(conn):
+        logger.warning("Discarding dead pooled connection; replacing with fresh one")
+        p.putconn(conn, close=True)
+        conn = p.getconn()
+
     try:
         yield conn
         conn.commit()
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass  # rollback may fail on a broken conn; swallow to raise original
         raise
     finally:
-        _get_pool().putconn(conn)
+        # Return to pool only if still usable; otherwise discard
+        if conn.closed:
+            p.putconn(conn, close=True)
+        else:
+            p.putconn(conn)
 
 
 def execute(sql: str, params: tuple = ()) -> None:

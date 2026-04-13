@@ -135,21 +135,51 @@ def _get_pool() -> pg_pool.ThreadedConnectionPool:
             minconn=settings.CRAWLER_POSTGRES_POOL_MIN,
             maxconn=settings.CRAWLER_POSTGRES_POOL_MAX,
             dsn=settings.crawler_postgres_dsn,
+            keepalives=1,
+            keepalives_idle=60,
+            keepalives_interval=15,
+            keepalives_count=4,
         )
     return _pool
 
 
+def _is_conn_alive(conn: psycopg2.extensions.connection) -> bool:
+    """Check if a pooled connection is still usable."""
+    if conn.closed:
+        return False
+    try:
+        conn.cursor().execute("SELECT 1")
+        conn.rollback()
+        return True
+    except Exception:
+        return False
+
+
 @contextmanager
 def get_conn() -> Generator[psycopg2.extensions.connection, None, None]:
-    conn = _get_pool().getconn()
+    """Yield a connection from the pool with dead-connection detection."""
+    p = _get_pool()
+    conn = p.getconn()
+
+    if not _is_conn_alive(conn):
+        logger.warning("Discarding dead pooled connection; replacing with fresh one")
+        p.putconn(conn, close=True)
+        conn = p.getconn()
+
     try:
         yield conn
         conn.commit()
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
-        _get_pool().putconn(conn)
+        if conn.closed:
+            p.putconn(conn, close=True)
+        else:
+            p.putconn(conn)
 
 
 def execute(sql: str, params: tuple = ()) -> None:

@@ -529,15 +529,19 @@ def _maintenance_thread(app, stop_event: threading.Event) -> None:
                 break
 
             log.info("[%s] Starting scheduled maintenance cycle (03:00 CST)", thread_name)
-            try:
-                from src.governance.maintenance import OntologyMaintenance
-                maint = OntologyMaintenance(
-                    store=app.store, graph=app.graph, ontology=app.ontology,
-                )
-                stats = maint.run()
-                log.info("[%s] Cycle complete: %s", thread_name, stats.get("final", {}))
-            except Exception as exc:
-                log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
+            for attempt in range(1, 4):
+                try:
+                    from src.governance.maintenance import OntologyMaintenance
+                    maint = OntologyMaintenance(
+                        store=app.store, graph=app.graph, ontology=app.ontology,
+                    )
+                    stats = maint.run()
+                    log.info("[%s] Cycle complete: %s", thread_name, stats.get("final", {}))
+                    break
+                except Exception as exc:
+                    log.error("[%s] Attempt %d/3 failed: %s", thread_name, attempt, exc, exc_info=True)
+                    if attempt < 3:
+                        stop_event.wait(60)  # wait 60s before retry
     finally:
         log.info("[%s] Thread stopped", thread_name)
 
