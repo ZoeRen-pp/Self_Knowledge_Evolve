@@ -60,6 +60,7 @@ class AlignStage(Stage):
         total_tags = 0
         pending = 0
         candidate_terms = 0
+        pending_seg_ids: list[str] = []  # segments that got 0 canonical tags
 
         for seg in segments:
             tags, candidates = self.align_segment(seg)
@@ -79,6 +80,12 @@ class AlignStage(Stage):
                     (seg["segment_id"],),
                 )
                 pending += 1
+                pending_seg_ids.append(str(seg["segment_id"]))
+
+        # RST propagation: for segments with 0 canonical tags, borrow tags from RST neighbors
+        propagated = 0
+        if pending_seg_ids:
+            propagated = self._propagate_via_rst(source_doc_id, pending_seg_ids)
 
         self._crawler_store.execute(
             "INSERT INTO extraction_jobs (job_type, source_doc_id, status, pipeline_version) "
@@ -86,10 +93,11 @@ class AlignStage(Stage):
             (source_doc_id,),
         )
         log.info(
-            "Aligned doc=%s tags=%d pending_segments=%d candidates_seen=%d",
+            "Aligned doc=%s tags=%d pending_segments=%d rst_propagated=%d candidates_seen=%d",
             source_doc_id,
             total_tags,
             pending,
+            propagated,
             candidate_terms,
         )
 
@@ -108,7 +116,7 @@ class AlignStage(Stage):
                 matched_nodes[node_id] = conf
 
         for node_id, conf in matched_nodes.items():
-            node = ontology.get_node_dict(node_id)
+            node = ontology.get_node(node_id)
             layer = node.get("knowledge_layer", "concept") if node else "concept"
             tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
             tags.append({
@@ -122,13 +130,13 @@ class AlignStage(Stage):
         # Embedding fallback: if no canonical tags from exact match, try semantic matching
         canonical_count = sum(1 for n, c in matched_nodes.items()
                              if _LAYER_TAG_TYPE.get(
-                                 (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept"),
+                                 (ontology.get_node(n) or {}).get("knowledge_layer", "concept"),
                                  "canonical") == "canonical")
         if canonical_count == 0:
             for node_id, conf in self._embedding_match(text):
                 if node_id not in matched_nodes:
                     matched_nodes[node_id] = conf
-                    node = ontology.get_node_dict(node_id)
+                    node = ontology.get_node(node_id)
                     layer = node.get("knowledge_layer", "concept") if node else "concept"
                     tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
                     tags.append({
@@ -184,7 +192,7 @@ class AlignStage(Stage):
                 if surface not in text_lower:
                     continue
 
-            node = ontology.get_node_dict(node_id)
+            node = ontology.get_node(node_id)
             if node and node.get("canonical_name", "").lower() == surface:
                 found.append((surface, node_id, 1.0))
             else:
@@ -207,16 +215,16 @@ class AlignStage(Stage):
         try:
             from src.utils.embedding import get_embeddings
             ontology = self._ontology
-            nodes = [n for n in ontology.get_all_nodes() if n.label]
+            nodes = [n for n in ontology.nodes.values() if n.get("canonical_name")]
             if not nodes:
                 return False
-            texts = [n.label.lower() for n in nodes]
+            texts = [n["canonical_name"].lower() for n in nodes]
             vecs = get_embeddings(texts)
             if vecs is None:
                 return False
             import numpy as np
             self.__class__._onto_embeddings = np.array(vecs)
-            self.__class__._onto_node_ids = [n.node_id for n in nodes]
+            self.__class__._onto_node_ids = [n["node_id"] for n in nodes]
             log.info("Cached embeddings for %d ontology nodes", len(nodes))
             return True
         except Exception as exc:
@@ -272,7 +280,7 @@ class AlignStage(Stage):
         if not self._llm or not hasattr(self._llm, "extract_candidate_terms"):
             return 0
 
-        known = [n.label for n in ontology.get_all_nodes() if n.label]
+        known = [n["canonical_name"] for n in ontology.nodes.values() if n.get("canonical_name")]
         llm_results = self._llm.extract_candidate_terms(text, known)
         if not llm_results:
             return 0
@@ -386,10 +394,10 @@ class AlignStage(Stage):
         # Build reference texts: ontology node canonical names
         ref_texts = []
         ref_labels = []
-        for node in ontology.get_all_nodes():
-            if node.label:
-                ref_texts.append(node.label.lower())
-                ref_labels.append(node.node_id)
+        for node in ontology.nodes.values():
+            if node.get("canonical_name"):
+                ref_texts.append(node["canonical_name"].lower())
+                ref_labels.append(node["node_id"])
 
         # Add existing candidates (top 500 by source_count)
         try:
@@ -496,6 +504,121 @@ class AlignStage(Stage):
                 (initial_forms, normalized, candidate_type, source_doc_id, example,
                  clean_term, clean_term, source_doc_id, source_doc_id, example),
             )
+
+    def _propagate_via_rst(self, source_doc_id: str, pending_seg_ids: list[str]) -> int:
+        """P1b: Propagate canonical tags from aligned neighbors to pending segments via RST.
+
+        For each segment with 0 canonical tags, look up its RST neighbors (both directions).
+        If a neighbor has canonical tags, propagate them with a weight that depends on the
+        RST relation type — strong elaboration/sequence neighbors are more trustworthy than
+        weak contrast/background neighbors.
+
+        Only inserts a propagated tag when adjusted confidence > 0.50.
+        Returns the total number of propagated tag rows inserted.
+        """
+        # Propagation weights by RST relation type
+        # Anchor: the neighbor is the nucleus (more reliable source of canonical concepts)
+        _WEIGHTS: dict[str, float] = {
+            "Elaboration":    0.85,
+            "Sequence":       0.85,
+            "Exemplification": 0.80,
+            "Causation":      0.70,
+            "Constraint":     0.70,
+            "Prerequisite":   0.65,
+            "Evidence":       0.60,
+            "Background":     0.60,
+            "Condition":      0.50,
+            "Contrast":       0.30,
+        }
+        MIN_CONF = 0.50
+        store = self._store
+        total_inserted = 0
+
+        placeholders = ",".join(["%s"] * len(pending_seg_ids))
+        # Fetch all RST edges touching any pending segment (either direction)
+        rst_rows = store.fetchall(
+            f"""SELECT src_edu_id, dst_edu_id, relation_type, nuclearity
+                FROM t_rst_relation
+                WHERE src_edu_id::text IN ({placeholders})
+                   OR dst_edu_id::text IN ({placeholders})""",
+            (*pending_seg_ids, *pending_seg_ids),
+        )
+
+        pending_set = set(pending_seg_ids)
+
+        for row in rst_rows:
+            rel_type   = row.get("relation_type", "Elaboration")
+            nuclearity = row.get("nuclearity") or "NN"
+            weight     = _WEIGHTS.get(rel_type, 0.40)
+
+            src_id = str(row["src_edu_id"])
+            dst_id = str(row["dst_edu_id"])
+
+            # Determine which is the pending segment and which is the neighbor
+            if src_id in pending_set and dst_id not in pending_set:
+                pending_id   = src_id
+                neighbor_id  = dst_id
+                # Boost if neighbor is the nucleus
+                if nuclearity == "SN":  # dst is nucleus → neighbor is nucleus
+                    weight = min(weight + 0.05, 1.0)
+            elif dst_id in pending_set and src_id not in pending_set:
+                pending_id   = dst_id
+                neighbor_id  = src_id
+                if nuclearity == "NS":  # src is nucleus → neighbor is nucleus
+                    weight = min(weight + 0.05, 1.0)
+            else:
+                continue  # both pending or both aligned — skip
+
+            if weight < MIN_CONF:
+                continue
+
+            # Fetch neighbor's canonical tags
+            neighbor_tags = store.fetchall(
+                """SELECT tag_value, ontology_node_id, confidence
+                   FROM segment_tags
+                   WHERE segment_id = %s AND tag_type = 'canonical'""",
+                (neighbor_id,),
+            )
+            if not neighbor_tags:
+                continue
+
+            # Propagate each canonical tag with attenuated confidence
+            inserted_here = 0
+            for nt in neighbor_tags:
+                adj_conf = round(float(nt["confidence"]) * weight, 3)
+                if adj_conf < MIN_CONF:
+                    continue
+                node = self._ontology.get_node(nt["ontology_node_id"])
+                tag_value = node["canonical_name"] if node else nt["tag_value"]
+                try:
+                    store.execute(
+                        """
+                        INSERT INTO segment_tags
+                          (segment_id, tag_type, tag_value, ontology_node_id,
+                           confidence, tagger, ontology_version)
+                        VALUES (%s, 'canonical', %s, %s, %s, 'rst_propagated', 'v0.1.0')
+                        ON CONFLICT DO NOTHING
+                        """,
+                        (pending_id, tag_value, nt["ontology_node_id"], adj_conf),
+                    )
+                    inserted_here += 1
+                except Exception as exc:
+                    log.debug("  rst_propagate insert failed: %s", exc)
+
+            if inserted_here:
+                # Restore segment to active so Stage 4 can use it
+                store.execute(
+                    "UPDATE segments SET lifecycle_state='active' WHERE segment_id=%s",
+                    (pending_id,),
+                )
+                log.debug("  rst_propagate seg=%s ← neighbor=%s rel=%s weight=%.2f tags=%d",
+                          pending_id[:8], neighbor_id[:8], rel_type, weight, inserted_here)
+                total_inserted += inserted_here
+
+        if total_inserted:
+            log.info("RST propagation doc=%s: %d tags added to %d pending segments",
+                     source_doc_id, total_inserted, len(pending_seg_ids))
+        return total_inserted
 
     def _save_tags(self, segment_id: str, tags: list[dict]) -> int:
         if not tags:

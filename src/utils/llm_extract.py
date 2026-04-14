@@ -60,56 +60,75 @@ Extract triples as a JSON array:"""
 
 
 RST_RELATION_TYPES = [
-    # ── Causal / logical ──────────────────────────────────────
-    "Cause-Result",      # A causes B (retrospective)
-    "Result-Cause",      # B is because of A (reverse narrative order)
-    "Purpose",           # A is done in order to achieve B (prospective)
-    "Means",             # B is the method/path to accomplish A
-    # ── Conditional / enablement ──────────────────────────────
-    "Condition",         # if A then B
-    "Unless",            # unless A, B holds
-    "Enablement",        # A makes B possible (prerequisite)
-    # ── Elaborative / refinement ──────────────────────────────
-    "Elaboration",       # B elaborates or details A
-    "Explanation",       # B explains the mechanism/rationale of A
-    "Restatement",       # B restates A in different words
-    "Summary",           # B summarises A
-    # ── Contrastive / concessive ──────────────────────────────
-    "Contrast",          # A and B form a parallel comparison
-    "Concession",        # despite A, B (acknowledge A, pivot to B)
-    # ── Evidential / evaluative ───────────────────────────────
-    "Evidence",          # B provides evidence supporting A's claim
-    "Evaluation",        # B evaluates or judges A
-    "Justification",     # B justifies the action/decision stated in A
-    # ── Structural / organisational ───────────────────────────
-    "Background",        # A provides background for understanding B
-    "Preparation",       # A prepares the reader's attention for B
-    "Sequence",          # A precedes B in temporal/logical order
-    "Joint",             # A and B are co-enumerated at the same level
-    "Problem-Solution",  # A states a problem; B provides solution
+    # ── Semantic expansion ────────────────────────────────────
+    "Elaboration",       # B adds more detail / sub-topics on A's main topic   [NS]
+    "Exemplification",   # B gives a concrete example or illustration of A      [NS]
+    # ── Logical structure ─────────────────────────────────────
+    "Sequence",          # B follows A in strict temporal / procedural order    [NN]
+    "Causation",         # A causes B, or B explains why A holds                [NS]
+    "Contrast",          # B presents an alternative, opposing option to A      [NN]
+    # ── Normative / constraint ────────────────────────────────
+    "Constraint",        # B imposes MUST/SHALL/SHOULD rules governing A        [NS]
+    "Condition",         # A is the condition; B is the conditioned content     [SN]
+    "Prerequisite",      # A must be done/understood before B can be applied    [SN]
+    # ── Support / context ─────────────────────────────────────
+    "Evidence",          # B provides spec citations / data supporting A        [NS]
+    "Background",        # A provides context / motivation needed for B         [SN]
 ]
 
 _RST_SYSTEM_PROMPT = """\
-You are a discourse analyst for technical texts.
+You are a discourse analyst for technical network engineering documents.
 
-Given two adjacent text fragments (EDU-A then EDU-B) from the same document,
-identify the most appropriate RST (Rhetorical Structure Theory) relation type.
+Given two adjacent paragraphs (A then B) from the same document, classify their
+rhetorical relation using EXACTLY ONE type from this list and assign nuclearity.
 
-Choose EXACTLY ONE type from this list (grouped by category):
+RELATION TYPES AND NUCLEARITY:
+- Elaboration:     B adds more detail, sub-topics, or clarification on A.
+                   Nuclearity: NS  (A is the main point; B elaborates)
+- Exemplification: B gives a concrete example, scenario, or illustration of A.
+                   Nuclearity: NS  (A is the main point; B is the example)
+- Sequence:        B follows A in strict temporal or procedural order
+                   (numbered steps, first/then/next/finally).
+                   Nuclearity: NN  (both equal; order is the key signal)
+- Causation:       A causes or leads to B, or B explains why A holds.
+                   Nuclearity: NS  (A is cause/nucleus; B is effect or explanation)
+- Contrast:        B presents an alternative option, opposing behavior, or
+                   counterpoint to A. Both are equally important.
+                   Nuclearity: NN  (both equal)
+- Constraint:      B imposes a normative rule (MUST/SHALL/MUST NOT/is required/
+                   is prohibited) that limits or governs the behavior in A.
+                   Nuclearity: NS  (A is the described behavior; B constrains it)
+- Condition:       B states an action or outcome; A specifies when B applies
+                   (if A then B; unless A; when A; only if A).
+                   Nuclearity: SN  (B is nucleus — the conditioned content)
+- Prerequisite:    A is something that must be understood or completed BEFORE B
+                   can be applied. B is the main task or concept.
+                   Nuclearity: SN  (B is nucleus — the main task)
+- Evidence:        B provides supporting data, RFC/spec citations, or factual
+                   justification for the claim made in A.
+                   Nuclearity: NS  (A is nucleus — the claim; B supports it)
+- Background:      A provides contextual information (history, motivation, overview)
+                   needed to understand B. B is the main content.
+                   Nuclearity: SN  (B is nucleus — the main content)
 
-Causal/logical:     Cause-Result, Result-Cause, Purpose, Means
-Conditional:        Condition, Unless, Enablement
-Elaborative:        Elaboration, Explanation, Restatement, Summary
-Contrastive:        Contrast, Concession
-Evidential:         Evidence, Evaluation, Justification
-Structural:         Background, Preparation, Sequence, Joint, Problem-Solution
+DECISION RULES (apply in order, stop at first match):
+1. "for example / consider / as an illustration / e.g." in B → Exemplification
+2. Numbered steps, or "first … then … next … finally" → Sequence
+3. "however / in contrast / alternatively / whereas / on the other hand" → Contrast
+4. "MUST / SHALL / MUST NOT / is required / is prohibited" in B → Constraint
+5. "if / when / unless / only if / in case" starts or dominates B → Condition
+6. "before / requires / assumes / prerequisite / first ensure" in A → Prerequisite
+7. RFC §, spec table, benchmark data, measurement result in B → Evidence
+8. History, motivation, "background", overview paragraph before technical detail → Background
+9. "because / therefore / as a result / this causes / leads to" → Causation
+10. B continues the same topic with more detail → Elaboration (default)
 
-Return ONLY a JSON array of relation objects, one per pair.
-Each object: {"src_idx": <int>, "relation_type": "<type>"}
-No explanation outside the JSON array."""
+Return ONLY a JSON array. Each element:
+{"src_idx": <int>, "relation_type": "<type>", "nuclearity": "NS"|"SN"|"NN"}
+One element per input pair. No explanation outside the JSON array."""
 
 _RST_USER_TEMPLATE = """\
-Analyse the following EDU pairs and return RST relation types:
+Classify the rhetorical relation between each pair of adjacent paragraphs:
 
 {pairs_text}
 
@@ -117,19 +136,29 @@ Return JSON array:"""
 
 
 SEGMENT_TYPES = [
-    "definition",       # defines a concept, term, or data format
-    "mechanism",        # how a protocol/algorithm/process works
-    "config",           # configuration commands, syntax, procedural steps
-    "constraint",       # limitations, MUST/SHALL rules, applicability conditions
-    "fault",            # fault symptoms, error states, failures, alarms
-    "troubleshooting",  # diagnostic steps, debug procedures, verification
-    "best_practice",    # recommendations, design guidance, security considerations
-    "performance",      # performance metrics, throughput, latency, timers
-    "comparison",       # contrasts between two or more options
-    "table",            # tabular data (feature matrices, comparison tables)
-    "code",             # code blocks, CLI output, config snippets
-    "noise",            # document structure noise — TOC, RFC index, author page, boilerplate
-    "unknown",          # substantive but no clear type fits
+    # 知识本质层 — what it IS
+    "definition",       # concept/term/protocol field/data format definition
+    "mechanism",        # how a protocol/algorithm/process works internally
+    "scenario",         # deployment pattern, business use case, topology design context
+    # 操作层 — how to DO it
+    "config",           # configuration syntax, parameter description, single-step command
+    "procedure",        # ordered multi-step workflow with verification/rollback steps
+    "prerequisite",     # preconditions required before a task/configuration can start
+    # 条件层 — when/under what
+    "constraint",       # protocol-internal MUST/SHALL normative rules, limits, boundaries
+    "compatibility",    # cross-vendor/version behavior differences, interoperability facts
+    # 评估建议层 — how to JUDGE
+    "best_practice",    # design recommendations, security guidance, anti-patterns
+    "performance",      # metrics, sizing, capacity, timer values, throughput benchmarks
+    "comparison",       # technology/option tradeoff analysis for decision-making
+    "fault",            # fault symptoms, error states, commissioning failures, alarms
+    "troubleshooting",  # diagnostic steps, verification procedures, debug commands
+    # 结构层 — non-prose
+    "table",            # meaningful data tables (parameter reference, feature matrix)
+    "code",             # CLI output, config snippets, code blocks
+    # 过滤层
+    "noise",            # TOC, boilerplate, navigation, author page → DROPPED from KB
+    "unknown",          # substantive but no clear type fits above
 ]
 
 _SEGTYPE_SYSTEM_PROMPT = """\
@@ -137,28 +166,65 @@ You are a technical document analyst for a network engineering knowledge base.
 
 Classify each text segment into EXACTLY ONE type from this list:
 
-- definition: defines a concept/term/data format (e.g. packet header field descriptions).
-- mechanism: explains HOW a protocol/algorithm/process works.
-- config: configuration commands, CLI syntax, procedural steps to configure something.
-- constraint: limitations, requirements, MUST/SHALL rules, applicability conditions.
-- fault: fault symptoms, error states, failures, alarms.
-- troubleshooting: diagnostic steps, debug procedures, verification checks.
-- best_practice: recommendations, design guidance, security considerations.
-- performance: performance metrics, throughput, latency, timers, sizing.
-- comparison: contrasts between two or more options (vs, versus, compared to).
-- table: tabular data (feature matrices, comparison tables).
-- code: code blocks, CLI output, config snippets.
-- noise: DOCUMENT STRUCTURE NOISE — table of contents, RFC index listings, author
-  pages/bio, navigation menus, page headers/footers, copyright boilerplate, bare
-  reference lists, "on this page" sidebars. These are NOT substantive technical content
-  and should be dropped from the knowledge base.
-- unknown: substantive technical content that does not clearly fit any specific type above.
+KNOWLEDGE TYPES:
+- definition: What something IS — defines a concept, term, data format, protocol field,
+  or object. Usually contains "is defined as", "refers to", "is a", field/value descriptions.
+- mechanism: How something WORKS internally — protocol algorithm, state machine, message
+  exchange, forwarding logic, timer behaviour. Explains causality or internal process.
+- scenario: WHERE/WHEN to use something — deployment topology, business use case, network
+  design context, integration pattern. Describes real-world application, not the protocol itself.
 
-Rules:
-- Be decisive about `noise`. RFC index pages ("| rfc 1234 | date | title | ..."), author
-  RFC lists ("yakov rekhter rfcs (78)"), and TOC lines ("section 4.1 . . . . 15") are noise.
-- `table` is for meaningful data tables; boilerplate formatted as a table is still noise.
-- Prefer `unknown` over a forced specific type when uncertain.
+OPERATION TYPES:
+- config: Single-step CLI syntax, parameter descriptions, command reference, configuration
+  knobs for ONE thing. Does NOT include sequential steps or verification.
+- procedure: Ordered multi-step workflow — "Step 1 ... Step 2 ... verify ..." — with
+  sequencing words (first/then/next/finally) or numbered steps. Includes rollback or
+  verification as part of the workflow. DISTINCT from config (config = syntax, procedure = workflow).
+- prerequisite: Conditions that MUST be satisfied BEFORE a task starts — "Before configuring X,
+  ensure Y is enabled", requirements for the operator's environment, not the protocol's own rules.
+  DISTINCT from constraint (constraint = protocol rule, prerequisite = task precondition).
+
+CONDITION TYPES:
+- constraint: Protocol-internal normative rules — MUST/SHALL/MUST NOT from an RFC or spec,
+  protocol-defined limits (max prefix, timer range, packet size). Applies regardless of operator
+  choice. DISTINCT from prerequisite (which is about what the operator must set up first).
+- compatibility: Cross-vendor/version behavioral differences, interoperability facts, known
+  incompatibilities between implementations. "Vendor X does Y differently", "RFC-compliant but
+  Cisco and Juniper diverge on". DISTINCT from comparison (compatibility = interop fact,
+  comparison = decision tradeoff).
+
+EVALUATION TYPES:
+- best_practice: Design recommendations, security hardening, anti-patterns, "should" guidance
+  that goes beyond normative protocol rules.
+- performance: Quantitative metrics — throughput numbers, latency figures, timer values,
+  capacity sizing, convergence time benchmarks.
+- comparison: Tradeoff analysis between two or more options to support a decision —
+  "Option A vs Option B: A is better for X because ..., B for Y because ...".
+  DISTINCT from compatibility (comparison = help you choose, compatibility = warn you about interop).
+- fault: Observable failure symptoms, error states, alarm conditions, commissioning failures.
+  What GOES WRONG and what it looks like.
+- troubleshooting: Diagnostic steps to identify root cause, verification commands, debug
+  procedures. HOW to investigate a fault. Often follows a fault segment.
+
+STRUCTURAL TYPES:
+- table: Meaningful data table — parameter reference, feature matrix, timer value table.
+  Pure structure with significant data payload. Boilerplate formatted as table = noise.
+- code: CLI command output, running configuration snippet, pseudocode, script block.
+
+FILTER TYPES:
+- noise: DOCUMENT STRUCTURE NOISE — table of contents, RFC index listings ("| rfc NNNN | ..."),
+  author pages/bios, navigation menus, page headers/footers, copyright boilerplate, bare
+  reference lists, "on this page" sidebars, section numbering lists. NOT technical content.
+- unknown: Substantive technical content that genuinely does not fit any specific type above.
+  Prefer this over forcing an incorrect type.
+
+Decision rules:
+1. noise vs table: Is the table technical data or document chrome? RFC index = noise.
+2. config vs procedure: Is it one command/parameter, or a numbered/sequenced workflow? Workflow = procedure.
+3. constraint vs prerequisite: Is it a protocol rule (MUST in spec) or an operator setup step? Setup step = prerequisite.
+4. compatibility vs comparison: Is it reporting how implementations differ (fact) or helping choose between options (decision)? Fact = compatibility.
+5. scenario vs mechanism: Does it describe a real deployment context (where/why) or explain internal protocol behaviour (how)? Deployment = scenario.
+6. Be decisive about noise — RFC index, TOC, author bio, boilerplate reference lists are always noise.
 
 Return ONLY a JSON array. Each element: {"idx": <int>, "type": "<type>"}.
 One element per input segment. No explanation outside the JSON array."""
@@ -383,41 +449,67 @@ class LLMExtractor:
         log.debug("LLM extracted %d triples from segment", len(triples))
         return triples
 
+    # Alias used by stage4 and backfill when app.llm is LLMExtractor directly
+    extract_triples = extract
+
+    # Max pairs per LLM call. Each pair contributes ~800 chars of prompt;
+    # 15 pairs ≈ 12 000 chars — well within context limits and avoids timeouts.
+    _RST_BATCH_SIZE = 15
+
     def extract_rst_relations(
         self,
-        edu_pairs: list[tuple[str, str, str, str]],
-    ) -> list[str]:
+        edu_pairs: list[tuple],
+    ) -> list[dict]:
         """
-        Extract RST relation types for a list of adjacent EDU pairs.
+        Extract RST relation type + nuclearity for a list of adjacent paragraph pairs.
+
+        Each pair is independent — A→B relation depends only on those two paragraphs,
+        not on the rest of the document. Pairs are processed in batches of
+        _RST_BATCH_SIZE to avoid prompt-size timeouts on large documents.
 
         Args:
-            edu_pairs: List of (src_id, src_text, dst_id, dst_text).
+            edu_pairs: List of tuples, each either:
+                (src_id, src_text, dst_id, dst_text)  — legacy 4-tuple
+                (src_id, src_text, src_type, dst_id, dst_text, dst_type)  — 6-tuple with types
+
+            The segment_type hints (src_type / dst_type) are injected into the
+            prompt so the LLM can use structural cues even when text is truncated.
 
         Returns:
-            List of relation_type strings, one per input pair.
-            Falls back to "Sequence" for each pair if LLM is unavailable.
+            List of dicts {"relation_type": str, "nuclearity": "NS"|"SN"|"NN"},
+            one per input pair. Falls back to Elaboration/NN on failure.
         """
-        fallback = ["Sequence"] * len(edu_pairs)
+        fallback = {"relation_type": "Elaboration", "nuclearity": "NN"}
         if not self.is_enabled() or not edu_pairs:
-            return fallback
+            return [fallback] * len(edu_pairs)
 
-        from src.config.settings import settings
+        results: list[dict] = []
+        batch_size = self._RST_BATCH_SIZE
 
-        lines = []
-        for i, (_, src_text, _, dst_text) in enumerate(edu_pairs):
-            lines.append(
-                f"Pair {i}:\n"
-                f"  EDU-A: {src_text[:300]}\n"
-                f"  EDU-B: {dst_text[:300]}"
-            )
-        pairs_text = "\n\n".join(lines)
+        for start in range(0, len(edu_pairs), batch_size):
+            batch = edu_pairs[start : start + batch_size]
+            lines = []
+            for i, pair in enumerate(batch):
+                if len(pair) == 6:
+                    _, src_text, src_type, _, dst_text, dst_type = pair
+                    type_hint = f" [type: {src_type}]"
+                    type_hint_b = f" [type: {dst_type}]"
+                else:
+                    _, src_text, _, dst_text = pair
+                    type_hint = type_hint_b = ""
+                lines.append(
+                    f"Pair {i}:\n"
+                    f"  Paragraph A{type_hint}: {src_text[:600]}\n"
+                    f"  Paragraph B{type_hint_b}: {dst_text[:600]}"
+                )
+            prompt = _RST_USER_TEMPLATE.format(pairs_text="\n\n".join(lines))
+            raw = self._call_llm(_RST_SYSTEM_PROMPT, prompt, 32 + 40 * len(batch))
+            if raw is None:
+                results.extend([fallback] * len(batch))
+            else:
+                results.extend(self._parse_rst_response(raw, len(batch)))
 
-        prompt = _RST_USER_TEMPLATE.format(pairs_text=pairs_text)
-
-        raw = self._call_llm(_RST_SYSTEM_PROMPT, prompt, 256 + 32 * len(edu_pairs))
-        if raw is None:
-            return fallback
-        return self._parse_rst_response(raw, len(edu_pairs))
+        return results
 
     def classify_segment_types(
         self,
@@ -498,8 +590,12 @@ class LLMExtractor:
                 result[idx] = t if t in valid else "unknown"
         return result
 
-    def _parse_rst_response(self, raw: str, expected: int) -> list[str]:
-        """Parse RST JSON response; fill gaps with 'Sequence'."""
+    def _parse_rst_response(self, raw: str, expected: int) -> list[dict]:
+        """Parse RST JSON response; fill gaps with Elaboration/NN."""
+        _default = {"relation_type": "Elaboration", "nuclearity": "NN"}
+        _valid_rel = set(RST_RELATION_TYPES)
+        _valid_nuc = {"NS", "SN", "NN"}
+
         raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.MULTILINE)
         raw = re.sub(r"\s*```$", "", raw, flags=re.MULTILINE).strip()
         try:
@@ -507,24 +603,27 @@ class LLMExtractor:
         except json.JSONDecodeError:
             m = re.search(r"\[.*\]", raw, re.DOTALL)
             if not m:
-                return ["Sequence"] * expected
+                return [_default.copy() for _ in range(expected)]
             try:
                 data = json.loads(m.group())
             except json.JSONDecodeError:
-                return ["Sequence"] * expected
+                return [_default.copy() for _ in range(expected)]
 
         if not isinstance(data, list):
-            return ["Sequence"] * expected
+            return [_default.copy() for _ in range(expected)]
 
-        result = ["Sequence"] * expected
-        valid = set(RST_RELATION_TYPES)
+        result = [_default.copy() for _ in range(expected)]
         for item in data:
             if not isinstance(item, dict):
                 continue
             idx = item.get("src_idx")
-            rel = item.get("relation_type", "Sequence")
+            rel = item.get("relation_type", "Elaboration")
+            nuc = item.get("nuclearity", "NN")
             if isinstance(idx, int) and 0 <= idx < expected:
-                result[idx] = rel if rel in valid else "Sequence"
+                result[idx] = {
+                    "relation_type": rel if rel in _valid_rel else "Elaboration",
+                    "nuclearity":    nuc if nuc in _valid_nuc else "NN",
+                }
         return result
 
     def generate_title(self, text: str) -> str | None:

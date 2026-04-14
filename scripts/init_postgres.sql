@@ -94,13 +94,14 @@ CREATE INDEX IF NOT EXISTS idx_segments_simhash       ON segments(simhash_value)
 -- =============================================================
 CREATE TABLE IF NOT EXISTS t_rst_relation (
     nn_relation_id  VARCHAR(36)   NOT NULL PRIMARY KEY,   -- UUID
-    relation_type   VARCHAR(255)  NOT NULL,                -- RST type (Elaboration, Cause-Result, …)
+    relation_type   VARCHAR(255)  NOT NULL,                -- paragraph-level discourse type
+    nuclearity      VARCHAR(2)    NOT NULL DEFAULT 'NN',   -- NS | SN | NN
     src_edu_id      UUID          NOT NULL REFERENCES segments(segment_id),
     dst_edu_id      UUID          NOT NULL REFERENCES segments(segment_id),
-    meta_context    JSONB,         -- symmetric relations: {"SYNTACTIC_ORDER": <int>}
+    meta_context    JSONB,         -- {"SYNTACTIC_ORDER": <int>, "src_type": "...", "dst_type": "..."}
     relation_source VARCHAR(255),  -- rule / llm / manual
     update_time     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    reliability     BIGINT        NOT NULL DEFAULT 1       -- confidence placeholder, default 1
+    reliability     BIGINT        NOT NULL DEFAULT 1
 );
 
 CREATE INDEX IF NOT EXISTS idx_rst_src ON t_rst_relation(src_edu_id);

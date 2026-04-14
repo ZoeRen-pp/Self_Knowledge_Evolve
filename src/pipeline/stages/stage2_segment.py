@@ -119,33 +119,117 @@ class SegmentStage(Stage):
         return saved
 
     def _segment_document(self, text: str, doc_type: str) -> list[dict]:
-        """Structural split → length control → LLM segment_type classification."""
-        raw_chunks = self._structural_split(text)
-        segments: list[dict] = []
-        for chunk in raw_chunks:
-            sub = self._process_chunk(chunk)
-            segments.extend(sub)
-        return self._classify_and_filter(segments)
+        """Joint segmentation + typing in four steps:
 
-    def _classify_and_filter(self, segments: list[dict]) -> list[dict]:
-        """Batch-classify segment_type via LLM; drop noise; compute confidence."""
-        if not segments:
+        1. Structural split on headings/section markers → section-level chunks
+        2. Each chunk split into paragraph-level units (\\n\\n boundaries)
+        3. LLM batch-classifies ALL paragraphs in one call → segment_type assigned
+        4. Adjacent same-type paragraphs in the same section are merged;
+           noise paragraphs are dropped; oversized results are length-controlled.
+
+        This ensures every segment has a single communicative role, and
+        segment boundaries coincide with type-change boundaries.
+        """
+        raw_chunks = self._structural_split(text)
+        if not raw_chunks:
             return []
 
-        types = self.llm.classify_segment_types(segments)
-        result: list[dict] = []
-        dropped = 0
-        for seg, seg_type in zip(segments, types):
-            if seg_type == "noise":
-                dropped += 1
-                continue
-            seg["segment_type"] = seg_type
-            seg["confidence"] = self._estimate_confidence(
-                seg["raw_text"], seg["token_count"], seg_type
-            )
-            result.append(seg)
+        # Step 1→2: flatten chunks → paragraph units
+        all_paras: list[dict] = []
+        for chunk in raw_chunks:
+            all_paras.extend(self._split_into_paragraphs(chunk))
+
+        if not all_paras:
+            return []
+
+        # Step 3: joint LLM classification (one batch for the whole document)
+        all_paras = self._classify_paragraphs(all_paras)
+
+        # Step 4a: drop noise
+        dropped = sum(1 for p in all_paras if p["segment_type"] == "noise")
         if dropped:
-            log.info("Dropped %d noise segments (LLM classification)", dropped)
+            log.info("Dropped %d noise paragraphs", dropped)
+        all_paras = [p for p in all_paras if p["segment_type"] != "noise"]
+
+        # Step 4b: merge adjacent same-type paragraphs within same section
+        merged = self._merge_same_type(all_paras)
+
+        # Step 4c: length control + confidence
+        result: list[dict] = []
+        for seg in merged:
+            for sub in self._apply_length_control(seg):
+                sub["confidence"] = self._estimate_confidence(
+                    sub["raw_text"], sub["token_count"], sub["segment_type"]
+                )
+                result.append(sub)
+        return result
+
+    def _split_into_paragraphs(self, chunk: dict) -> list[dict]:
+        """Split a section chunk into paragraph-level units on \\n\\n boundaries.
+
+        Each paragraph becomes a candidate discourse unit. Paragraphs shorter
+        than 15 tokens are discarded (likely noise lines or lone headings).
+        If the chunk has no paragraph breaks, it is kept as a single unit.
+        """
+        text = chunk["raw_text"]
+        parts = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+        if not parts:
+            parts = [text.strip()] if text.strip() else []
+
+        result: list[dict] = []
+        for p in parts:
+            tc = token_count(p)
+            if tc < 15:
+                continue
+            result.append({
+                **chunk,
+                "raw_text":     p,
+                "token_count":  tc,
+                "segment_type": "unknown",
+                "confidence":   0.5,
+            })
+        return result
+
+    def _classify_paragraphs(self, paras: list[dict]) -> list[dict]:
+        """Batch-classify segment_type for all paragraphs (one LLM call).
+
+        When LLM is disabled, all paragraphs keep type 'unknown'.
+        """
+        if not paras:
+            return paras
+        types = self.llm.classify_segment_types(paras)
+        for para, t in zip(paras, types):
+            para["segment_type"] = t
+        return paras
+
+    def _merge_same_type(self, paras: list[dict]) -> list[dict]:
+        """Merge adjacent paragraphs that share type and section_path.
+
+        Merge conditions (ALL must hold):
+        - Same segment_type (and not 'unknown' — avoids over-merging when LLM is off)
+        - Same section_path (no cross-heading merging)
+        - Merged token count ≤ 1024
+        """
+        if not paras:
+            return []
+
+        result: list[dict] = []
+        current = dict(paras[0])
+
+        for para in paras[1:]:
+            same_type    = para["segment_type"] == current["segment_type"]
+            same_section = para.get("section_path") == current.get("section_path")
+            fits          = current["token_count"] + para["token_count"] <= 1024
+            not_unknown  = current["segment_type"] != "unknown"
+
+            if same_type and same_section and fits and not_unknown:
+                current["raw_text"]    = current["raw_text"] + "\n\n" + para["raw_text"]
+                current["token_count"] = current["token_count"] + para["token_count"]
+            else:
+                result.append(current)
+                current = dict(para)
+
+        result.append(current)
         return result
 
     def _structural_split(self, text: str) -> list[dict]:
@@ -244,25 +328,24 @@ class SegmentStage(Stage):
             for p in parts if p.strip()
         ]
 
-    def _process_chunk(self, chunk: dict) -> list[dict]:
-        """Length control only. segment_type is assigned later via LLM batch."""
-        text = chunk["raw_text"]
-        tc = token_count(text)
+    def _apply_length_control(self, seg: dict) -> list[dict]:
+        """Split an oversized merged segment while preserving segment_type.
 
-        if tc < 15:
-            return []
+        Segments ≤ 1024 tokens are returned as-is. Larger segments are split
+        using the three-level strategy (paragraph → sentence → sliding window).
+        The segment_type is inherited by all sub-segments.
+        """
+        if seg["token_count"] <= 1024:
+            return [seg]
 
-        if tc <= 1024:
-            return [{**chunk, "token_count": tc}]
-
-        sub_texts = self._split_oversized(text)
-        results = []
+        sub_texts = self._split_oversized(seg["raw_text"])
+        result: list[dict] = []
         for sub in sub_texts:
-            sub_tc = token_count(sub)
-            if sub_tc < 15:
+            tc = token_count(sub)
+            if tc < 15:
                 continue
-            results.append({**chunk, "raw_text": sub, "token_count": sub_tc})
-        return results
+            result.append({**seg, "raw_text": sub, "token_count": tc})
+        return result if result else [seg]
 
     def _split_oversized(self, text: str) -> list[str]:
         """Three-level split for text exceeding 1024 tokens.
@@ -413,28 +496,38 @@ class SegmentStage(Stage):
         return f"{site_key}:{url}"[:128]
 
     def _insert_rst_relations(self, segments: list[dict]) -> int:
-        """Insert RST relations between adjacent EDU pairs into t_rst_relation."""
+        """Insert paragraph-level discourse relations between adjacent segments."""
         if len(segments) < 2:
             return 0
 
-        pairs: list[tuple[str, str, str, str]] = [
-            (segments[i]["segment_id"],   segments[i]["raw_text"],
-             segments[i + 1]["segment_id"], segments[i + 1]["raw_text"])
+        pairs: list[tuple[str, str, str, str, str, str]] = [
+            (
+                segments[i]["segment_id"],     segments[i]["raw_text"],
+                segments[i].get("segment_type", "unknown"),
+                segments[i + 1]["segment_id"], segments[i + 1]["raw_text"],
+                segments[i + 1].get("segment_type", "unknown"),
+            )
             for i in range(len(segments) - 1)
         ]
 
         llm_enabled = self.llm.is_enabled()
-        llm_types = self.llm.extract_rst_relations(pairs) if llm_enabled else []
+        rel_results: list[dict] = (
+            self.llm.extract_rst_relations(pairs) if llm_enabled else []
+        )
 
+        _default = {"relation_type": "Elaboration", "nuclearity": "NN"}
         rows = []
-        for i, (src_id, _, dst_id, _) in enumerate(pairs):
-            rel_type = llm_types[i] if i < len(llm_types) else "Sequence"
-            source = "llm" if llm_enabled else "fallback"
-            src_type = segments[i].get("segment_type", "unknown")
-            dst_type = segments[i + 1].get("segment_type", "unknown")
+        for i, (src_id, _, _src_type, dst_id, _, _dst_type) in enumerate(pairs):
+            rel = rel_results[i] if i < len(rel_results) else _default
+            rel_type   = rel.get("relation_type", "Elaboration")
+            nuclearity = rel.get("nuclearity", "NN")
+            source     = "llm" if llm_enabled else "rule"
+            src_type   = segments[i].get("segment_type", "unknown")
+            dst_type   = segments[i + 1].get("segment_type", "unknown")
             rows.append((
                 str(uuid.uuid4()),
                 rel_type,
+                nuclearity,
                 src_id,
                 dst_id,
                 json.dumps({"SYNTACTIC_ORDER": i, "src_type": src_type, "dst_type": dst_type}),
@@ -450,9 +543,9 @@ class SegmentStage(Stage):
                 cur.execute(
                     """
                     INSERT INTO t_rst_relation
-                        (nn_relation_id, relation_type, src_edu_id, dst_edu_id,
+                        (nn_relation_id, relation_type, nuclearity, src_edu_id, dst_edu_id,
                          meta_context, relation_source)
-                    VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
                     ON CONFLICT (nn_relation_id) DO NOTHING
                     """,
                     row,

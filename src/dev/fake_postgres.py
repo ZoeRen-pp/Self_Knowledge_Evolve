@@ -139,6 +139,7 @@ def _init_schema() -> None:
         CREATE TABLE IF NOT EXISTS t_rst_relation (
             nn_relation_id  TEXT PRIMARY KEY,
             relation_type   TEXT,
+            nuclearity      TEXT DEFAULT 'NN',
             src_edu_id      TEXT,
             dst_edu_id      TEXT,
             meta_context    TEXT,
@@ -217,6 +218,12 @@ def execute(sql: str, params=()) -> None:
 def get_conn() -> Generator:
     """Yield a thin wrapper that exposes cursor() for stage code that uses get_conn()."""
     yield _FakeConn(_get_conn())
+
+
+@contextmanager
+def transaction() -> Generator:
+    """Yield a cursor-like object for bulk inserts inside a transaction block."""
+    yield _FakeCursor(_get_conn())
 
 
 def ping() -> bool:

@@ -302,7 +302,7 @@ def _get_rst_chains(segment_ids: list[str], store: RelationalStore) -> list[dict
 
     placeholders = ",".join(["%s"] * len(segment_ids))
     rows = store.fetchall(
-        f"""SELECT src_edu_id, dst_edu_id, relation_type, relation_source
+        f"""SELECT src_edu_id, dst_edu_id, relation_type, nuclearity, relation_source
             FROM t_rst_relation
             WHERE src_edu_id::text IN ({placeholders})
               AND dst_edu_id::text IN ({placeholders})
@@ -312,9 +312,10 @@ def _get_rst_chains(segment_ids: list[str], store: RelationalStore) -> list[dict
     return [
         {
             "from_segment": str(r["src_edu_id"]),
-            "to_segment": str(r["dst_edu_id"]),
-            "relation": r["relation_type"],
-            "source": r.get("relation_source") or "rule",
+            "to_segment":   str(r["dst_edu_id"]),
+            "relation":     r["relation_type"],
+            "nuclearity":   r.get("nuclearity") or "NN",
+            "source":       r.get("relation_source") or "rule",
         }
         for r in rows
     ]

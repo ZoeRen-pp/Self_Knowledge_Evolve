@@ -72,7 +72,7 @@ class ClaudeLLMProvider(LLMProvider):
 
     def extract_rst_relations(
         self, edu_pairs: list[tuple[str, str, str, str]]
-    ) -> list[str]:
+    ) -> list[dict]:
         return self._extractor.extract_rst_relations(edu_pairs)
 
     def generate_title(self, text: str) -> str | None:

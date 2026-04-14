@@ -38,6 +38,19 @@ class ExtractStage(Stage):
         self.set_output(ctx, {"facts": facts})
         return ctx
 
+    # RST relation types whose predicate can be derived structurally (no LLM needed).
+    # Value: (ontology_predicate, subject_is_src)
+    #   subject_is_src=True  → subject = nucleus when NS, i.e. src_seg
+    #   subject_is_src=False → subject = nucleus when SN, i.e. dst_seg
+    # In all cases subject = nucleus segment; object = satellite segment.
+    _RST_DERIVED_PREDICATES: dict[str, tuple[str, bool]] = {
+        "Constraint":      ("constrained_by", True),   # NS: src(behavior) constrained_by dst(rule)
+        "Prerequisite":    ("requires",       False),  # SN: dst(task) requires src(prereq)
+        "Causation":       ("triggers",       True),   # NS: src(cause) triggers dst(effect)
+        "Condition":       ("applies_when",   False),  # SN: dst(content) applies_when src(cond)
+        "Exemplification": ("has_example",    True),   # NS: src(concept) has_example dst
+    }
+
     def _run(self, source_doc_id: str) -> list[dict]:
         """Extract facts from all segments of a document."""
         store = self._store
@@ -64,23 +77,29 @@ class ExtractStage(Stage):
         log.info("Extract start doc=%s: segments=%d rank=%s llm=%s",
                  source_doc_id, len(segments), source_rank,
                  "enabled" if self._llm.is_enabled() else "disabled")
-        all_facts: list[dict] = []
-        llm_count = 0
-        rule_count = 0
 
+        all_facts: list[dict] = []
+
+        # P0: RST-derived facts — structural predicate inference, no LLM needed
+        rst_derived = self._extract_rst_derived_facts(segments, source_rank, source_doc_id)
+        all_facts.extend(rst_derived)
+
+        llm_count = 0
         cooccurrence_count = 0
         merged_count = 0
+        covered_ids: set[str] = set()  # segments with successful single-seg LLM extraction
+
         for i, seg in enumerate(segments):
-            # Priority 1: LLM extraction (highest quality)
+            # P1: LLM extraction (highest quality, single segment)
             llm_facts = self.extract_facts_llm(seg, source_rank)
             if llm_facts:
                 all_facts.extend(llm_facts)
                 llm_count += len(llm_facts)
+                covered_ids.add(str(seg["segment_id"]))
                 log.debug("  seg=%s llm=%d", str(seg["segment_id"])[:12], len(llm_facts))
                 continue
 
-            # Priority 2: LLM with merged context — combine with previous segment
-            # if RST relation is continuative (Elaboration/Sequence/Restatement/Explanation)
+            # P2: LLM with merged context + RST discourse hint
             if i > 0:
                 merged_facts = self._extract_merged_context(
                     segments[i - 1], seg, source_rank, source_doc_id,
@@ -91,12 +110,16 @@ class ExtractStage(Stage):
                     log.debug("  seg=%s merged=%d", str(seg["segment_id"])[:12], len(merged_facts))
                     continue
 
-            # Priority 3: Co-occurrence (last resort, low quality)
+            # P3: Co-occurrence (last resort, low quality)
             cooc_facts = self._extract_cooccurrence(seg, source_rank)
             if cooc_facts:
                 all_facts.extend(cooc_facts)
                 cooccurrence_count += len(cooc_facts)
                 log.debug("  seg=%s cooccurrence=%d", str(seg["segment_id"])[:12], len(cooc_facts))
+
+        # P2-chain: RST chain extraction for chains with uncovered segments
+        chain_facts = self._walk_rst_chains(segments, source_rank, source_doc_id, covered_ids)
+        all_facts.extend(chain_facts)
 
         self._save_facts(all_facts, source_doc_id)
         self._crawler_store.execute(
@@ -107,42 +130,124 @@ class ExtractStage(Stage):
         fact_ids = [f["fact_id"] for f in all_facts]
         id_preview = self._preview_ids(fact_ids)
         log.info(
-            "Extracted facts doc=%s total=%d llm=%d merged=%d cooccurrence=%d fact_ids=%s",
-            source_doc_id,
-            len(all_facts),
-            llm_count,
-            merged_count,
-            cooccurrence_count,
-            id_preview,
+            "Extracted facts doc=%s total=%d llm=%d merged=%d "
+            "rst_derived=%d chain=%d cooccurrence=%d fact_ids=%s",
+            source_doc_id, len(all_facts), llm_count, merged_count,
+            len(rst_derived), len(chain_facts), cooccurrence_count, id_preview,
         )
         return all_facts
+
+    def _extract_rst_derived_facts(
+        self, segments: list[dict], source_rank: str, source_doc_id: str,
+    ) -> list[dict]:
+        """P0: Derive facts directly from RST structure — no LLM needed.
+
+        For 5 RST types the predicate can be read off the discourse relation itself.
+        Subject/object assignment follows nuclearity:
+          NS → src_seg is nucleus → src_seg is subject
+          SN → dst_seg is nucleus → dst_seg is subject
+          NN → src_seg as subject (symmetric, arbitrary)
+        """
+        store = self._store
+        facts: list[dict] = []
+
+        seg_index = {str(s["segment_id"]): s for s in segments}
+        seg_ids = list(seg_index.keys())
+        if len(seg_ids) < 2:
+            return facts
+
+        placeholders = ",".join(["%s"] * len(seg_ids))
+        rst_rows = store.fetchall(
+            f"""SELECT src_edu_id, dst_edu_id, relation_type, nuclearity
+                FROM t_rst_relation
+                WHERE src_edu_id::text IN ({placeholders})
+                  AND dst_edu_id::text IN ({placeholders})""",
+            (*seg_ids, *seg_ids),
+        )
+
+        for row in rst_rows:
+            rel_type = row.get("relation_type", "")
+            if rel_type not in self._RST_DERIVED_PREDICATES:
+                continue
+
+            predicate, subject_is_src = self._RST_DERIVED_PREDICATES[rel_type]
+            nuclearity = row.get("nuclearity") or "NN"
+
+            src_seg = seg_index.get(str(row["src_edu_id"]))
+            dst_seg = seg_index.get(str(row["dst_edu_id"]))
+            if not src_seg or not dst_seg:
+                continue
+
+            # Pick which segment is subject (nucleus) based on nuclearity
+            if nuclearity == "NS":
+                subj_seg, obj_seg = src_seg, dst_seg
+            elif nuclearity == "SN":
+                subj_seg, obj_seg = dst_seg, src_seg
+            else:  # NN — follow static subject_is_src flag
+                subj_seg, obj_seg = (src_seg, dst_seg) if subject_is_src else (dst_seg, src_seg)
+
+            subj_nodes = subj_seg.get("canonical_nodes") or []
+            obj_nodes  = obj_seg.get("canonical_nodes") or []
+
+            # Need at least one node on each side
+            for sn in subj_nodes[:3]:
+                for on in obj_nodes[:3]:
+                    if sn == on:
+                        continue
+                    if not self._ontology.is_valid_relation(predicate):
+                        continue
+                    facts.append(self._build_fact(
+                        sn, predicate, on, subj_seg, source_rank, "rst_derived",
+                    ))
+
+        log.debug("RST-derived facts doc=%s: %d facts from %d RST rows",
+                  source_doc_id, len(facts), len(rst_rows))
+        return facts
 
     def _extract_merged_context(
         self, prev_seg: dict, curr_seg: dict, source_rank: str, source_doc_id: str,
     ) -> list[dict]:
         """Priority 2: Merge with previous segment and retry LLM.
 
-        Only triggers when the RST relation between prev and curr is continuative
-        (Elaboration, Sequence, Restatement, Explanation), meaning they form
-        a semantic unit that was split by segmentation.
+        Only triggers when the discourse relation between prev and curr is continuative
+        (Elaboration, Sequence, Causation, Evidence, Background, Exemplification),
+        meaning they form a semantic unit that was split by segmentation.
+        Prepends an RST discourse hint so the LLM understands the semantic role split.
         """
         store = self._store
-        continuative_types = {"Elaboration", "Sequence", "Restatement", "Explanation",
-                              "Background", "Evidence", "Means"}
+        continuative_types = {"Elaboration", "Sequence", "Causation",
+                              "Evidence", "Background", "Exemplification"}
 
-        # Check RST relation between prev and curr
+        # Check RST relation between prev and curr — also fetch nuclearity
         rst_row = store.fetchone(
-            """SELECT relation_type FROM t_rst_relation
+            """SELECT relation_type, nuclearity FROM t_rst_relation
                WHERE src_edu_id = %s AND dst_edu_id = %s LIMIT 1""",
             (str(prev_seg["segment_id"]), str(curr_seg["segment_id"])),
         )
         if not rst_row or rst_row.get("relation_type") not in continuative_types:
             return []
 
-        # Merge texts and retry LLM
+        rel_type   = rst_row["relation_type"]
+        nuclearity = rst_row.get("nuclearity") or "NN"
+
+        # Build a human-readable hint for the LLM
+        _nuc_hint = {
+            "NS": "the first paragraph is the main content, the second is supportive",
+            "SN": "the second paragraph is the main content, the first is supportive",
+            "NN": "both paragraphs carry equal weight",
+        }
+        rst_hint = (
+            f"[Discourse context: These two paragraphs have a {rel_type} relation "
+            f"({_nuc_hint.get(nuclearity, 'both paragraphs carry equal weight')}). "
+            f"Extract facts that span or connect both paragraphs.]\n\n"
+        )
+
+        # Merge texts with hint prepended
         merged_text = (
-            (prev_seg.get("raw_text") or "") + "\n" +
-            (curr_seg.get("raw_text") or "")
+            rst_hint
+            + (prev_seg.get("raw_text") or "")
+            + "\n"
+            + (curr_seg.get("raw_text") or "")
         )
         # Build merged segment dict for LLM
         merged_seg = {
@@ -156,11 +261,110 @@ class ExtractStage(Stage):
         }
         facts = self.extract_facts_llm(merged_seg, source_rank)
         if facts:
-            log.debug("  merged context (%s): %s + %s → %d facts",
-                      rst_row["relation_type"],
+            log.debug("  merged context (%s/%s): %s + %s → %d facts",
+                      rel_type, nuclearity,
                       str(prev_seg["segment_id"])[:8],
                       str(curr_seg["segment_id"])[:8],
                       len(facts))
+        return facts
+
+    def _walk_rst_chains(
+        self, segments: list[dict], source_rank: str,
+        source_doc_id: str, covered_ids: set[str],
+    ) -> list[dict]:
+        """P2: Multi-hop triple extraction along RST chains.
+
+        Finds chains of 3–4 segments connected by continuative RST relations
+        where at least one segment was not already covered by single-segment LLM.
+        Sends the whole chain as merged context to LLM for cross-segment triples.
+        """
+        CHAIN_TYPES = {"Sequence", "Elaboration", "Causation", "Background", "Exemplification"}
+        MAX_CHAIN_LEN  = 4
+        MAX_CHAIN_TOKENS = 1500
+
+        store = self._store
+        seg_index = {str(s["segment_id"]): s for s in segments}
+        seg_ids = list(seg_index.keys())
+        if len(seg_ids) < 3:
+            return []
+
+        # Build directed adjacency: src → [dst] for chain-eligible RST types
+        placeholders = ",".join(["%s"] * len(seg_ids))
+        rst_rows = store.fetchall(
+            f"""SELECT src_edu_id, dst_edu_id, relation_type, nuclearity
+                FROM t_rst_relation
+                WHERE src_edu_id::text IN ({placeholders})
+                  AND dst_edu_id::text IN ({placeholders})
+                  AND relation_type IN ({",".join(["%s"] * len(CHAIN_TYPES))})""",
+            (*seg_ids, *seg_ids, *CHAIN_TYPES),
+        )
+
+        adjacency: dict[str, list[str]] = {}  # src_id → list of dst_id
+        reachable: set[str] = set()           # ids that are reachable from some other id
+        for row in rst_rows:
+            src = str(row["src_edu_id"])
+            dst = str(row["dst_edu_id"])
+            adjacency.setdefault(src, []).append(dst)
+            reachable.add(dst)
+
+        # Chain starts: nodes in the adjacency graph that are NOT reachable from another
+        chain_starts = [nid for nid in adjacency if nid not in reachable]
+
+        facts: list[dict] = []
+
+        for start in chain_starts:
+            # Walk the chain greedily
+            chain: list[str] = [start]
+            current = start
+            total_tokens = len((seg_index.get(start) or {}).get("raw_text") or "") // 4
+
+            while len(chain) < MAX_CHAIN_LEN:
+                nexts = adjacency.get(current, [])
+                if not nexts:
+                    break
+                nxt = nexts[0]  # take the first (usually only) successor
+                nxt_tokens = len((seg_index.get(nxt) or {}).get("raw_text") or "") // 4
+                if total_tokens + nxt_tokens > MAX_CHAIN_TOKENS:
+                    break
+                chain.append(nxt)
+                total_tokens += nxt_tokens
+                current = nxt
+
+            if len(chain) < 3:
+                continue
+
+            # Only process chains where at least one segment was not covered
+            if all(sid in covered_ids for sid in chain):
+                continue
+
+            # Merge chain texts with a structural header
+            parts = []
+            for idx, sid in enumerate(chain, 1):
+                seg = seg_index.get(sid)
+                if seg:
+                    parts.append(f"[Paragraph {idx}]\n{seg.get('raw_text') or ''}")
+
+            merged_text = "\n\n".join(parts)
+            all_nodes: list[str] = []
+            for sid in chain:
+                seg = seg_index.get(sid)
+                if seg:
+                    all_nodes.extend(seg.get("canonical_nodes") or [])
+            all_nodes = list(dict.fromkeys(all_nodes))  # deduplicate, preserve order
+
+            # Use the first segment as anchor for segment_id / metadata
+            anchor_seg = {
+                **(seg_index.get(chain[0]) or {}),
+                "raw_text": merged_text,
+                "normalized_text": merged_text.lower(),
+                "canonical_nodes": all_nodes,
+            }
+            chain_facts = self.extract_facts_llm(anchor_seg, source_rank)
+            facts.extend(chain_facts)
+            if chain_facts:
+                log.debug("  rst_chain len=%d segs=%s → %d facts",
+                          len(chain), [s[:8] for s in chain], len(chain_facts))
+
         return facts
 
     def _extract_cooccurrence(self, segment: dict, source_rank: str) -> list[dict]:
@@ -264,8 +468,8 @@ class ExtractStage(Stage):
             if not subj or not pred or not obj or subj == obj:
                 continue
             # Normalize subject/object: try alias → node_id mapping
-            subj = ontology.resolve_alias(subj) or subj
-            obj = ontology.resolve_alias(obj) or obj
+            subj = ontology.lookup_alias(subj) or subj
+            obj = ontology.lookup_alias(obj) or obj
             # Normalize predicate: lowercase, strip, underscores
             pred = pred.strip().lower().replace(" ", "_").replace("-", "_")
             if not ontology.is_valid_relation(pred):

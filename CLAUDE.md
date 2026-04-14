@@ -88,13 +88,17 @@ Fact nodes are intentionally disconnected from OntologyNodes in the graph — th
 ### 7-Stage Pipeline (triggered by `source_doc_id`)
 ```
 Stage 1: Ingest    → text extraction, denoise, SHA256 dedup, quality gate, doc_type detection
-Stage 2: Segment   → 3-level: structural split → semantic role classification (12 types) → length control
-                     20 RST relation types; discourse-marker-aware topic-shift detection
-                     window: max 1024 tokens, sentence-merge target 512, sliding 512/64
+Stage 2: Segment   → 4-step joint segmentation + typing:
+                     structural split → paragraph-level LLM classification (17 types) →
+                     merge adjacent same-type paragraphs (same section, ≤1024 tokens) →
+                     length control (max 1024 tokens, sliding 512/64 fallback)
+                     10 paragraph-level discourse relation types with nuclearity (NS/SN/NN);
+                     segment boundaries coincide with communicative role changes
 Stage 3: Align     → exact+alias match (word-boundary aware), embedding fuzzy match on miss (threshold 0.80),
                      5-layer tagging, LLM candidate discovery (classified: new_concept/variant/noise)
 Stage 3b: Evolve   → 6-dim scoring, 6-gate review, auto-promote (score ≥ 0.85 + all gates + ≥ 7 days)
-Stage 4: Extract   → LLM-first (S,P,O) triples → merged-context retry (RST continuative relations)
+Stage 4: Extract   → LLM-first (S,P,O) triples → merged-context retry (continuative discourse relations:
+                     Elaboration/Sequence/Causation/Evidence/Background/Exemplification)
                      → dual-node co-occurrence fallback
 Stage 5: Dedup     → SimHash + embedding semantic dedup (cosine > 0.90), fact merging, conflict detection
 Stage 6: Index     → confidence gate (segment ≥ 0.5, fact ≥ 0.5), Neo4j ingestion, vector index

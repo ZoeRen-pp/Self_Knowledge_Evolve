@@ -220,6 +220,7 @@ class ContentExtractor:
             result = trafilatura.extract(
                 html, url=url, include_comments=False,
                 include_tables=True, no_fallback=False,
+                include_formatting=True,  # preserve # headings so Stage 2 can split structurally
             )
             return (result or "", 0.85 if result else 0.0)
         except Exception as exc:
@@ -231,16 +232,41 @@ class ContentExtractor:
             from readability import Document
             doc = Document(html)
             content = doc.summary()
-            text = re.sub(r'<[^>]+>', ' ', content)
-            text = re.sub(r'\s+', ' ', text).strip()
+            text = self._html_to_structured_text(content)
             return (text, 0.65 if text else 0.0)
         except Exception as exc:
             log.debug("readability failed: %s", exc)
             return ("", 0.0)
 
+    @staticmethod
+    def _html_to_structured_text(html: str) -> str:
+        """Convert HTML to structured plain text, preserving heading hierarchy.
+
+        Converts <h1>/<h2>/<h3>/<h4> to markdown # markers so Stage 2's
+        _split_markdown can split on structural boundaries. Block elements
+        (p, li, div, br) become newlines to preserve paragraph structure.
+        """
+        # Headings → markdown markers (before stripping other tags)
+        for level in range(4, 0, -1):
+            html = re.sub(
+                rf'<h{level}[^>]*>(.*?)</h{level}>',
+                lambda m, lv=level: f'\n{"#" * lv} {re.sub(r"<[^>]+>", "", m.group(1)).strip()}\n',
+                html, flags=re.I | re.S,
+            )
+        # Block elements → paragraph breaks
+        html = re.sub(r'<(p|div|li|tr|blockquote)[^>]*>', '\n', html, flags=re.I)
+        html = re.sub(r'</(p|div|li|tr|blockquote)>', '\n', html, flags=re.I)
+        html = re.sub(r'<br\s*/?>', '\n', html, flags=re.I)
+        # Strip remaining tags
+        text = re.sub(r'<[^>]+>', '', html)
+        # Normalize: collapse runs of spaces/tabs (but keep newlines)
+        text = re.sub(r'[ \t]+', ' ', text)
+        # Collapse 3+ newlines to 2 (paragraph break)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
     def _fallback_strip_tags(self, html: str) -> str:
-        text = re.sub(r'<[^>]+>', ' ', html)
-        return re.sub(r'\s+', ' ', text).strip()
+        return self._html_to_structured_text(html)
 
     def _extract_title(self, html: str) -> str:
         m = re.search(r'<title[^>]*>(.*?)</title>', html, re.I | re.S)
