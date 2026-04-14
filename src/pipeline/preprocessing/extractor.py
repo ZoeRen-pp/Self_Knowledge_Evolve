@@ -10,6 +10,90 @@ log = logging.getLogger(__name__)
 _FAQ_PATTERN = re.compile(r'\bQ\s*[:：]|\bA\s*[:：]|frequently asked|常见问题', re.I)
 _CODE_BLOCK = re.compile(r'```[\s\S]*?```|^\s{4,}\S', re.M)
 
+# ── Site-agnostic content quality signals ───────────────────────────
+# These catch pages that pass the token-count gate but aren't substantive
+# content: author/bio pages, RFC index tables, tag clouds, link farms,
+# TOC dumps, bibtex metadata, profile pages. No per-site rules — they
+# rest on one language-neutral property: real prose contains sentences.
+
+# Sentence terminal: western or CJK sentence punctuation followed by
+# whitespace, closing punctuation, or end-of-text. The trailing context
+# is what distinguishes real sentence endings from dots inside URLs,
+# IPs, version numbers, and decimal literals.
+_SENTENCE_TERMINAL_RE = re.compile(r'[.!?。！？]+(?:\s|["\')\]]|$)')
+
+# Line structure helpers (secondary signals). Bullets and pipe-tables
+# are universal typographic conventions, not site-specific.
+_LISTY_BULLET_RE = re.compile(r'^\s*[\-\*•◦·▪▫]\s')
+_DOT_LEADER_RE = re.compile(r'\.\s*\.\s*\.')
+
+
+def _is_listy_line(line: str) -> bool:
+    """A line looks like list/table/TOC structure, not prose."""
+    if line.count('|') >= 2:
+        return True
+    if _LISTY_BULLET_RE.match(line):
+        return True
+    if _DOT_LEADER_RE.search(line):
+        return True
+    return False
+
+
+def _compute_quality_signals(text: str) -> dict:
+    """Return site-agnostic structural metrics for a cleaned text body.
+
+    The primary signal is `sentence_density` — sentence terminals per
+    1000 characters. Real prose runs 4–12; profile pages / tag clouds
+    / bibtex dumps run near zero; tables and lists run near zero.
+    This is language-neutral (western + CJK punctuation both counted)
+    and format-neutral (works whether extraction produced one-line
+    paragraphs or wrapped columns).
+    """
+    n_chars = len(text)
+    if n_chars == 0:
+        return {
+            "line_count":       0,
+            "char_count":       0,
+            "sentence_density": 0.0,
+            "listy_ratio":      0.0,
+        }
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    n_lines = max(len(lines), 1)
+    sentences = len(_SENTENCE_TERMINAL_RE.findall(text))
+    listy = sum(1 for l in lines if _is_listy_line(l))
+    return {
+        "line_count":       n_lines,
+        "char_count":       n_chars,
+        "sentence_density": round(sentences / (n_chars / 1000), 2),
+        "listy_ratio":      round(listy / n_lines, 2),
+    }
+
+
+def _judge_quality(text: str, tc: int) -> tuple[bool, str, dict]:
+    """Decide whether a document is structurally substantive.
+
+    Returns (is_low_quality, reason, signals). Rules, in order:
+      1. `too_short` — below the minimum token budget for a real article.
+      2. `no_sentences` — near-zero sentence density (profile pages,
+         RFC index tables, tag clouds, bibtex dumps, link farms). Real
+         prose has 4+ sentence terminals per 1000 characters; these
+         hit 0 because they are pure structured data.
+      3. `listy_dump` — low sentence density AND dominated by pipe-row
+         or bullet structure (tabular catalogs with no narrative).
+    All rules are site-agnostic and language-neutral.
+    """
+    if tc < 200:
+        return True, "too_short", {}
+    sig = _compute_quality_signals(text)
+    sd = sig["sentence_density"]
+    if sd < 1.0:
+        return True, f"no_sentences(density={sd}/1k)", sig
+    if sd < 2.0 and sig["listy_ratio"] > 0.4:
+        return True, (
+            f"listy_dump(density={sd}/1k,listy={sig['listy_ratio']})"
+        ), sig
+    return False, "", sig
+
 
 class ContentExtractor:
     def extract(self, html: str, url: str) -> dict:
@@ -32,14 +116,25 @@ class ContentExtractor:
                 quality = 0.1
 
         from src.utils.text import token_count
-        tc = token_count(text)
+        clean = text.strip()
+        tc = token_count(clean)
         content_type = "text/plain" if self._is_plaintext(html, url) else "text/html"
+
+        is_low, reason, signals = _judge_quality(clean, tc)
+        if is_low:
+            log.info(
+                "Low-quality content rejected: url=%s tc=%d reason=%s signals=%s",
+                url or "(n/a)", tc, reason, signals,
+            )
+
         return {
             "title":          title,
-            "text":           text.strip(),
-            "language":       self._detect_language(text),
+            "text":           clean,
+            "language":       self._detect_language(clean),
             "quality":        quality,
-            "is_low_quality": tc < 200,
+            "is_low_quality": is_low,
+            "low_quality_reason": reason,
+            "quality_signals": signals,
             "token_count":    tc,
             "content_type":   content_type,
         }
