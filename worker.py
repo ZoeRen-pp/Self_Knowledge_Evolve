@@ -500,48 +500,110 @@ def _pipeline_thread(app, stop_event: threading.Event) -> None:
 
 # ── Thread: Stats / Monitoring ───────────────────────────────────────────────
 
-def _next_3am_cst() -> float:
-    """Return seconds until the next 03:00 China Standard Time (UTC+8)."""
-    cst = datetime.timezone(datetime.timedelta(hours=8))
-    now = datetime.datetime.now(tz=cst)
-    target = now.replace(hour=3, minute=0, second=0, microsecond=0)
-    if now >= target:
-        target += datetime.timedelta(days=1)
-    return (target - now).total_seconds()
+# Maintenance targets 03:00 CST but runs at the first poll after that time
+# each CST day. This survives host sleep/suspend: if the machine is asleep
+# at 03:00 and wakes at 07:00, the cycle runs at 07:00. At most one run per
+# CST date, persisted to disk so worker restarts don't trigger a re-run.
+_MAINT_TARGET_HOUR = 3            # 03:00 CST
+_MAINT_POLL_SECS = 300            # 5-minute polling interval
+_MAINT_STATE_PATH = Path(__file__).parent / "logs" / "maintenance_state.json"
+_CST = datetime.timezone(datetime.timedelta(hours=8))
+
+
+def _load_maint_state() -> dict:
+    try:
+        return json.loads(_MAINT_STATE_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _save_maint_state(state: dict) -> None:
+    try:
+        _MAINT_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _MAINT_STATE_PATH.write_text(json.dumps(state), encoding="utf-8")
+    except Exception as exc:
+        log.warning("Failed to persist maintenance state: %s", exc)
 
 
 def _maintenance_thread(app, stop_event: threading.Event) -> None:
-    """Ontology maintenance: runs once daily at 03:00 CST (Shanghai time)."""
+    """Ontology maintenance: one run per CST day, first poll after 03:00.
+
+    Uses a short polling interval and catch-up semantics so that a sleeping
+    or suspended host doesn't miss the daily window. Last successful run
+    date is persisted to disk; worker restarts don't re-run the same day.
+    """
     thread_name = "maintenance"
     log.info("[%s] Thread started", thread_name)
 
+    state = _load_maint_state()
+    last_run_date = state.get("last_run_date")
+    if last_run_date:
+        log.info("[%s] Loaded state: last_run_date=%s", thread_name, last_run_date)
+    log.info(
+        "[%s] Polling every %ds, target hour %02d:00 CST",
+        thread_name, _MAINT_POLL_SECS, _MAINT_TARGET_HOUR,
+    )
+
+    # When an attempt fails, back off from the normal 5-min poll to 1h
+    # so a persistent failure doesn't spam the log.
+    failure_retry_at: datetime.datetime | None = None
+
     try:
         while not stop_event.is_set():
-            secs = _next_3am_cst()
-            cst = datetime.timezone(datetime.timedelta(hours=8))
-            run_at = datetime.datetime.now(tz=cst) + datetime.timedelta(seconds=secs)
-            log.info(
-                "[%s] Next run at %s CST (in %.1fh)",
-                thread_name, run_at.strftime("%Y-%m-%d 03:00"), secs / 3600,
+            now = datetime.datetime.now(tz=_CST)
+            today_target = now.replace(
+                hour=_MAINT_TARGET_HOUR, minute=0, second=0, microsecond=0,
             )
-            stop_event.wait(secs)
-            if stop_event.is_set():
-                break
+            today_str = now.date().isoformat()
+            past_backoff = failure_retry_at is None or now >= failure_retry_at
+            due = (
+                now >= today_target
+                and last_run_date != today_str
+                and past_backoff
+            )
 
-            log.info("[%s] Starting scheduled maintenance cycle (03:00 CST)", thread_name)
-            for attempt in range(1, 4):
-                try:
-                    from src.governance.maintenance import OntologyMaintenance
-                    maint = OntologyMaintenance(
-                        store=app.store, graph=app.graph, ontology=app.ontology,
+            if due:
+                delay_min = (now - today_target).total_seconds() / 60
+                log.info(
+                    "[%s] Starting maintenance cycle for %s "
+                    "(target 03:00 CST, actual %s, delay %.0f min)",
+                    thread_name, today_str, now.strftime("%H:%M"), delay_min,
+                )
+                succeeded = False
+                for attempt in range(1, 4):
+                    try:
+                        from src.governance.maintenance import OntologyMaintenance
+                        maint = OntologyMaintenance(
+                            store=app.store, graph=app.graph, ontology=app.ontology,
+                        )
+                        stats = maint.run()
+                        log.info(
+                            "[%s] Cycle complete: %s",
+                            thread_name, stats.get("final", {}),
+                        )
+                        succeeded = True
+                        break
+                    except Exception as exc:
+                        log.error(
+                            "[%s] Attempt %d/3 failed: %s",
+                            thread_name, attempt, exc, exc_info=True,
+                        )
+                        if attempt < 3 and stop_event.wait(60):
+                            break
+
+                if succeeded:
+                    last_run_date = today_str
+                    failure_retry_at = None
+                    _save_maint_state({"last_run_date": last_run_date})
+                else:
+                    failure_retry_at = now + datetime.timedelta(hours=1)
+                    log.warning(
+                        "[%s] All 3 attempts failed; next retry at %s",
+                        thread_name, failure_retry_at.strftime("%H:%M"),
                     )
-                    stats = maint.run()
-                    log.info("[%s] Cycle complete: %s", thread_name, stats.get("final", {}))
-                    break
-                except Exception as exc:
-                    log.error("[%s] Attempt %d/3 failed: %s", thread_name, attempt, exc, exc_info=True)
-                    if attempt < 3:
-                        stop_event.wait(60)  # wait 60s before retry
+
+            if stop_event.wait(_MAINT_POLL_SECS):
+                break
     finally:
         log.info("[%s] Thread stopped", thread_name)
 
