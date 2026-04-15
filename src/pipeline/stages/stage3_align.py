@@ -116,7 +116,7 @@ class AlignStage(Stage):
                 matched_nodes[node_id] = conf
 
         for node_id, conf in matched_nodes.items():
-            node = ontology.get_node(node_id)
+            node = ontology.get_node_dict(node_id)
             layer = node.get("knowledge_layer", "concept") if node else "concept"
             tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
             tags.append({
@@ -130,13 +130,13 @@ class AlignStage(Stage):
         # Embedding fallback: if no canonical tags from exact match, try semantic matching
         canonical_count = sum(1 for n, c in matched_nodes.items()
                              if _LAYER_TAG_TYPE.get(
-                                 (ontology.get_node(n) or {}).get("knowledge_layer", "concept"),
+                                 (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept"),
                                  "canonical") == "canonical")
         if canonical_count == 0:
             for node_id, conf in self._embedding_match(text):
                 if node_id not in matched_nodes:
                     matched_nodes[node_id] = conf
-                    node = ontology.get_node(node_id)
+                    node = ontology.get_node_dict(node_id)
                     layer = node.get("knowledge_layer", "concept") if node else "concept"
                     tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
                     tags.append({
@@ -192,7 +192,7 @@ class AlignStage(Stage):
                 if surface not in text_lower:
                     continue
 
-            node = ontology.get_node(node_id)
+            node = ontology.get_node_dict(node_id)
             if node and node.get("canonical_name", "").lower() == surface:
                 found.append((surface, node_id, 1.0))
             else:
@@ -588,7 +588,7 @@ class AlignStage(Stage):
                 adj_conf = round(float(nt["confidence"]) * weight, 3)
                 if adj_conf < MIN_CONF:
                     continue
-                node = self._ontology.get_node(nt["ontology_node_id"])
+                node = self._ontology.get_node_dict(nt["ontology_node_id"])
                 tag_value = node["canonical_name"] if node else nt["tag_value"]
                 try:
                     store.execute(

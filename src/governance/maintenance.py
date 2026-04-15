@@ -87,6 +87,9 @@ class OntologyMaintenance:
         """Deduplicate candidates using embedding similarity."""
         log.info("Pass 1: Embedding dedup on %d candidates...", len(candidates))
 
+        if not candidates:
+            return {"status": "skipped", "reason": "no_candidates"}
+
         try:
             import numpy as np
             from src.utils.embedding import get_embeddings

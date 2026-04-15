@@ -35,7 +35,7 @@ class SegmentStage(Stage):
         self._objects = getattr(app, "objects", None)
         self._store = app.store
         self._crawler_store = getattr(app, "crawler_store", None) or app.store
-        if hasattr(app, "llm"):
+        if hasattr(app, "llm") and hasattr(app.llm, "classify_segment_types"):
             self.llm = app.llm
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         segs = self._run(source_doc_id)

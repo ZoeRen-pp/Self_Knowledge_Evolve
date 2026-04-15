@@ -43,10 +43,8 @@ DEFAULT_HEADERS = {
 }
 
 # Sites known to use Cloudflare / TLS fingerprint detection → use curl_cffi
-# NOTE: rfc-editor.org is NOT listed here because we fetch plain-text .txt URLs
-# which do not trigger JS challenges.  HTML pages on rfc-editor.org were moved
-# to plain-text via _normalize_url() before this set is consulted.
-_TLS_FINGERPRINT_SITES: set[str] = set()
+# rfc-editor.org blocks plain httpx even for .txt files (returns 403).
+_TLS_FINGERPRINT_SITES = {"www.rfc-editor.org"}
 
 # Sites with broken / self-signed certificate chains → skip SSL verify
 _SSL_SKIP_VERIFY_SITES = {"portal.3gpp.org"}
