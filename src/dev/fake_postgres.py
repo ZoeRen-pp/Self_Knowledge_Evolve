@@ -189,12 +189,36 @@ def _normalise_params(params) -> tuple:
     return (params,)
 
 
+def _deserialise_row(row: dict) -> dict:
+    """Restore list/dict values that were JSON-serialised on write.
+
+    _normalise_params serialises Python lists → JSON strings so SQLite can
+    store them.  On read-back we reverse that for any string that looks like
+    a JSON array ('[…]') or object ('{…}'), which covers columns such as
+    section_path, surface_forms, seen_source_doc_ids, examples, etc.
+    Non-JSON strings are returned unchanged.
+    """
+    import json as _json
+    result = {}
+    for k, v in row.items():
+        if isinstance(v, str) and len(v) >= 2 and (
+            (v[0] == "[" and v[-1] == "]") or (v[0] == "{" and v[-1] == "}")
+        ):
+            try:
+                result[k] = _json.loads(v)
+            except ValueError:
+                result[k] = v
+        else:
+            result[k] = v
+    return result
+
+
 def fetchall(sql: str, params=()) -> list[dict[str, Any]]:
     sql_lite = _to_sqlite(sql)
     # Handle PostgreSQL ANY(%s) → SQLite IN (?) workaround: not needed for dev queries
     try:
         cur = _get_conn().execute(sql_lite, _normalise_params(params))
-        return [dict(row) for row in cur.fetchall()]
+        return [_deserialise_row(dict(row)) for row in cur.fetchall()]
     except sqlite3.OperationalError as e:
         logger.debug("fake_postgres.fetchall skipped unsupported query: %s | %s", e, sql[:80])
         return []
@@ -252,7 +276,7 @@ class _FakeCursor:
         sql_lite = _to_sqlite(sql)
         try:
             cur = self._conn.execute(sql_lite, _normalise_params(params))
-            self._rows = [dict(r) for r in cur.fetchall()]
+            self._rows = [_deserialise_row(dict(r)) for r in cur.fetchall()]
             self._conn.commit()
         except sqlite3.OperationalError as e:
             logger.debug("_FakeCursor.execute skipped: %s | %s", e, sql[:80])

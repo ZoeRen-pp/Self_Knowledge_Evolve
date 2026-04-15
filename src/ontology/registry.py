@@ -19,6 +19,7 @@ class OntologyRegistry:
         self.nodes: dict[str, dict] = {}           # node_id → node dict
         self.alias_map: dict[str, str] = {}        # lower(surface_form) → node_id
         self.relation_ids: set[str] = set()        # valid relation type ids
+        self.functional_predicates: frozenset[str] = frozenset()  # cardinality=one relations
         self._layer_index: dict[str, list[str]] = {}  # knowledge_layer → [node_id]
 
         # Seed relations loaded from ontology/seeds/*.yaml
@@ -58,8 +59,12 @@ class OntologyRegistry:
             log.warning("relations.yaml not found at %s", path)
             return
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        one_cardinality: set[str] = set()
         for rel in data.get("relations", []):
             self.relation_ids.add(rel["id"])
+            if rel.get("cardinality") == "one":
+                one_cardinality.add(rel["id"])
+        self.functional_predicates = frozenset(one_cardinality)
 
     def _load_domain(self, path: Path) -> None:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}

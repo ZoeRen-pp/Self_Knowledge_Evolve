@@ -238,17 +238,24 @@ Return JSON array:"""
 
 
 class LLMExtractor:
-    # Circuit breaker: after this many consecutive failures, auto-disable
+    # Circuit breaker: after this many consecutive failures, block until LLM recovers
     _CIRCUIT_BREAKER_THRESHOLD = 3
-    # Auto-disable duration in seconds (10 minutes)
-    _CIRCUIT_BREAKER_COOLDOWN = 600
+    # How often to re-ping the LLM during blocking wait (seconds)
+    _RECOVERY_POLL_INTERVAL = 30
 
     def __init__(self) -> None:
         self._client = None
         self._http_client: httpx.Client | None = None
         self._enabled: bool | None = None
         self._consecutive_failures: int = 0
-        self._circuit_open_until: float = 0.0  # monotonic timestamp
+        self._circuit_open: bool = False  # True = circuit tripped, all callers block
+        # Registered DB keep-alive callbacks called during blocking waits
+        self._keep_alive_fns: list = []
+
+    def register_keep_alive(self, fn) -> None:
+        """Register a zero-argument callable to be invoked every poll cycle
+        while the circuit breaker is open (e.g. a DB ping to prevent timeout)."""
+        self._keep_alive_fns.append(fn)
 
     def is_enabled(self) -> bool:
         if self._enabled is None:
@@ -256,34 +263,67 @@ class LLMExtractor:
             self._enabled = settings.LLM_ENABLED and bool(settings.LLM_API_KEY)
         if not self._enabled:
             return False
-        # Circuit breaker: if too many consecutive failures, temporarily disable
-        if self._circuit_open_until > 0:
-            import time
-            if time.monotonic() < self._circuit_open_until:
-                return False
-            # Cooldown expired — reset and allow retry
-            log.info("LLM circuit breaker reset, allowing retry")
-            self._circuit_open_until = 0.0
-            self._consecutive_failures = 0
+        # Circuit breaker: block all callers until LLM recovers (no degraded mode)
+        if self._circuit_open:
+            self._block_until_recovery()
         return True
+
+    def _block_until_recovery(self) -> None:
+        """Block the calling thread until the LLM endpoint responds successfully.
+
+        Polls every _RECOVERY_POLL_INTERVAL seconds.  Between polls, calls all
+        registered keep-alive callbacks so DB connections don't time out while
+        we wait.  Returns (without raising) once the LLM is reachable again.
+        """
+        import time
+        log.warning(
+            "LLM circuit breaker open — blocking caller until LLM recovers "
+            "(polling every %ds). Register DB keep-alive callbacks via "
+            "register_keep_alive() to prevent connection timeouts.",
+            self._RECOVERY_POLL_INTERVAL,
+        )
+        while self._circuit_open:
+            time.sleep(self._RECOVERY_POLL_INTERVAL)
+            # Keep DB connections alive
+            for fn in self._keep_alive_fns:
+                try:
+                    fn()
+                except Exception as exc:
+                    log.debug("keep_alive callback raised: %s", exc)
+            # Try LLM
+            try:
+                alive = self.ping(timeout=5.0)
+            except Exception:
+                alive = False
+            if alive:
+                log.info("LLM circuit breaker reset — LLM is responsive again")
+                self._circuit_open = False
+                self._consecutive_failures = 0
 
     def _record_success(self) -> None:
         """Reset circuit breaker on successful LLM call."""
         self._consecutive_failures = 0
-        self._circuit_open_until = 0.0
+        self._circuit_open = False
 
     def _record_failure(self) -> None:
         """Track consecutive failures; trip circuit breaker if threshold exceeded."""
-        import time
         self._consecutive_failures += 1
         if self._consecutive_failures >= self._CIRCUIT_BREAKER_THRESHOLD:
-            self._circuit_open_until = time.monotonic() + self._CIRCUIT_BREAKER_COOLDOWN
+            self._circuit_open = True
             log.warning(
                 "LLM circuit breaker tripped after %d consecutive failures. "
-                "Disabling LLM for %ds.",
+                "All callers will block until LLM recovers.",
                 self._consecutive_failures,
-                self._CIRCUIT_BREAKER_COOLDOWN,
             )
+
+    def reset_circuit_breaker(self) -> None:
+        """Force-reset circuit breaker state.
+
+        Call between independent documents in tests so one document's
+        transient network failure does not disable LLM for subsequent docs.
+        """
+        self._consecutive_failures = 0
+        self._circuit_open = False
 
     def _is_openai_style(self) -> bool:
         from src.config.settings import settings
@@ -311,7 +351,7 @@ class LLMExtractor:
         if self._http_client is None:
             self._http_client = httpx.Client(
                 timeout=httpx.Timeout(
-                    connect=15.0,   # SSL handshake must complete in 15s
+                    connect=5.0,    # DNS + TCP: fail fast so circuit breaker trips quickly
                     read=120.0,     # LLM generation can be slow
                     write=30.0,
                     pool=30.0,
@@ -390,15 +430,42 @@ class LLMExtractor:
                 message = choices[0].get("message") or {}
                 self._record_success()
                 return (message.get("content") or "").strip()
-            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError) as exc:
-                # Transient network issue — retry after short backoff
+            except (httpx.ConnectTimeout, httpx.ConnectError) as exc:
+                # Host unreachable — no point retrying, trip circuit breaker
+                log.warning("LLM request failed (host unreachable): %s", exc)
+                self._record_failure()
+                return None
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                if status == 429:
+                    # Rate-limited: treat as transient, back off and retry
+                    last_exc = exc
+                    if attempt < 3:
+                        log.warning("LLM rate-limited (429), retrying in %ds...", attempt * 5)
+                        _time.sleep(attempt * 5)
+                        continue
+                    log.warning("LLM rate-limited after 3 attempts")
+                    self._record_failure()
+                    return None
+                elif 400 <= status < 500:
+                    # Client error (bad request, invalid prompt, etc.) — server is working,
+                    # our request is malformed.  Do NOT trip circuit breaker.
+                    log.warning("LLM rejected request with HTTP %d: %s", status, exc)
+                    return None
+                else:
+                    # 5xx — server fault, counts toward circuit breaker
+                    log.warning("LLM server error HTTP %d: %s", status, exc)
+                    self._record_failure()
+                    return None
+            except httpx.ReadTimeout as exc:
+                # Response slow — worth retrying
                 last_exc = exc
                 if attempt < 3:
-                    log.debug("LLM request attempt %d/3 failed (%s), retrying...", attempt, type(exc).__name__)
-                    _time.sleep(2 * attempt)
+                    log.debug("LLM request attempt %d/3 timed out, retrying...", attempt)
+                    _time.sleep(attempt)
                     continue
             except Exception as exc:
-                # Non-transient (auth error, 4xx, etc.) — fail immediately
+                # Unexpected error — count toward circuit breaker
                 log.warning("LLM request failed: %s", exc)
                 self._record_failure()
                 return None

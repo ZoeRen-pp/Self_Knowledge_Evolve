@@ -1,4 +1,11 @@
 version: v0.1.0
+# cardinality field (optional, default: many):
+#   one  — functional/single-valued: same (subject, predicate) can have only ONE
+#           valid object; two different objects are a genuine contradiction.
+#           Stage 5 D4 conflict detection ONLY fires for these relations.
+#   many — multi-valued (default): same subject can have multiple valid objects
+#           for this predicate without any contradiction (e.g. "explains",
+#           "used_for", "implements").  Do NOT set cardinality: one here.
 relations:
 - id: is_a
   category: classification

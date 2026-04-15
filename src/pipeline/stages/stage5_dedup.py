@@ -26,6 +26,9 @@ class DedupStage(Stage):
 
     def process(self, ctx: PipelineContext, app) -> PipelineContext:  # type: ignore[override]
         self._store = app.store
+        self._functional_predicates: frozenset[str] = getattr(
+            getattr(app, "ontology", None), "functional_predicates", frozenset()
+        )
         source_doc_id = ctx.doc.source_doc_id if ctx.doc else ctx.source_doc_id
         seg_stats  = self.process_document(source_doc_id)
         fact_stats = self.process_facts(source_doc_id)
@@ -137,9 +140,15 @@ class DedupStage(Stage):
                 merged += sem_merged
                 continue
 
-            # Rule D4: conflict detection — same subject+predicate, different object
-            # Pre-check: normalize object for comparison to avoid false conflicts
-            # from trivial string differences (case, whitespace, notation)
+            # Rule D4: conflict detection — same subject+predicate, different object.
+            # Only applies to *functional* (single-valued) predicates where two
+            # different objects genuinely contradict each other.  Multi-valued
+            # predicates like "explains", "used_for", "implements", etc. are
+            # intentionally excluded: a node can legitimately have many objects
+            # for the same predicate without any contradiction.
+            if fact.get("predicate") not in self._functional_predicates:
+                continue
+
             fact_obj_norm = (fact["object"] or "").strip().lower()
             conflicts = store.fetchall(
                 """
