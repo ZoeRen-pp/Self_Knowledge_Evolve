@@ -7,6 +7,7 @@ fallback for sites protected by TLS fingerprint detection (e.g. Cloudflare).
 from __future__ import annotations
 
 import logging
+import re
 import time
 import urllib.robotparser
 from typing import TypedDict
@@ -42,10 +43,20 @@ DEFAULT_HEADERS = {
 }
 
 # Sites known to use Cloudflare / TLS fingerprint detection → use curl_cffi
-_TLS_FINGERPRINT_SITES = {"www.rfc-editor.org"}
+# NOTE: rfc-editor.org is NOT listed here because we fetch plain-text .txt URLs
+# which do not trigger JS challenges.  HTML pages on rfc-editor.org were moved
+# to plain-text via _normalize_url() before this set is consulted.
+_TLS_FINGERPRINT_SITES: set[str] = set()
 
 # Sites with broken / self-signed certificate chains → skip SSL verify
 _SSL_SKIP_VERIFY_SITES = {"portal.3gpp.org"}
+
+# Rewrite IETF Datatracker HTML wrapper URLs to RFC Editor plain-text URLs.
+# The HTML wrapper at datatracker.ietf.org yields poorly structured extraction;
+# the .txt version is machine-friendly and preserves section structure.
+_DATATRACKER_RFC_RE = re.compile(
+    r"https?://datatracker\.ietf\.org/doc/html/(rfc\d+)(?:[/?#].*)?$", re.I
+)
 
 
 class CrawlTask(TypedDict):
@@ -77,8 +88,21 @@ class Spider:
 
     # ── Public ────────────────────────────────────────────────────
 
+    @staticmethod
+    def normalize_url(url: str) -> str:
+        """Rewrite known URL patterns to their canonical form for better content quality.
+
+        Currently handles:
+          datatracker.ietf.org/doc/html/rfcNNNN  →  www.rfc-editor.org/rfc/rfcNNNN.txt
+        """
+        m = _DATATRACKER_RFC_RE.match(url)
+        if m:
+            return f"https://www.rfc-editor.org/rfc/{m.group(1)}.txt"
+        return url
+
     def fetch(self, url: str, extra_headers: dict | None = None) -> dict | None:
         """Fetch a URL. Returns {html, status_code, final_url, content_type} or None."""
+        url = self.normalize_url(url)
         site_key = self._site_key_from_url(url)
         self._respect_rate_limit(site_key)
         hostname = urlparse(url).hostname or ""
@@ -194,7 +218,7 @@ class Spider:
 
     def _process_task(self, task: dict) -> dict:
         task_id = task["id"]
-        url = task["url"]
+        url = self.normalize_url(task["url"])  # rewrite datatracker → rfc-editor .txt etc.
         log.info("Crawl task start: id=%s url=%s", task_id, url)
 
         # Mark running

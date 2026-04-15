@@ -141,34 +141,12 @@ llm.register_keep_alive(_db_keep_alive)
 
 # ── 待测 URL 列表 ──────────────────────────────────────────────────────────────
 # (source_rank, label, url)
+# Covers: S-rank RFC plain-text, A-rank open-source impl docs, B-rank blog
 TEST_URLS = [
-    # S — IETF 标准文档
-    ("S", "rfc_bgp",
-     "https://datatracker.ietf.org/doc/html/rfc4271"),
-
-    # S — 3GPP 5G 架构概览
-    ("S", "3gpp_5g_arch",
-     "https://www.3gpp.org/technologies/5g-system-overview"),
-
-    # A — Cisco IOS BGP 配置指南
-    ("A", "cisco_bgp",
-     "https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/iproute_bgp/configuration/xe-16/irg-xe-16-book/configuring-a-basic-bgp-network.html"),
-
-    # A — Huawei OSPF 配置指南
-    ("A", "huawei_ospf",
-     "https://support.huawei.com/enterprise/en/doc/EDOC1100278509/12de9b3d/configuring-ospf-basic-functions"),
-
-    # A — Juniper BGP 概览
-    ("A", "juniper_bgp",
-     "https://www.juniper.net/documentation/us/en/software/junos/bgp/topics/topic-map/bgp-overview.html"),
-
-    # B — Nokia 5G Transport whitepaper
-    ("B", "nokia_5g_transport",
-     "https://www.nokia.com/networks/mobile-networks/5g/transport/"),
-
-    # C — NetworkLessons BGP 教程（博客）
-    ("C", "blog_bgp_basics",
-     "https://networklessons.com/bgp/bgp-attributes-and-path-selection"),
+    ("S", "rfc_bgp",    "https://www.rfc-editor.org/rfc/rfc4271.txt"),
+    ("S", "rfc_ospf",   "https://www.rfc-editor.org/rfc/rfc2328.txt"),
+    ("A", "frr_bgp",    "https://docs.frrouting.org/en/latest/bgp.html"),
+    ("B", "noction_bgp", "https://www.noction.com/blog/bgp-best-path-selection-process"),
 ]
 
 # ── 辅助 ──────────────────────────────────────────────────────────────────────

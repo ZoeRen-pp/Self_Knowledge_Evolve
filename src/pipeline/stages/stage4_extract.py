@@ -63,11 +63,18 @@ class ExtractStage(Stage):
             "SELECT * FROM segments WHERE source_doc_id=%s AND lifecycle_state='active'",
             (source_doc_id,),
         )
-        # Enrich each segment with its canonical ontology tags
+        # Enrich each segment with ALL ontology-linked tags that Stage 3
+        # assigned — not just canonical. mechanism_tag / method_tag /
+        # condition_tag / scenario_tag point to MECH.* / METHOD.* / COND.* /
+        # SCENE.* nodes respectively and are the correct cross-layer anchors.
+        # (Field name kept as `canonical_nodes` for backward compatibility
+        # with _extract_rst_derived_facts and _walk_rst_chains.)
         for seg in segments:
             tags = store.fetchall(
                 "SELECT ontology_node_id FROM segment_tags "
-                "WHERE segment_id=%s AND tag_type='canonical'",
+                "WHERE segment_id=%s AND ontology_node_id IS NOT NULL "
+                "AND tag_type IN ('canonical','mechanism_tag','method_tag',"
+                "'condition_tag','scenario_tag')",
                 (seg["segment_id"],),
             )
             seg["canonical_nodes"] = [
@@ -433,7 +440,16 @@ class ExtractStage(Stage):
         return predicates
 
     def extract_facts_llm(self, segment: dict, source_rank: str) -> list[dict]:
-        """LLM-based extraction: uses segment's canonical tags as node context."""
+        """LLM-based extraction: uses segment's Stage-3-aligned nodes as context.
+
+        Candidates are strictly what Stage 3 aligned to this segment via
+        exact/alias match or (when embedding is enabled) the 0.80 semantic
+        fallback. We do NOT dump the full cross-layer node set at the LLM;
+        doing so caused hallucinated facts referencing scenarios and
+        mechanisms the source text never mentions. If Stage 3 couldn't
+        anchor at least 3 nodes on this segment, we skip LLM extraction
+        rather than ask the model to guess.
+        """
         llm = self._llm
         ontology = self._ontology
         if not llm.is_enabled():
@@ -443,29 +459,42 @@ class ExtractStage(Stage):
         if not text.strip():
             return []
 
+        # Deduplicate anchor list (Stage 3 can produce the same node via
+        # multiple tag types — e.g. canonical + mechanism_tag).
         canonical_nodes = segment.get("canonical_nodes") or []
-        candidate_ids = [n for n in canonical_nodes if n]
+        candidate_ids = list({n for n in canonical_nodes if n})
 
-        # Always include mechanism/method/condition/scenario nodes so LLM
-        # can extract cross-layer relationships, not just concept-level facts
-        multi_layer_ids = [
-            nid for nid in ontology.all_node_ids()
-            if nid.startswith(("MECH.", "METHOD.", "COND.", "SCENE."))
-        ]
-        candidate_ids = list(set(candidate_ids + multi_layer_ids))
-
-        if len(candidate_ids) < 5:
-            candidate_ids = ontology.all_node_ids()[:100]
+        # Not enough anchors to ground a relational claim — skip LLM.
+        if len(candidate_ids) < 3:
+            log.debug(
+                "  seg=%s skipped LLM: only %d anchors",
+                str(segment.get("segment_id", ""))[:12], len(candidate_ids),
+            )
+            return []
 
         valid_relations = list(ontology.relation_ids)
 
+        # Raw text used for quote grounding; prefer raw_text over normalized (normalised
+        # lowercases the text, making exact-match harder for mixed-case quotes).
+        segment_raw_text = segment.get("raw_text") or text
+
         raw_triples = llm.extract_triples(text, candidate_ids, valid_relations)
         facts: list[dict] = []
+        dropped_no_quote = 0
         for triple in raw_triples:
             subj = triple.get("subject", "")
             pred = triple.get("predicate", "")
             obj = triple.get("object", "")
+            quote = triple.get("quote", "")
             if not subj or not pred or not obj or subj == obj:
+                continue
+            # Quote grounding: drop triples the LLM cannot pin to the source text.
+            if not self._quote_supported(quote, segment_raw_text):
+                dropped_no_quote += 1
+                log.debug(
+                    "  quote ungrounded, dropping triple (%s, %s, %s) quote=%r",
+                    subj, pred, obj, quote[:80],
+                )
                 continue
             # Normalize subject/object: try alias → node_id mapping
             subj = ontology.lookup_alias(subj) or subj
@@ -498,7 +527,13 @@ class ExtractStage(Stage):
                 "source_rank":       source_rank,
                 "lifecycle_state":   "active",
                 "ontology_version":  "v0.2.0",
+                "exact_span":        quote,
             })
+        if dropped_no_quote:
+            log.info(
+                "  seg=%s: dropped %d ungrounded triple(s), kept %d",
+                str(segment.get("segment_id", ""))[:12], dropped_no_quote, len(facts),
+            )
         return facts
 
     def _record_relation_candidate(
@@ -533,6 +568,27 @@ class ExtractStage(Stage):
         except Exception as exc:
             log.warning("Failed to record relation candidate %s: %s", predicate, exc)
 
+    @staticmethod
+    def _quote_supported(quote: str, segment_text: str) -> bool:
+        """Return True if `quote` is grounded in `segment_text`.
+
+        Accepts two forms of grounding:
+        1. Exact substring match (normalised whitespace, case-insensitive).
+        2. Fuzzy: ≥80% token overlap — handles minor whitespace / encoding
+           differences while remaining strict enough to block hallucinations.
+        """
+        if not quote or len(quote) < 8:
+            return False
+        norm_quote = re.sub(r"\s+", " ", quote.lower().strip())
+        norm_text  = re.sub(r"\s+", " ", segment_text.lower())
+        if norm_quote in norm_text:
+            return True
+        q_tokens = set(norm_quote.split())
+        if not q_tokens:
+            return False
+        overlap = len(q_tokens & set(norm_text.split())) / len(q_tokens)
+        return overlap >= 0.80
+
     def _resolve_term(self, term: str) -> str | None:
         return self._ontology.lookup_alias(term.lower())
 
@@ -558,14 +614,15 @@ class ExtractStage(Stage):
                 cur.execute(
                     """
                     INSERT INTO evidence (evidence_id, fact_id, source_doc_id, segment_id,
-                        source_rank, extraction_method, evidence_score)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                        source_rank, extraction_method, evidence_score, exact_span)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT DO NOTHING
                     """,
                     (
                         str(uuid.uuid4()), f["fact_id"], source_doc_id,
                         f.get("segment_id"), f["source_rank"],
                         f["extraction_method"], f["confidence"],
+                        f.get("exact_span") or None,
                     ),
                 )
         log.info("Saved facts doc=%s facts=%d evidence=%d", source_doc_id, len(facts), len(facts))

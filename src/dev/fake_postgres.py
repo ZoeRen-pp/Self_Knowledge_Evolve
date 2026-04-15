@@ -157,13 +157,43 @@ def _init_schema() -> None:
 def _to_sqlite(sql: str) -> str:
     """Convert psycopg2 syntax to SQLite-compatible syntax."""
     sql = sql.replace("governance.", "")          # strip schema prefix (SQLite has no schemas)
+    # ARRAY literal forms, with optional per-element type cast:
+    #   ARRAY[%s], ARRAY[%s::uuid], ARRAY[?::uuid]  →  %s / ?
+    sql = re.sub(r"ARRAY\[%s(?:::\w+)?\]", "%s", sql)
+    sql = re.sub(r"ARRAY\[\?(?:::\w+)?\]", "?", sql)
     sql = re.sub(r"%s::\w+", "?", sql)           # strip PG type casts (%s::jsonb → ?)
-    sql = re.sub(r"ARRAY\[%s\]", "%s", sql)      # ARRAY[%s] → %s (store as plain text)
+    sql = re.sub(r"\bNOW\(\)", "datetime('now')", sql)   # SQLite has no NOW()
+    # PG "ON CONFLICT (col) DO UPDATE SET <expr>, …" uses constructs SQLite
+    # can't parse (array_append, tablename-qualified col refs, || jsonb,
+    # = ANY(col_identifier)).  Fall back to DO NOTHING for test visibility —
+    # the first insert of each unique row still succeeds, so candidate
+    # discovery is observable.  Any extra placeholders referenced only by
+    # the stripped SET clauses are dropped by _trim_params() below.
+    sql = re.sub(
+        r"ON\s+CONFLICT\s*\([^)]*\)\s+DO\s+UPDATE\s+SET.*\Z",
+        "ON CONFLICT DO NOTHING",
+        sql,
+        flags=re.I | re.S,
+    )
     # ANY(%s) → IN (SELECT value FROM json_each(?))
     # Params are JSON-serialised lists; json_each unpacks them for IN-list matching.
     sql = re.sub(r"=\s*ANY\(%s\)", "IN (SELECT value FROM json_each(?))", sql)
     sql = re.sub(r"=\s*ANY\(\?\)", "IN (SELECT value FROM json_each(?))", sql)
     return sql.replace("%s", "?")
+
+
+def _trim_params(sql_lite: str, params: tuple) -> tuple:
+    """Trim trailing params to match the number of ? placeholders in translated SQL.
+
+    When _to_sqlite() strips parts of the original query (notably ON CONFLICT
+    DO UPDATE SET clauses that contained their own %s bindings), the
+    placeholder count drops.  Positional param binding in psycopg2 means we
+    can safely drop the tail of the params tuple.
+    """
+    expected = sql_lite.count("?")
+    if expected < len(params):
+        return params[:expected]
+    return params
 
 
 def _normalise_params(params) -> tuple:
@@ -215,9 +245,9 @@ def _deserialise_row(row: dict) -> dict:
 
 def fetchall(sql: str, params=()) -> list[dict[str, Any]]:
     sql_lite = _to_sqlite(sql)
-    # Handle PostgreSQL ANY(%s) → SQLite IN (?) workaround: not needed for dev queries
+    sql_params = _trim_params(sql_lite, _normalise_params(params))
     try:
-        cur = _get_conn().execute(sql_lite, _normalise_params(params))
+        cur = _get_conn().execute(sql_lite, sql_params)
         return [_deserialise_row(dict(row)) for row in cur.fetchall()]
     except sqlite3.OperationalError as e:
         logger.debug("fake_postgres.fetchall skipped unsupported query: %s | %s", e, sql[:80])
@@ -231,8 +261,9 @@ def fetchone(sql: str, params=()) -> dict[str, Any] | None:
 
 def execute(sql: str, params=()) -> None:
     sql_lite = _to_sqlite(sql)
+    sql_params = _trim_params(sql_lite, _normalise_params(params))
     try:
-        _get_conn().execute(sql_lite, _normalise_params(params))
+        _get_conn().execute(sql_lite, sql_params)
         _get_conn().commit()
     except sqlite3.OperationalError as e:
         logger.debug("fake_postgres.execute skipped unsupported query: %s | %s", e, sql[:80])
@@ -274,8 +305,9 @@ class _FakeCursor:
 
     def execute(self, sql: str, params=()):
         sql_lite = _to_sqlite(sql)
+        sql_params = _trim_params(sql_lite, _normalise_params(params))
         try:
-            cur = self._conn.execute(sql_lite, _normalise_params(params))
+            cur = self._conn.execute(sql_lite, sql_params)
             self._rows = [_deserialise_row(dict(r)) for r in cur.fetchall()]
             self._conn.commit()
         except sqlite3.OperationalError as e:

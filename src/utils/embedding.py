@@ -1,9 +1,13 @@
 """
-Embedding client — Ollama (preferred) or sentence-transformers fallback.
+Embedding client — HTTP BGE-M3 service (preferred) or Ollama or sentence-transformers.
 
 Priority:
-1. Ollama API at OLLAMA_URL (default http://localhost:11434) — fast, no Python deps
-2. sentence-transformers with BAAI/bge-m3 — local model, needs pip install
+1. HTTP BGE-M3 service at EMBEDDING_HTTP_URL (default http://localhost:8000) —
+   POST /embedding {"text": "..."} → {"embedding": [1024 floats]}. This is the
+   BGE-M3 systemd service running in WSL2 (see CLAUDE.md).
+2. Ollama API at OLLAMA_URL (default http://localhost:11434) — only used if the
+   HTTP service is down; requires `ollama pull bge-m3` (not installed by default).
+3. sentence-transformers with BAAI/bge-m3 — local Python model fallback.
 
 Usage:
     from src.utils.embedding import get_embeddings
@@ -20,7 +24,7 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
-_backend: Optional[str] = None   # 'ollama' | 'st' | 'disabled'
+_backend: Optional[str] = None   # 'http' | 'ollama' | 'st' | 'disabled'
 _st_model = None                 # lazy-loaded SentenceTransformer
 
 
@@ -39,8 +43,28 @@ def _detect_backend() -> str:
         _backend = "disabled"
         return _backend
 
-    # Try Ollama first
     from src.config.settings import settings
+
+    # 1. HTTP BGE-M3 service — preferred (the WSL2 systemd service on :8000)
+    http_url = getattr(settings, "EMBEDDING_HTTP_URL", "http://localhost:8000")
+    try:
+        req = urllib.request.Request(
+            f"{http_url}/embedding",
+            data=json.dumps({"text": "test"}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read())
+        vec = data.get("embedding") if isinstance(data, dict) else None
+        if vec and len(vec) > 0:
+            _backend = "http"
+            log.info("Embedding backend: HTTP BGE-M3 at %s (dim=%d)", http_url, len(vec))
+            return _backend
+    except Exception as exc:
+        log.debug("HTTP BGE-M3 service not available at %s: %s", http_url, exc)
+
+    # 2. Ollama API
     ollama_url = getattr(settings, "OLLAMA_URL", "http://localhost:11434")
     ollama_model = getattr(settings, "OLLAMA_EMBED_MODEL", "bge-m3")
     try:
@@ -59,7 +83,7 @@ def _detect_backend() -> str:
     except Exception as exc:
         log.debug("Ollama not available: %s", exc)
 
-    # Fallback: sentence-transformers
+    # 3. sentence-transformers
     try:
         from sentence_transformers import SentenceTransformer
         _backend = "st"
@@ -68,7 +92,11 @@ def _detect_backend() -> str:
     except ImportError:
         pass
 
-    log.warning("No embedding backend available (Ollama down, sentence-transformers not installed)")
+    log.warning(
+        "No embedding backend available "
+        "(HTTP %s / Ollama / sentence-transformers all unavailable)",
+        http_url,
+    )
     _backend = "disabled"
     return _backend
 
@@ -99,6 +127,9 @@ def get_embeddings(texts: list[str]) -> list[list[float]] | None:
     if backend == "disabled":
         return None
 
+    if backend == "http":
+        return _http_embed(texts)
+
     if backend == "ollama":
         return _ollama_embed(texts)
 
@@ -106,6 +137,37 @@ def get_embeddings(texts: list[str]) -> list[list[float]] | None:
         return _st_embed(texts)
 
     return None
+
+
+def _http_embed(texts: list[str]) -> list[list[float]] | None:
+    """Embed via the HTTP BGE-M3 service.
+
+    The service exposes POST /embedding with {"text": "..."} (single input only),
+    so we iterate. Responses look like {"embedding": [1024 floats]}.
+    """
+    from src.config.settings import settings
+    http_url = getattr(settings, "EMBEDDING_HTTP_URL", "http://localhost:8000")
+
+    results: list[list[float]] = []
+    try:
+        for text in texts:
+            req = urllib.request.Request(
+                f"{http_url}/embedding",
+                data=json.dumps({"text": text or ""}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req, timeout=120)
+            data = json.loads(resp.read())
+            vec = data.get("embedding") if isinstance(data, dict) else None
+            if not vec:
+                log.warning("HTTP BGE-M3 returned no embedding for text snippet")
+                return None
+            results.append(vec)
+        return results
+    except Exception as exc:
+        log.warning("HTTP BGE-M3 embedding failed: %s", exc)
+        return None
 
 
 def _ollama_embed(texts: list[str]) -> list[list[float]] | None:

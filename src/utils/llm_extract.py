@@ -41,7 +41,9 @@ Your task: given a text segment and candidate node IDs from ALL layers, extract 
 - Extract BOTH intra-layer and cross-layer relationships
 - Only extract triples that are clearly stated or strongly implied by the text
 
-Return ONLY a JSON array. Each element: {"subject": "<node_id>", "predicate": "<relation_id>", "object": "<node_id>"}
+Return ONLY a JSON array. Each element:
+{"subject": "<node_id>", "predicate": "<relation_id>", "object": "<node_id>", "quote": "<verbatim substring ≤200 chars copied directly from the text that directly supports this triple>"}
+The "quote" field is REQUIRED. Copy the exact words from the text (do not paraphrase). Keep it under 200 characters.
 Return [] if no valid triples can be extracted.
 Do not add explanation or markdown formatting outside the JSON array.
 """
@@ -888,8 +890,9 @@ class LLMExtractor:
             subj = item.get("subject", "")
             pred = item.get("predicate", "")
             obj = item.get("object", "")
+            quote = (item.get("quote") or "").strip()[:200]
             if subj in valid_nodes and obj in valid_nodes and pred:
                 if subj != obj:
-                    results.append({"subject": subj, "predicate": pred, "object": obj})
+                    results.append({"subject": subj, "predicate": pred, "object": obj, "quote": quote})
 
         return results

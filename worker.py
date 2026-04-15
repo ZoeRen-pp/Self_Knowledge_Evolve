@@ -42,67 +42,63 @@ _RETRY_BACKOFF_MINUTES = [5, 30, 120]
 
 _SEED_SOURCES: list[dict] = [
     # S-rank: Authoritative standards bodies
+    # Plain-text RFC Editor URLs — avoid the HTML wrapper on datatracker.ietf.org
+    # which yields poorly structured extraction.  The spider's normalize_url()
+    # rewrites any remaining datatracker URLs that arrive via link discovery.
     {
-        "site_key": "ietf-datatracker",
-        "site_name": "IETF Datatracker",
-        "home_url": "https://datatracker.ietf.org/",
+        "site_key": "rfc-editor",
+        "site_name": "RFC Editor",
+        "home_url": "https://www.rfc-editor.org/",
         "source_rank": "S",
         "rate_limit_rps": 0.5,
         "seed_urls": [
-            "https://datatracker.ietf.org/doc/html/rfc4271",
-            "https://datatracker.ietf.org/doc/html/rfc4456",
-            "https://datatracker.ietf.org/doc/html/rfc4760",
-            "https://datatracker.ietf.org/doc/html/rfc7938",
-            "https://datatracker.ietf.org/doc/html/rfc4364",
-            "https://datatracker.ietf.org/doc/html/rfc4684",
-            "https://datatracker.ietf.org/doc/html/rfc5065",
-            "https://datatracker.ietf.org/doc/html/rfc6811",
-            "https://datatracker.ietf.org/doc/html/rfc2328",
-            "https://datatracker.ietf.org/doc/html/rfc5340",
-            "https://datatracker.ietf.org/doc/html/rfc3630",
-            "https://datatracker.ietf.org/doc/html/rfc5308",
-            "https://datatracker.ietf.org/doc/html/rfc5305",
-            "https://datatracker.ietf.org/doc/html/rfc3031",
-            "https://datatracker.ietf.org/doc/html/rfc3032",
-            "https://datatracker.ietf.org/doc/html/rfc3209",
-            "https://datatracker.ietf.org/doc/html/rfc5036",
-            "https://datatracker.ietf.org/doc/html/rfc8402",
-            "https://datatracker.ietf.org/doc/html/rfc8986",
-            "https://datatracker.ietf.org/doc/html/rfc9252",
-            "https://datatracker.ietf.org/doc/html/rfc7432",
-            "https://datatracker.ietf.org/doc/html/rfc7348",
-            "https://datatracker.ietf.org/doc/html/rfc8365",
-            "https://datatracker.ietf.org/doc/html/rfc9136",
-            "https://datatracker.ietf.org/doc/html/rfc5765",
-            "https://datatracker.ietf.org/doc/html/rfc7130",
-            "https://datatracker.ietf.org/doc/html/rfc8668",
-            "https://datatracker.ietf.org/doc/html/rfc791",
-            "https://datatracker.ietf.org/doc/html/rfc8200",
-            "https://datatracker.ietf.org/doc/html/rfc793",
-            "https://datatracker.ietf.org/doc/html/rfc768",
-            "https://datatracker.ietf.org/doc/html/rfc2131",
-            "https://datatracker.ietf.org/doc/html/rfc1034",
-            "https://datatracker.ietf.org/doc/html/rfc792",
-            "https://datatracker.ietf.org/doc/html/rfc4443",
-            "https://datatracker.ietf.org/doc/html/rfc3768",
-            "https://datatracker.ietf.org/doc/html/rfc5798",
-            "https://datatracker.ietf.org/doc/html/rfc5880",
-            "https://datatracker.ietf.org/doc/html/rfc5881",
-            "https://datatracker.ietf.org/doc/html/rfc2474",
-            "https://datatracker.ietf.org/doc/html/rfc2475",
-            "https://datatracker.ietf.org/doc/html/rfc2697",
-            "https://datatracker.ietf.org/doc/html/rfc2698",
-            "https://datatracker.ietf.org/doc/html/rfc2544",
-            "https://datatracker.ietf.org/doc/html/rfc4303",
-            "https://datatracker.ietf.org/doc/html/rfc7296",
-            "https://datatracker.ietf.org/doc/html/rfc6241",
-            "https://datatracker.ietf.org/doc/html/rfc8040",
-            "https://datatracker.ietf.org/doc/html/rfc7950",
-            "https://datatracker.ietf.org/doc/html/rfc8345",
-            "https://datatracker.ietf.org/doc/html/rfc3022",
-            "https://datatracker.ietf.org/doc/html/rfc6146",
-            "https://datatracker.ietf.org/doc/html/rfc4601",
-            "https://datatracker.ietf.org/doc/html/rfc3376",
+            "https://www.rfc-editor.org/rfc/rfc4271.txt",   # BGP-4
+            "https://www.rfc-editor.org/rfc/rfc4456.txt",   # BGP Route Reflectors
+            "https://www.rfc-editor.org/rfc/rfc4760.txt",   # Multiprotocol BGP
+            "https://www.rfc-editor.org/rfc/rfc7938.txt",   # BGP in DC
+            "https://www.rfc-editor.org/rfc/rfc4364.txt",   # BGP/MPLS IP VPNs
+            "https://www.rfc-editor.org/rfc/rfc4684.txt",   # Constrained Route Distribution
+            "https://www.rfc-editor.org/rfc/rfc5065.txt",   # Confederations
+            "https://www.rfc-editor.org/rfc/rfc6811.txt",   # BGP Prefix Origin Validation
+            "https://www.rfc-editor.org/rfc/rfc2328.txt",   # OSPFv2
+            "https://www.rfc-editor.org/rfc/rfc5340.txt",   # OSPFv3
+            "https://www.rfc-editor.org/rfc/rfc3630.txt",   # OSPF-TE
+            "https://www.rfc-editor.org/rfc/rfc5308.txt",   # IS-IS for IPv6
+            "https://www.rfc-editor.org/rfc/rfc5305.txt",   # IS-IS TE
+            "https://www.rfc-editor.org/rfc/rfc3031.txt",   # MPLS Architecture
+            "https://www.rfc-editor.org/rfc/rfc3032.txt",   # MPLS Label Stack
+            "https://www.rfc-editor.org/rfc/rfc3209.txt",   # RSVP-TE
+            "https://www.rfc-editor.org/rfc/rfc5036.txt",   # LDP
+            "https://www.rfc-editor.org/rfc/rfc8402.txt",   # Segment Routing Architecture
+            "https://www.rfc-editor.org/rfc/rfc8986.txt",   # SRv6 Network Programming
+            "https://www.rfc-editor.org/rfc/rfc9252.txt",   # BGP Overlay Services (EVPN)
+            "https://www.rfc-editor.org/rfc/rfc7432.txt",   # BGP MPLS-Based EVPN
+            "https://www.rfc-editor.org/rfc/rfc7348.txt",   # VXLAN
+            "https://www.rfc-editor.org/rfc/rfc8365.txt",   # NVO3 using EVPN
+            "https://www.rfc-editor.org/rfc/rfc9136.txt",   # IP Prefix Advertisement in EVPN
+            "https://www.rfc-editor.org/rfc/rfc791.txt",    # IPv4
+            "https://www.rfc-editor.org/rfc/rfc8200.txt",   # IPv6
+            "https://www.rfc-editor.org/rfc/rfc793.txt",    # TCP
+            "https://www.rfc-editor.org/rfc/rfc768.txt",    # UDP
+            "https://www.rfc-editor.org/rfc/rfc2131.txt",   # DHCP
+            "https://www.rfc-editor.org/rfc/rfc1034.txt",   # DNS Concepts
+            "https://www.rfc-editor.org/rfc/rfc792.txt",    # ICMP
+            "https://www.rfc-editor.org/rfc/rfc4443.txt",   # ICMPv6
+            "https://www.rfc-editor.org/rfc/rfc5798.txt",   # VRRPv3
+            "https://www.rfc-editor.org/rfc/rfc5880.txt",   # BFD
+            "https://www.rfc-editor.org/rfc/rfc5881.txt",   # BFD for IPv4/IPv6
+            "https://www.rfc-editor.org/rfc/rfc2474.txt",   # DiffServ Field
+            "https://www.rfc-editor.org/rfc/rfc2475.txt",   # DiffServ Architecture
+            "https://www.rfc-editor.org/rfc/rfc2697.txt",   # srTCM
+            "https://www.rfc-editor.org/rfc/rfc2698.txt",   # trTCM
+            "https://www.rfc-editor.org/rfc/rfc4303.txt",   # ESP
+            "https://www.rfc-editor.org/rfc/rfc7296.txt",   # IKEv2
+            "https://www.rfc-editor.org/rfc/rfc6241.txt",   # NETCONF
+            "https://www.rfc-editor.org/rfc/rfc8040.txt",   # RESTCONF
+            "https://www.rfc-editor.org/rfc/rfc7950.txt",   # YANG 1.1
+            "https://www.rfc-editor.org/rfc/rfc3022.txt",   # NAT
+            "https://www.rfc-editor.org/rfc/rfc4601.txt",   # PIM-SM
+            "https://www.rfc-editor.org/rfc/rfc3376.txt",   # IGMPv3
         ],
         "scope_rules": None,
         "extra_headers": None,
@@ -175,6 +171,31 @@ _SEED_SOURCES: list[dict] = [
         "scope_rules": None,
         "extra_headers": None,
     },
+    # A-rank: Open-source reference implementations (primary authoritative source
+    # for configuration syntax, CLI options, and protocol behaviour on Linux)
+    {
+        "site_key": "frr-docs",
+        "site_name": "FRRouting Documentation",
+        "home_url": "https://docs.frrouting.org/en/latest/",
+        "source_rank": "A",
+        "rate_limit_rps": 0.5,
+        "seed_urls": [
+            "https://docs.frrouting.org/en/latest/bgp.html",
+            "https://docs.frrouting.org/en/latest/ospfd.html",
+            "https://docs.frrouting.org/en/latest/isisd.html",
+            "https://docs.frrouting.org/en/latest/bfd.html",
+            "https://docs.frrouting.org/en/latest/vrrpd.html",
+            "https://docs.frrouting.org/en/latest/ldpd.html",
+            "https://docs.frrouting.org/en/latest/mpls.html",
+            "https://docs.frrouting.org/en/latest/sr.html",
+            "https://docs.frrouting.org/en/latest/evpn.html",
+            "https://docs.frrouting.org/en/latest/pbrd.html",
+            "https://docs.frrouting.org/en/latest/vrf.html",
+            "https://docs.frrouting.org/en/latest/pim.html",
+        ],
+        "scope_rules": None,
+        "extra_headers": None,
+    },
     # B-rank: Technical learning / whitepapers
     {
         "site_key": "networklessons",
@@ -242,6 +263,25 @@ _SEED_SOURCES: list[dict] = [
             "https://blog.ipspace.net/2022/09/evpn-bridging-routing.html",
             "https://blog.ipspace.net/2023/03/segment-routing-overview.html",
             "https://blog.ipspace.net/2022/03/vxlan-evpn-behind-curtain.html",
+        ],
+        "scope_rules": None,
+        "extra_headers": None,
+    },
+    {
+        "site_key": "noction",
+        "site_name": "Noction Blog",
+        "home_url": "https://www.noction.com/blog/",
+        "source_rank": "B",
+        "rate_limit_rps": 0.3,
+        "seed_urls": [
+            "https://www.noction.com/blog/bgp-best-path-selection-process",
+            "https://www.noction.com/blog/bgp-route-reflector",
+            "https://www.noction.com/blog/bgp-confederations",
+            "https://www.noction.com/blog/mpls-architecture",
+            "https://www.noction.com/blog/segment-routing",
+            "https://www.noction.com/blog/vxlan-overview",
+            "https://www.noction.com/blog/ospf-protocol",
+            "https://www.noction.com/blog/bgp-communities",
         ],
         "scope_rules": None,
         "extra_headers": None,
