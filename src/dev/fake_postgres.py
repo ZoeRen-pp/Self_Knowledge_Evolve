@@ -162,6 +162,7 @@ def _to_sqlite(sql: str) -> str:
     sql = re.sub(r"ARRAY\[%s(?:::\w+)?\]", "%s", sql)
     sql = re.sub(r"ARRAY\[\?(?:::\w+)?\]", "?", sql)
     sql = re.sub(r"%s::\w+", "?", sql)           # strip PG type casts (%s::jsonb → ?)
+    sql = re.sub(r"(\w+)::\w+", r"\1", sql)      # strip column casts  (col::text → col)
     sql = re.sub(r"\bNOW\(\)", "datetime('now')", sql)   # SQLite has no NOW()
     # PG "ON CONFLICT (col) DO UPDATE SET <expr>, …" uses constructs SQLite
     # can't parse (array_append, tablename-qualified col refs, || jsonb,

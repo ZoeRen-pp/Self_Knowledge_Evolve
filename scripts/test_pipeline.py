@@ -62,6 +62,7 @@ sys.modules["src.db.crawler_postgres"]  = fake_crawler_postgres
 
 # ── 本体 ──────────────────────────────────────────────────────────────────────
 from src.ontology.registry import OntologyRegistry
+from src.ontology.yaml_provider import YAMLOntologyProvider
 from src.dev.seed import seed_from_registry
 registry = OntologyRegistry.from_default()
 seed_from_registry()
@@ -124,7 +125,7 @@ class FakeApp:
     store         = fake_postgres
     crawler_store = fake_crawler_postgres
     objects       = objects
-    ontology      = registry
+    ontology      = YAMLOntologyProvider(registry)
     llm           = llm
 
 app = FakeApp()

@@ -97,6 +97,10 @@ class YAMLOntologyProvider(OntologyProvider):
         return self._reg.nodes
 
     @property
+    def functional_predicates(self) -> frozenset[str]:
+        return self._reg.functional_predicates
+
+    @property
     def seed_relations(self):
         return self._reg.seed_relations
 
