@@ -28,7 +28,7 @@ psql -h 192.168.3.71 -U postgres -d telecom_crawler -f scripts/init_crawler_post
 python scripts/init_neo4j.py
 python scripts/load_ontology.py       # YAML → Neo4j + PG lexicon (cold start)
 uvicorn src.app:app --host 0.0.0.0 --port 8001
-python worker.py                      # background: 4 threads (Crawler/Pipeline/Stats/Maintenance)
+python worker.py                      # background: 4 threads, 60+ seed URLs, LLM hard dependency
 ```
 Dashboard: `http://localhost:8001/dashboard`
 
@@ -97,13 +97,17 @@ Stage 2: Segment   → 4-step joint segmentation + typing:
 Stage 3: Align     → exact+alias match (word-boundary aware), embedding fuzzy match on miss (threshold 0.80),
                      5-layer tagging, LLM candidate discovery (classified: new_concept/variant/noise)
 Stage 3b: Evolve   → 6-dim scoring, 6-gate review, auto-promote (score ≥ 0.85 + all gates + ≥ 7 days)
-Stage 4: Extract   → LLM-first (S,P,O) triples → merged-context retry (continuative discourse relations:
-                     Elaboration/Sequence/Causation/Evidence/Background/Exemplification)
-                     → dual-node co-occurrence fallback
-Stage 5: Dedup     → SimHash + embedding semantic dedup (cosine > 0.90), fact merging, conflict detection
+Stage 4: Extract   → 5-priority extraction:
+                     P0 RST-derived facts (Constraint→constrained_by, Prerequisite→requires, etc.)
+                     P1 single-segment LLM (≥3 anchor nodes, quote grounding ≥80% token overlap)
+                     P2 merged-context LLM (continuative RST: Elaboration/Sequence/Causation/Evidence/Background)
+                     P2-chain multi-hop RST chains (3-4 segments, ≤1500 tokens)
+                     P3 dual-node co-occurrence fallback (exactly 2 nodes + predicate signal)
+Stage 5: Dedup     → SimHash + embedding semantic dedup (cosine > 0.90), fact merging,
+                     ontology-driven conflict detection (D4 only fires for cardinality=one predicates)
 Stage 6: Index     → confidence gate (segment ≥ 0.5, fact ≥ 0.5), Neo4j ingestion, vector index
 ```
-To feed the pipeline: insert a `documents` row with `status='raw'` and upload the file to MinIO `raw/`. The worker polls automatically.
+To feed the pipeline: insert a `documents` row with `status='raw'` and upload the file to MinIO `raw/`. The worker polls automatically. Worker auto-seeds 60+ authoritative URLs across 10 sites (RFC Editor, Huawei, Juniper, Arista, FRRouting, NetworkLessons, Cloudflare, PacketLife, ipSpace, Noction). LLM is a hard dependency — pipeline blocks until LLM is reachable.
 
 ### 21 Semantic Operators (REST `/api/v1/semantic/`)
 `lookup`, `resolve`, `expand`, `path`, `dependency_closure`, `impact_propagate`, `filter`, `evidence_rank`, `conflict_detect`, `fact_merge`, `candidate_discover`, `attach_score`, `evolution_gate`, `context_assemble`, `semantic_search`, `ontology_quality`, `stale_knowledge`, `cross_layer_check`, `graph_inspect`, `ontology_inspect`, `edu_search`
@@ -139,8 +143,8 @@ score = 0.30×source_authority + 0.20×extraction_method
 Source authority tiers: S (IETF/3GPP/ITU-T/IEEE) → 1.0 · A (Cisco/Huawei/Juniper) → 0.85 · B (whitepapers) → 0.65 · C (blogs/forums) → 0.40
 
 ### Optional Features
-- `LLM_ENABLED=true` — enables OpenAI-compatible LLM for Stage 4 extraction and candidate discovery (`LLM_API_KEY` + `LLM_BASE_URL` required; configured for DeepSeek by default)
-- `EMBEDDING_ENABLED=true` — enables vector search via Ollama bge-m3 (`OLLAMA_URL` + `OLLAMA_EMBED_MODEL`); falls back to sentence-transformers if Ollama unavailable
+- `LLM_ENABLED=true` — enables OpenAI-compatible LLM for Stage 2 classification, Stage 3 candidate discovery, Stage 4 extraction, and maintenance classification (`LLM_API_KEY` + `LLM_BASE_URL` required; configured for Gemini by default via Google AI API)
+- `EMBEDDING_ENABLED=true` — enables vector search via 3-tier fallback: HTTP BGE-M3 service (`EMBEDDING_HTTP_URL`, preferred) → Ollama (`OLLAMA_URL` + `OLLAMA_EMBED_MODEL`) → local sentence-transformers
 
 ## Five-Layer Ontology Model
 
@@ -152,7 +156,7 @@ Source authority tiers: S (IETF/3GPP/ITU-T/IEEE) → 1.0 · A (Cisco/Huawei/Juni
 | condition | `ip_network_conditions.yaml` | `ConditionRuleNode` | 20 | Applicability conditions, constraints, and decision rules (when to use) |
 | scenario | `ip_network_scenarios.yaml` | `ScenarioPatternNode` | 13 | Deployment patterns and business scenarios (real-world contexts) |
 
-Relations: 77 types in `ontology/top/relations.yaml`. Aliases: 759 entries in `ontology/lexicon/aliases.yaml` (Chinese/English + vendor variants). Seed relations: 114 (axiom 58 + cross-layer 56).
+Relations: 77 types in `ontology/top/relations.yaml` (with optional `cardinality: one` for functional predicates). Aliases: 828 entries in `ontology/lexicon/aliases.yaml` (Chinese/English + vendor variants). Seed relations: 187 (axiom 85 + cross-layer 102).
 
 **Concept layer (v0.3.0):** Redesigned from abstract protocol concepts to YANG-level configurable objects. Protocol-level abstract relations (e.g. "BGP uses TCP") removed; only structural config dependencies retained. Category groupings follow the pattern "Category grouping X configurable objects."
 
@@ -161,8 +165,8 @@ Relations: 77 types in `ontology/top/relations.yaml`. Aliases: 759 entries in `o
 All architecture decisions are documented before implementation. Key references:
 - `docs/architecture-design-20260406.md` — system architecture design (latest)
 - `docs/development-spec-20260406.md` — full development specification (latest)
+- `docs/product-architecture-4plus1-20260413.md` — 4+1 product architecture view
 - `docs/candidate-dedup-design.md` — candidate deduplication design
 - `docs/embedding-enhancements-design.md` — embedding enhancement design
-- `docs/ontology-quality-framework.md` — ontology quality assessment framework
 - `docs/telecom-ontology-design.md` — 5-layer knowledge model design
 - `docs/semcore-framework-design.md` — semcore framework abstraction rationale

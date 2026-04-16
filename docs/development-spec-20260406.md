@@ -13,8 +13,8 @@
 | 爬虫数据库 | PostgreSQL (telecom_crawler) | 与知识库物理隔离，独立 connection pool，故障不传播 |
 | 图数据库 | Neo4j Community | 原生图遍历；MERGE 语义天然幂等；动态关系类型是一等公民 |
 | 对象存储 | MinIO | S3 兼容 API，自部署，HTML/文本大文件不占 PG |
-| Embedding | Ollama (bge-m3 1024维) | 本地推理，零 API 成本，中英双语，无 Python 额外依赖 |
-| LLM | OpenAI 兼容 API (DeepSeek/Claude) | 关系抽取、候选词分类；通过 base-url + api-key 切换厂商 |
+| Embedding | bge-m3 1024维（三级回退：HTTP BGE-M3 → Ollama → sentence-transformers） | 本地推理，零 API 成本，中英双语 |
+| LLM | OpenAI 兼容 API（默认 Gemini 2.5 Flash） | 切分分类、关系抽取、候选词分类；通过 base-url + api-key 切换厂商 |
 | 框架抽象 | semcore（自研） | 零依赖 ABC 层；Pipeline Stage、Operator、Store、ConflictDetector 可独立测试 |
 
 ---
@@ -112,7 +112,7 @@ Self_Knowledge_Evolve/
 │   │   └── seed.py                ← 从 YAML 初始化开发数据
 │   │
 │   └── utils/
-│       ├── embedding.py           ← Embedding 客户端（Ollama 优先 → sentence-transformers 兜底）
+│       ├── embedding.py           ← Embedding 客户端（HTTP BGE-M3 → Ollama → sentence-transformers 三级回退）
 │       ├── llm_extract.py         ← LLMExtractor（关系抽取 + RST + 候选词分类）
 │       ├── normalize.py           ← normalize_term（词边界保留归一化）
 │       ├── confidence.py          ← score_fact（五维置信度公式）
@@ -453,52 +453,42 @@ for pattern, ctx in self._context_patterns:
 
 **职责**：从段落文本中抽取 (subject, predicate, object) 三元组，写入 facts + evidence 表
 
-Stage 4 有**三条路径**，按优先级顺序尝试，找到结果就跳过后续路径：
+Stage 4 有**五级优先抽取路径**，按优先级顺序尝试：
 
-**路径 1：LLM 直接抽取**
+**P0：RST 结构推断**（无 LLM 调用）
 
-```python
-facts = extract_facts_llm(seg, source_rank)
-if facts:
-    all_facts.extend(facts)
-    continue
-```
+利用 Stage 2 的篇章关系直接推导 fact。5 种 RST 类型映射为谓语：
+- Constraint → constrained_by
+- Prerequisite → requires
+- Causation → triggers
+- Condition → applies_when
+- Exemplification → has_example
+
+如果两个相邻段落各自只对齐到 1 个本体节点，且 RST 关系在上述 5 种之内，直接生成 fact，不需要 LLM。
+
+**P1：单段 LLM 抽取**（核心路径）
+
+要求段落至少有 **3 个锚点节点**（Stage 3 的 canonical + mechanism_tag + method_tag + condition_tag + scenario_tag），跨层锚点使 LLM 能抽取跨层关系。
 
 LLM 调用细节：
-- 提示词（系统 prompt）包含本体节点 ID 列表和有效谓语列表
-- 要求只使用节点 ID 作为 subject/object（不接受自由文本实体）
-- **关键设计**：允许 LLM 创造不在列表中的新谓语——如果文本的语义无法用已有谓语表达，LLM 应该创造一个新谓语（`lowercase_with_underscores`），这条关系会作为 `candidate_type='relation'` 进入候选词池等待审核
+- 提示词包含本体节点 ID 列表和有效谓语列表
+- 只接受节点 ID 作为 subject/object（不接受自由文本实体）
+- **引用验证（quote grounding）**：LLM 返回的每个 triple 必须在原文中找到支持证据——精确子串匹配 OR ≥80% token overlap——拦截幻觉
+- **新谓语发现**：允许 LLM 创造新谓语（`lowercase_with_underscores`），作为 `candidate_type='relation'` 进入候选词池等待审核
 
-```python
-# src/utils/llm_extract.py 中的系统 prompt 关键句
-# "if the text clearly expresses a relationship that does NOT fit any predicate,
-#  you MUST create a new predicate name (e.g. 'replaces', 'supersedes').
-#  Do NOT force-fit into an existing predicate when the semantics don't match."
-```
+**P2：合并上下文 LLM**
 
-**路径 2：合并上下文重试**
+只对"连续型"RST 关系触发：Elaboration、Sequence、Causation、Evidence、Background、Exemplification。这些关系表明相邻段落讲同一件事，合并后信息更完整。合并时在 prompt 头部注入 RST nuclearity 提示（如 "Paragraph B elaborates on A [NS]"）。
 
-```python
-if i > 0:
-    # 检查当前段落与前一段落的 RST 关系
-    # 只有 continuative 类型（Elaboration/Sequence/Restatement/Explanation）才合并
-    merged_facts = _extract_merged_context(segments[i-1], seg, source_rank, source_doc_id)
-    if merged_facts:
-        all_facts.extend(merged_facts)
-        continue
-```
+**P2-chain：多跳 RST 链**
 
-**为什么需要合并上下文**：很多技术文档把一个事实分散在两个相邻段落里——第一段介绍概念（"OSPF 使用 SPF 算法"），第二段补充细节（"SPF 算法基于 Dijkstra 最短路径"）。单独发送每个段落，LLM 可能因为信息不完整而无法抽取有效三元组。合并后变成一个完整的语境，抽取成功率显著提升。
+沿 Sequence/Elaboration/Causation 关系寻找 3-4 段连续链（≤1500 tokens），用 `[Paragraph N]` 标记每段，单次 LLM 调用提取跨段 fact。
 
-**路径 3：共现兜底**
+**P3：双节点共现兜底**
 
-```python
-cooc_facts = _extract_cooccurrence(seg, source_rank)
-```
-
-触发条件：该段落有 canonical 标签（即已知本体节点出现在段落里）。
-限制：只在同一段落里出现的节点对之间产生 `co_occurs_with` 关系，最多 1 条。
-原因：共现关系没有语义方向性，产生太多是噪声。限制为最多 1 条是为了保证每个段落都有最基本的图连接，不是为了大量积累。
+触发条件：该段落**恰好有 2 个** canonical 标签且匹配到 `predicate_signals.yaml` 中的谓语信号模式。
+限制：每段最多 1 条共现关系，谓语来自信号匹配（不再是无语义的 `co_occurs_with`）。
+从 S/A 级来源的共现 confidence 可达 0.74，是有意义的补充。
 
 **置信度计算**（`src/utils/confidence.py`）：
 
@@ -540,23 +530,28 @@ for i, a in enumerate(segments):
 **规则 D3-D5 — 事实去重与冲突检测**
 
 ```
-D3 — 精确去重：(subject, predicate, object) 完全相同 → 保留最高置信度，增加 source_count
-D4 — 语义去重：subject embedding 相似 + object embedding 相似 + predicate 相同 → 合并
-D5 — 冲突检测：调用 TelecomConflictDetector.detect()（见下）
+D3  — 精确去重：(subject, predicate, object) 完全相同 → 保留最高置信度的 canonical，
+      其余标记 superseded，所有指向同一 merge_cluster_id
+D3b — 语义去重：同 (subject, object) 不同 predicate 文本，embedding cosine ≥ 0.90
+      → 合并（保留高置信度 fact，supersede 低置信度 fact）
+D4  — 冲突检测：同 subject + 同 predicate + 不同 object → 但仅对函数型谓语触发
+      函数型谓语 = relations.yaml 中标记了 cardinality: one 的关系
+      多值谓语（explains, used_for, implements 等）不触发 D4
+D5  — 归一化：lowercase + collapse whitespace 后再比较 object 文本
 ```
+
+**D4 本体驱动**：`OntologyRegistry.functional_predicates`（frozenset）从 `relations.yaml` 的 `cardinality: one` 字段加载。Stage 5 通过 `app.ontology.functional_predicates` 获取。当前 IP network 域没有 `cardinality: one` 的关系——所有关系都是多值的，D4 实质上未激活。未来如果添加 `has_version`、`runs_on` 等函数型关系，只需在 YAML 中标记 `cardinality: one`，D4 自动生效。
 
 **TelecomConflictDetector 的两个检测信号**（`src/governance/conflict_detector.py`）：
 
 ```python
-# 信号 1：精确冲突（S+P 相同，O 不同）
+# 信号 1：精确冲突（S+P 相同，O 不同）— 仅函数型谓语
 SELECT fact_id FROM facts WHERE subject=%s AND predicate=%s AND object!=%s AND lifecycle_state='active'
 
 # 信号 2：语义冲突（S≈S AND O≈O，但 P 不同）
 # 用 embedding 对比 "subject object" 文本对
 # 相似度高但 predicate 不同 → 可能是同一关系的不同表述（或真实冲突）
-my_text = f"{fact.subject} {fact.object}".lower()
-# 与当前 facts 表中谓语不同的 facts 对比，取 top-50
-# cosine > 阈值 → 标记为 semantic_conflict
+# cosine > 0.85 → 标记为 semantic_contradiction
 ```
 
 冲突写入 `governance.conflict_records`，不自动解决，等待人工或 Maintenance 处理。

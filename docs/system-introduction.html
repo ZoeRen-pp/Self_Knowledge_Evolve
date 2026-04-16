@@ -822,16 +822,16 @@
       <text x="435" y="235" font-size="10" fill="#64748b">结构切分 → LLM 17 类型分类 → 合并同类 → RST 篇章关系标注</text>
       <rect x="379" y="241" width="346" height="16" fill="#f1f5f9" rx="2"/>
       <text x="385" y="253" font-size="10" font-weight="600" fill="#334155">S3 Align</text>
-      <text x="425" y="253" font-size="10" fill="#64748b">精确 / 别名(759) / Embedding 模糊(&gt;0.80) 匹配 → 候选词发现</text>
+      <text x="425" y="253" font-size="10" fill="#64748b">精确 / 别名(828) / Embedding 模糊(&gt;0.80) 匹配 → 候选词发现</text>
       <rect x="379" y="259" width="346" height="16" fill="#fafafa" rx="2"/>
       <text x="385" y="271" font-size="10" fill="#94a3b8">S3b Evolve</text>
       <text x="432" y="271" font-size="10" fill="#94a3b8">候选词 6 维评分 · 自动晋升 (≥0.85 + 6 道门控) · 每轮执行</text>
       <rect x="379" y="277" width="346" height="16" fill="#f1f5f9" rx="2"/>
       <text x="385" y="289" font-size="10" font-weight="600" fill="#334155">S4 Extract</text>
-      <text x="432" y="289" font-size="10" fill="#64748b">LLM 抽取 (S,P,O) → 合并上下文重试 → RST 推导 → 共现兜底</text>
+      <text x="432" y="289" font-size="10" fill="#64748b">P0 RST推导 → P1 LLM抽取(引用验证) → P2 合并上下文 → P3 共现��底</text>
       <rect x="379" y="295" width="346" height="16" fill="#fafafa" rx="2"/>
       <text x="385" y="307" font-size="10" font-weight="600" fill="#334155">S5 Dedup</text>
-      <text x="425" y="307" font-size="10" fill="#64748b">SimHash + Embedding 语义去重 (&gt;0.90) → Fact 合并 · 冲突检测</text>
+      <text x="425" y="307" font-size="10" fill="#64748b">SimHash + Embedding去重(&gt;0.90) → Fact合并 · 本体驱动冲突检测(D4)</text>
       <rect x="379" y="313" width="346" height="16" fill="#f1f5f9" rx="2"/>
       <text x="385" y="325" font-size="10" font-weight="600" fill="#334155">S6 Index</text>
       <text x="425" y="325" font-size="10" fill="#64748b">置信度门控 (≥0.35) → Neo4j 本体边 + 溯源链 → pgvector HNSW</text>
@@ -844,13 +844,13 @@
       <text x="864" y="79" text-anchor="middle" font-size="9" fill="#15803d" font-weight="700" letter-spacing="0.08em">外部服务 / 计算资源</text>
       <rect x="762" y="84" width="204" height="76" fill="white" stroke="#bbf7d0" stroke-width="1.5" rx="4"/>
       <text x="772" y="99" font-size="12" font-weight="700" fill="#15803d">LLM API</text>
-      <text x="772" y="113" font-size="10" fill="#64748b">DeepSeek / OpenAI 兼容接口</text>
+      <text x="772" y="113" font-size="10" fill="#64748b">Gemini / OpenAI 兼容接口 · 阻塞熔断器</text>
       <text x="772" y="126" font-size="10" fill="#64748b">S2: RST 关系分类 (批 15 对/call)</text>
       <text x="772" y="139" font-size="10" fill="#64748b">S4: (S,P,O) 三元组抽取</text>
       <text x="772" y="152" font-size="10" fill="#64748b">S3: 候选词 new / variant / noise</text>
       <rect x="762" y="170" width="204" height="52" fill="white" stroke="#bbf7d0" stroke-width="1.5" rx="4"/>
-      <text x="772" y="185" font-size="12" font-weight="700" fill="#15803d">Ollama  bge-m3</text>
-      <text x="772" y="199" font-size="10" fill="#64748b">1024 维 · 中英双语向量</text>
+      <text x="772" y="185" font-size="12" font-weight="700" fill="#15803d">Embedding  bge-m3</text>
+      <text x="772" y="199" font-size="10" fill="#64748b">1024维 · HTTP BGE-M3 → Ollama → ST 三级回退</text>
       <text x="772" y="213" font-size="10" fill="#64748b">S3 模糊对齐 (&gt;0.80) · S5 语义去重 (&gt;0.90)</text>
       <rect x="762" y="232" width="204" height="96" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
       <text x="772" y="247" font-size="11.5" font-weight="700" fill="#4c1d95">五层本体 × 多专业域</text>
@@ -1007,9 +1007,8 @@
         <thead><tr><th>资源</th><th>数量</th><th>说明</th></tr></thead>
         <tbody>
           <tr><td>关系类型</td><td>77 种</td><td><code>ontology/top/relations.yaml</code></td></tr>
-          <tr><td>别名映射</td><td>759 条</td><td>中英文 + 厂商变体，<code>ontology/lexicon/aliases.yaml</code></td></tr>
-          <tr><td>种子关系</td><td>114 条</td><td>公理 58 + 跨层 56</td></tr>
-          <tr><td>5G CN 域</td><td>已接入</td><td>基于 3GPP TS 23.501/23.502</td></tr>
+          <tr><td>别名映射</td><td>828 条</td><td>中英文 + 厂商变体，<code>ontology/lexicon/aliases.yaml</code></td></tr>
+          <tr><td>种子关系</td><td>187 条</td><td>公理 85 + 跨层 102</td></tr>
         </tbody>
       </table>
     </div>
@@ -1183,7 +1182,7 @@
         <div class="stage-num">Stage 3</div>
         <div class="stage-content">
           <div class="stage-name">Align — 本体对齐</div>
-          <div class="stage-desc">5 层对齐策略：① 词边界精确匹配 → ② 别名映射（759 条）→ ③ Embedding 模糊匹配（cosine > 0.80）→ ④ 候选词发现（LLM 分类：new_concept/variant/noise）→ ⑤ RST 传播（零命中段落从 RST 邻居借取本体标签，按关系类型加权 0.30–0.85）。对齐结果存 <code>segment_tags</code>。</div>
+          <div class="stage-desc">5 层对齐策略：① 词边界精确匹配 → ② 别名映射（828 条）→ ③ Embedding 模糊匹配（cosine > 0.80）→ ④ 候选词发现（LLM 分类：new_concept/variant/noise）→ ⑤ RST 传播（零命中段落从 RST 邻居借取本体标签，按关系类型加权 0.30–0.85）。对齐结果存 <code>segment_tags</code>。</div>
         </div>
       </div>
       <div class="stage">
@@ -1196,22 +1195,22 @@
       <div class="stage">
         <div class="stage-num">Stage 4</div>
         <div class="stage-content">
-          <div class="stage-name">Extract — 三元组抽取</div>
-          <div class="stage-desc">三条路径：① LLM 直接抽取（注入 nodeContext 节点列表 + RST 篇章关系提示）→ ② 合并上下文重试（Elaboration/Sequence/Causation/Evidence/Background/Exemplification 触发合并，最长 1500 tokens）→ ③ RST 直接推导（Constraint→constrained_by、Prerequisite→requires…无需 LLM）→ ④ 共现兜底（LLM 不可用时才用，不进 Neo4j）。结果存 <code>facts</code> + <code>evidence</code>。</div>
+          <div class="stage-name">Extract — 五级优先三元组抽取</div>
+          <div class="stage-desc">五级优先：P0 RST 结构推断（Constraint→constrained_by、Prerequisite→requires…无需 LLM）→ P1 单段 LLM 抽取（≥3 锚点 + 引用验证 80% 重叠）→ P2 合并上下文 LLM（Elaboration/Sequence/Causation/Evidence/Background/Exemplification 触发合并）→ P2-chain 多跳 RST 链（3–4 段连续关系）→ P3 双节点共现兜底。结果存 <code>facts</code> + <code>evidence</code>。</div>
         </div>
       </div>
       <div class="stage">
         <div class="stage-num">Stage 5</div>
         <div class="stage-content">
           <div class="stage-name">Dedup — 去重与冲突检测</div>
-          <div class="stage-desc">SimHash 结构去重 + Embedding 语义去重（cosine > 0.90）→ Fact 合并。语义冲突检测（S≈S, O≈O, P 不同）→ 写 <code>governance.conflict_records</code>，通知人工仲裁。</div>
+          <div class="stage-desc">SimHash 结构去重 + Embedding 语义去重（cosine > 0.90）→ Fact 合并。本体驱动冲突检测：D4 仅对 <code>cardinality: one</code> 函数型谓语触发（S≈S, O≠O, P 相同），非函数型谓语跳过；语义冲突检测（S≈S, O≈O, P 不同）→ 写 <code>governance.conflict_records</code>，通知人工仲裁。</div>
         </div>
       </div>
       <div class="stage">
         <div class="stage-num">Stage 6</div>
         <div class="stage-content">
           <div class="stage-name">Index — 入图 + 向量索引</div>
-          <div class="stage-desc">置信度门控（segment ≥ 0.5，fact ≥ 0.35）→ 写入 Neo4j 本体推理层（聚合边）和知识溯源层（Fact→Evidence→Segment→Document 链）→ 写入 pgvector 向量索引 → <code>documents.status='indexed'</code>。</div>
+          <div class="stage-desc">置信度门控（segment ≥ 0.5，fact ≥ 0.5）→ 写入 Neo4j 本体推理层（聚合边）和知识溯源层（Fact→Evidence→Segment→Document 链）→ 写入 pgvector 向量索引 → <code>documents.status='indexed'</code>。</div>
         </div>
       </div>
     </div>
@@ -1421,8 +1420,8 @@ Human Review（随时）           终审：approve / reject / merge</pre>
     <h3>为什么只让 subject/object 使用本体节点 ID</h3>
     <p>LLM 提示词要求 subject 和 object <strong>必须是</strong>提供的节点 ID 列表中的 ID，不接受自由文本实体。如果允许 LLM 自由命名实体（"BGP router"、"Border Gateway Protocol Router"、"bgp-router"——可能是同一个东西），Neo4j 里会出现大量游离节点，图会迅速变得混乱，图遍历结果不可信。强制节点 ID 保证了所有 Fact 都锚定在本体中。</p>
 
-    <h3>Circuit Breaker — 熔断器</h3>
-    <p><code>LLMExtractor</code> 连续失败 3 次后触发熔断，禁用 LLM 600 秒。Pipeline Worker 在每篇文档处理前重新检查 LLM 可用性（不只检查一次）——因为 LLM 可能在处理一批文档的中途变得不可用（网络抖动、API 限流），及时检测避免以降级模式处理后续文档。</p>
+    <h3>Circuit Breaker — 阻塞式熔断器</h3>
+    <p><code>LLMExtractor</code> 连续失败 3 次后触发熔断。熔断后<strong>不降级运行</strong>——所有依赖 LLM 的线程阻塞等待恢复（每 30 秒轮询 LLM 可用性），同时执行已注册的 keep-alive 回调（数据库心跳等）防止连接池断开。HTTP 4xx（429 除外）不计入熔断阈值，429 指数退避重试，5xx 计入失败。LLM 恢复后自动解除阻塞，从断点继续处理。</p>
 
     <h3>RST 批量分类：批次大小 15</h3>
     <p>一篇完整 RFC 可能有 246 个相邻段落对。所有对放在一个 LLM 调用会产生约 200K 字符的 prompt，导致超时。每对关系完全独立（A→B 只依赖这两个段落），可以安全地分批处理，批次大小固定为 15 对，保证 prompt 在合理大小内。</p>
@@ -1446,18 +1445,20 @@ Human Review（随时）           终审：approve / reject / merge</pre>
         <div class="card-body">维度足够高以捕捉语义细节，又不过高避免存储膨胀和 HNSW 索引性能下降。</div>
       </div>
       <div class="card">
-        <div class="card-title">开源本地运行</div>
-        <div class="card-body">通过 Ollama 在本地推理（WSL2，8000 端口 systemd 服务），零 API 成本，无数据隐私问题。</div>
+        <div class="card-title">本地推理 · 三级回退</div>
+        <div class="card-body">HTTP BGE-M3 服务（WSL2 systemd :8000）→ Ollama → sentence-transformers 本地回退。零 API 成本，无数据隐私问题。</div>
       </div>
     </div>
 
-    <h3>双后端策略</h3>
-    <pre>if ollama_is_available():
-    return OllamaEmbeddingClient()   # 无 Python 依赖，推理快，模型由 Ollama 管理
+    <h3>三级回退策略</h3>
+    <pre>if http_bge_m3_available():
+    return HttpEmbeddingClient()        # WSL2 systemd 服务，:8000，推理最快
+elif ollama_is_available():
+    return OllamaEmbeddingClient()      # 无 Python 依赖，模型由 Ollama 管理
 else:
-    return SentenceTransformerClient()  # pip install，首次加载慢，不依赖额外进程</pre>
+    return SentenceTransformerClient()  # pip install，首次加载慢，纯 Python 兜底</pre>
 
-    <p>两者的输出格式完全相同（float list），上层代码不感知差异。</p>
+    <p>三者的输出格式完全相同（1024 维 float list），上层代码不感知差异。HTTP BGE-M3 通过 <code>EMBEDDING_HTTP_URL</code> 配置，Ollama 通过 <code>OLLAMA_URL</code> + <code>OLLAMA_EMBED_MODEL</code> 配置。</p>
 
     <h3>各场景阈值</h3>
     <div class="table-wrap">
@@ -1483,10 +1484,12 @@ else:
     </div>
 
     <pre>主进程 (worker.py)
-├── _crawler_thread     — 持续爬取 pending 任务，写 raw 文档到 MinIO
-├── _pipeline_thread    — 持续处理 raw 文档，走 7 阶段 Pipeline
+├── _crawler_thread     — 60+ 种子 URL（RFC Editor / Huawei / Juniper / Arista / FRRouting 等 10 站）
+│                         持续爬取 pending 任务，写 raw 文档到 MinIO
+├── _pipeline_thread    — LLM 硬依赖（熔断时所有线程阻塞等待恢复，不降级运行）
+│                         持续处理 raw 文档，走 7 阶段 Pipeline
 ├── _stats_thread       — 每 5 分钟采集系统指标快照
-└── _maintenance_thread — 每天 03:00 CST 执行本体维护</pre>
+└── _maintenance_thread — 每天 03:00 CST 执行本体维护（候选词归类 + Embedding 去重）</pre>
 
     <h3>线程间协作：数据库状态而不是共享内存</h3>
     <pre>crawler_thread  写  documents(status='raw')
