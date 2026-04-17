@@ -142,15 +142,17 @@ def get_embeddings(texts: list[str]) -> list[list[float]] | None:
 def _http_embed(texts: list[str]) -> list[list[float]] | None:
     """Embed via the HTTP BGE-M3 service.
 
-    The service exposes POST /embedding with {"text": "..."} (single input only),
-    so we iterate. Responses look like {"embedding": [1024 floats]}.
+    The service exposes POST /embedding with {"text": "..."} (single input).
+    We use concurrent requests to maximize throughput while the GPU processes
+    one request at a time (the server queues them internally).
     """
     from src.config.settings import settings
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     http_url = getattr(settings, "EMBEDDING_HTTP_URL", "http://localhost:8000")
 
-    results: list[list[float]] = []
-    try:
-        for text in texts:
+    def _embed_one(idx_text: tuple[int, str]) -> tuple[int, list[float] | None]:
+        idx, text = idx_text
+        try:
             req = urllib.request.Request(
                 f"{http_url}/embedding",
                 data=json.dumps({"text": text or ""}).encode(),
@@ -160,11 +162,26 @@ def _http_embed(texts: list[str]) -> list[list[float]] | None:
             resp = urllib.request.urlopen(req, timeout=120)
             data = json.loads(resp.read())
             vec = data.get("embedding") if isinstance(data, dict) else None
-            if not vec:
-                log.warning("HTTP BGE-M3 returned no embedding for text snippet")
+            return (idx, vec)
+        except Exception as exc:
+            log.debug("HTTP embed failed for idx %d: %s", idx, exc)
+            return (idx, None)
+
+    max_workers = min(8, len(texts))
+    try:
+        results: list[tuple[int, list[float] | None]] = []
+        with ThreadPoolExecutor(max_workers=max_workers) as pool:
+            futures = {pool.submit(_embed_one, (i, t)): i for i, t in enumerate(texts)}
+            for fut in as_completed(futures):
+                results.append(fut.result())
+        results.sort(key=lambda x: x[0])
+        vecs = []
+        for idx, vec in results:
+            if vec is None:
+                log.warning("HTTP BGE-M3 returned no embedding for text %d", idx)
                 return None
-            results.append(vec)
-        return results
+            vecs.append(vec)
+        return vecs
     except Exception as exc:
         log.warning("HTTP BGE-M3 embedding failed: %s", exc)
         return None
