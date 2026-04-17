@@ -251,18 +251,38 @@ class LLMExtractor:
         self._enabled: bool | None = None
         self._consecutive_failures: int = 0
         self._circuit_open: bool = False  # True = circuit tripped, all callers block
-        # Registered DB keep-alive callbacks called during blocking waits
         self._keep_alive_fns: list = []
+        self._api_keys: list[str] = []
+        self._key_index: int = 0
+        import threading
+        self._key_lock = threading.Lock()
 
     def register_keep_alive(self, fn) -> None:
         """Register a zero-argument callable to be invoked every poll cycle
         while the circuit breaker is open (e.g. a DB ping to prevent timeout)."""
         self._keep_alive_fns.append(fn)
 
+    def _get_api_key(self) -> str:
+        """Round-robin key selection for concurrent pipeline workers."""
+        if not self._api_keys:
+            from src.config.settings import settings
+            raw = getattr(settings, "LLM_API_KEYS", "") or ""
+            keys = [k.strip() for k in raw.split(",") if k.strip()]
+            if not keys:
+                keys = [settings.LLM_API_KEY]
+            self._api_keys = keys
+            if len(keys) > 1:
+                log.info("LLM key pool initialized: %d keys", len(keys))
+        with self._key_lock:
+            key = self._api_keys[self._key_index % len(self._api_keys)]
+            self._key_index += 1
+        return key
+
     def is_enabled(self) -> bool:
         if self._enabled is None:
             from src.config.settings import settings
-            self._enabled = settings.LLM_ENABLED and bool(settings.LLM_API_KEY)
+            has_keys = bool(settings.LLM_API_KEY) or bool(getattr(settings, "LLM_API_KEYS", ""))
+            self._enabled = settings.LLM_ENABLED and has_keys
         if not self._enabled:
             return False
         # Circuit breaker: block all callers until LLM recovers (no degraded mode)
@@ -405,8 +425,9 @@ class LLMExtractor:
 
         from src.config.settings import settings
         url = self._openai_url()
+        api_key = self._get_api_key()
         headers = {
-            "Authorization": f"Bearer {settings.LLM_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         messages = []
@@ -838,8 +859,9 @@ class LLMExtractor:
         if not settings.LLM_ENABLED:
             log.info("LLM disabled; skipping health check.")
             return True
-        if not settings.LLM_API_KEY:
-            log.error("LLM enabled but LLM_API_KEY is empty.")
+        has_keys = bool(settings.LLM_API_KEY) or bool(getattr(settings, "LLM_API_KEYS", ""))
+        if not has_keys:
+            log.error("LLM enabled but no API keys configured (LLM_API_KEY / LLM_API_KEYS).")
             return False
 
         # Use a dedicated short-timeout client for ping

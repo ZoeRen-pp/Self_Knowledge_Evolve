@@ -720,10 +720,11 @@ class OntologyQualityCalculator:
 
         # Step 4: Compare all pairs
         similar: list[dict] = []
+        idx_map = {nid: i for i, nid in enumerate(node_list)}
 
         for i, n1 in enumerate(node_list):
-            for n2 in node_list[i + 1:]:
-                j = node_list.index(n2)
+            for j in range(i + 1, len(node_list)):
+                n2 = node_list[j]
 
                 # Neighborhood Jaccard
                 nb1 = neighbors.get(n1, set()) - {n2}
@@ -771,21 +772,18 @@ class OntologyQualityCalculator:
             from src.utils.embedding import get_embeddings
             import numpy as np
             g = self._graph
-            # Get canonical names for node_ids
-            texts = []
-            for nid in node_ids:
-                rows = g.read(
-                    "MATCH (n {node_id: $nid}) RETURN n.canonical_name AS name",
-                    nid=nid,
-                )
-                name = rows[0]["name"] if rows else nid
-                texts.append((name or nid).lower())
+            rows = g.read(
+                "MATCH (n) WHERE n.node_id IN $ids RETURN n.node_id AS nid, n.canonical_name AS name",
+                ids=node_ids,
+            )
+            name_map = {r["nid"]: (r["name"] or r["nid"]).lower() for r in rows}
+            texts = [name_map.get(nid, nid.lower()) for nid in node_ids]
 
             vecs = get_embeddings(texts)
             if vecs is None:
                 return None
             emb = np.array(vecs)
-            return np.dot(emb, emb.T)  # pairwise cosine (already normalized)
+            return np.dot(emb, emb.T)
         except Exception as exc:
             log.debug("Node embedding computation failed: %s", exc)
             return None

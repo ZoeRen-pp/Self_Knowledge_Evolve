@@ -232,11 +232,24 @@ class StatsCollector:
         )
         no_alias = no_alias_rows[0]["cnt"] if no_alias_rows else 0
 
+        layer_counts = {}
+        layer_labels = {
+            "concept": "OntologyNode", "mechanism": "MechanismNode",
+            "method": "MethodNode", "condition": "ConditionRuleNode",
+            "scenario": "ScenarioPatternNode",
+        }
+        for layer, label in layer_labels.items():
+            rows = g.read(
+                f"MATCH (n:{label}) WHERE n.lifecycle_state='active' RETURN count(n) AS cnt"
+            )
+            layer_counts[layer] = rows[0]["cnt"] if rows else 0
+
         return {
             "max_inheritance_depth": max_depth,
             "avg_branch_factor": round(float(b.get("avg_branch") or 0), 2),
             "single_child_ratio": round((b.get("single_child", 0) or 0) / parent_count, 4),
             "no_alias_node_count": no_alias,
+            "layer_node_counts": layer_counts,
         }
 
     # ── Helpers ───────────────────────────────────────────────────
