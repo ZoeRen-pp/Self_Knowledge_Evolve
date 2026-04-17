@@ -58,7 +58,11 @@ src/ domain implementation                     ← telecom-specific providers, o
     ↑ wired by
 src/app_factory.py → build_app() → SemanticApp singleton
     ↑ serves
-src/app.py (FastAPI) → src/api/semantic/router.py → OperatorRegistry
+src/app.py (FastAPI)
+    ├─ src/api/query_router.py    → POST /api/v1/query (declarative query engine)
+    ├─ src/api/copilot_router.py  → POST /api/v1/copilot (natural language Q&A)
+    ├─ src/api/semantic/router.py → 21 semantic operators
+    └─ src/api/system/router.py   → monitoring, showcase (uses QueryEngine internally)
 ```
 
 `semcore` is not installed as a package — it's imported via `sys.path.insert(0, "semcore")` in run scripts, or `pip install -e semcore`.
@@ -107,7 +111,20 @@ Stage 5: Dedup     → SimHash + embedding semantic dedup (cosine > 0.90), fact 
                      ontology-driven conflict detection (D4 only fires for cardinality=one predicates)
 Stage 6: Index     → confidence gate (segment ≥ 0.5, fact ≥ 0.5), Neo4j ingestion, vector index
 ```
-To feed the pipeline: insert a `documents` row with `status='raw'` and upload the file to MinIO `raw/`. The worker polls automatically. Worker auto-seeds 60+ authoritative URLs across 10 sites (RFC Editor, Huawei, Juniper, Arista, FRRouting, NetworkLessons, Cloudflare, PacketLife, ipSpace, Noction). LLM is a hard dependency — pipeline blocks until LLM is reachable.
+To feed the pipeline: insert a `documents` row with `status='raw'` and upload the file to MinIO `raw/`. The worker polls automatically with continuous-feed: each worker grabs a new doc immediately on completion, never blocked by slow documents on other workers. Worker auto-seeds 60+ authoritative URLs across 10 sites. LLM is a hard dependency — pipeline blocks until LLM is reachable.
+
+### Declarative Query Engine (`POST /api/v1/query`)
+5 algebraic primitives over a heterogeneous information network (Neo4j graph + PostgreSQL relations):
+- `seed`: initialize result set (by id/alias/layer/embedding/attribute)
+- `expand`: graph traversal (ontology edges + reserved: `tagged_in`, `rst_adjacent`, `evidenced_by`)
+- `combine`: set operations (union/intersect/subtract)
+- `aggregate`: count/rank/group/score/rerank (keyword relevance + optional cross-encoder)
+- `project`: field projection
+
+Planner auto-detects variable dependencies (`from`, `input`, `sets` fields) and groups steps into parallel execution waves. Total query timeout: 30s.
+
+### Knowledge Copilot (`POST /api/v1/copilot`)
+Natural language Q&A: question → ontology term extraction (alias matching) → build query plan → execute via QueryEngine → LLM synthesizes answer from retrieved facts + segments. Falls back to structured result listing when LLM is unavailable.
 
 ### 21 Semantic Operators (REST `/api/v1/semantic/`)
 `lookup`, `resolve`, `expand`, `path`, `dependency_closure`, `impact_propagate`, `filter`, `evidence_rank`, `conflict_detect`, `fact_merge`, `candidate_discover`, `attach_score`, `evolution_gate`, `context_assemble`, `semantic_search`, `ontology_quality`, `stale_knowledge`, `cross_layer_check`, `graph_inspect`, `ontology_inspect`, `edu_search`
@@ -163,8 +180,9 @@ Relations: 77 types in `ontology/top/relations.yaml` (with optional `cardinality
 ## Design Docs
 
 All architecture decisions are documented before implementation. Key references:
-- `docs/architecture-design-20260406.md` — system architecture design (latest)
-- `docs/development-spec-20260406.md` — full development specification (latest)
+- `docs/architecture-design-20260406.md` — system architecture design
+- `docs/development-spec-20260406.md` — full development specification
+- `docs/query-engine-design-20260417.md` — declarative query engine design (5 algebraic primitives)
 - `docs/product-architecture-4plus1-20260413.md` — 4+1 product architecture view
 - `docs/candidate-dedup-design.md` — candidate deduplication design
 - `docs/embedding-enhancements-design.md` — embedding enhancement design

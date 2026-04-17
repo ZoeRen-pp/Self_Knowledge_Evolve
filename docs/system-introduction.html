@@ -616,11 +616,15 @@
   <a class="nav-link" href="#confidence">置信度公式</a>
   <a class="nav-link" href="#governance">候选词治理</a>
 
+  <div class="nav-section">查询与交互</div>
+  <a class="nav-link" href="#query-engine">声明式查询引擎</a>
+  <a class="nav-link" href="#copilot">Knowledge Copilot</a>
+  <a class="nav-link" href="#operators">21 个语义算子</a>
+
   <div class="nav-section">技术实现</div>
   <a class="nav-link" href="#llm">LLM 集成设计</a>
   <a class="nav-link" href="#embedding">Embedding 架构</a>
   <a class="nav-link" href="#worker">Worker 进程模型</a>
-  <a class="nav-link" href="#operators">21 个语义算子</a>
   <a class="nav-link" href="#semcore">semcore 框架</a>
 </nav>
 
@@ -643,6 +647,8 @@
       <span class="tag">5 层本体模型</span>
       <span class="tag">7 阶段 Pipeline</span>
       <span class="tag">置信度评分</span>
+      <span class="tag">声明式查询引擎</span>
+      <span class="tag">Knowledge Copilot</span>
     </div>
   </div>
 
@@ -742,7 +748,7 @@
   <section class="section" id="arch">
     <div class="section-header">
       <div class="section-num">3</div>
-      <div class="section-title">六层架构</div>
+      <div class="section-title">七层架构</div>
     </div>
 
     <div style="overflow-x:auto;margin:20px 0;">
@@ -1505,10 +1511,60 @@ maintenance_thread 读  evolution_candidates 并归类</pre>
     <p><strong>为什么使用 threading 而不是 asyncio 或 multiprocessing：</strong>Pipeline 处理的瓶颈是 I/O（LLM API 调用 5–30 秒、MinIO 读写、Neo4j 查询），不是 CPU。Python GIL 对 I/O 密集型线程没有实质限制。asyncio 需要改写成响应式风格，且 psycopg2 不天然支持；multiprocessing 进程间通信 overhead 更大，不必要。</p>
   </section>
 
-  <!-- ── Section 14: Operators ── -->
-  <section class="section" id="operators">
+  <!-- ── Section 14: Query Engine ── -->
+  <section class="section" id="query-engine">
     <div class="section-header">
       <div class="section-num">14</div>
+      <div class="section-title">声明式查询引擎</div>
+    </div>
+
+    <p><code>POST /api/v1/query</code> — 客户端提交 JSON 查询计划，引擎自动验证、依赖分析、分波并行执行。5 种代数原语覆盖异构信息网络（Neo4j 图 + PostgreSQL 关系表）上的所有查询模式。</p>
+
+    <h3>5 种代数原语</h3>
+    <table>
+      <thead><tr><th>原语</th><th>对应代数</th><th>功能</th></tr></thead>
+      <tbody>
+        <tr><td><code>seed</code></td><td>&sigma; (Selection)</td><td>从 ID/别名/层/Embedding/属性初始化结果集</td></tr>
+        <tr><td><code>expand</code></td><td>&bowtie;+TC</td><td>图遍历（本体关系 + 保留边 tagged_in/rst_adjacent/evidenced_by）</td></tr>
+        <tr><td><code>combine</code></td><td>&cup;&cap;&minus;</td><td>并集/交集/差集</td></tr>
+        <tr><td><code>aggregate</code></td><td>&gamma;</td><td>count/rank/group/score/rerank（关键词相关性 + 可选 cross-encoder）</td></tr>
+        <tr><td><code>project</code></td><td>&pi;</td><td>字段投影</td></tr>
+      </tbody>
+    </table>
+
+    <h3>执行模型</h3>
+    <p>QueryPlanner 分析步骤间的变量依赖（<code>from</code>、<code>input</code>、<code>sets</code> 字段），拓扑排序后分组为并行执行波（wave）。同一波内的步骤并发执行，波间串行。总查询超时 30 秒。</p>
+
+    <h3>Rerank 排序</h3>
+    <p>Phase 4a 特征评分（source_rank 0.15 + confidence 0.15 + anchor_coverage 0.15 + rst_coherence 0.10 + freshness 0.10 + <strong>关键词命中率 0.35</strong>）；Phase 4b 可选 cross-encoder（bge-reranker-v2，HTTP 服务 :8002）；Phase 4c 可选 token budget 截断。</p>
+
+    <h3>Dashboard 集成</h3>
+    <p>知识探索页的快速体验（doSearch）和 5 个深度案例（showcase）均已改为通过查询引擎执行，不再使用手写 SQL/Cypher。</p>
+  </section>
+
+  <!-- ── Section 14b: Copilot ── -->
+  <section class="section" id="copilot">
+    <div class="section-header">
+      <div class="section-num">14b</div>
+      <div class="section-title">Knowledge Copilot</div>
+    </div>
+
+    <p><code>POST /api/v1/copilot</code> — 自然语言知识问答。用户输入问题，系统自动检索语义知识基础设施并组织回答。</p>
+
+    <h3>处理流程</h3>
+    <p>用户问题 &rarr; 本体术语提取（alias 匹配） &rarr; 构建查询计划（seed &rarr; expand &rarr; tagged_in &rarr; rerank） &rarr; 查询引擎执行 &rarr; 收集 facts 三元组 + source segments &rarr; LLM 基于检索知识生成自然语言回答。</p>
+
+    <h3>LLM 集成</h3>
+    <p>当前使用 qwen-plus（通义千问，DashScope API）。LLM 不可用时退化为结构化结果展示（facts 列表 + segments 列表），不报错。</p>
+
+    <h3>Dashboard 入口</h3>
+    <p>Dashboard 新增 Copilot tab，对话框界面，带预置问题快捷入口，支持多轮对话。每条回答附带查询计划（可折叠查看）和耗时统计。</p>
+  </section>
+
+  <!-- ── Section 15: Operators ── -->
+  <section class="section" id="operators">
+    <div class="section-header">
+      <div class="section-num">15</div>
       <div class="section-title">21 个语义算子</div>
     </div>
 

@@ -55,11 +55,20 @@ Self_Knowledge_Evolve/
 │   │   │   ├── context_assemble.py← context_assemble 业务逻辑
 │   │   │   ├── ontology_quality.py← ontology_quality 业务逻辑
 │   │   │   └── stale_knowledge.py ← stale_knowledge 业务逻辑
-│   │   └── system/
-│   │       ├── router.py          ← 系统管理端点注册
-│   │       ├── stats.py           ← 监控快照端点
-│   │       ├── review.py          ← 候选词审核（approve/reject/merge/check_synonyms）
-│   │       └── drilldown.py       ← 质量指标钻取
+│   │   ├── system/
+│   │   │   ├── router.py          ← 系统管理端点注册 + showcase（内部调用 QueryEngine）
+│   │   │   ├── review.py          ← 候选词审核（approve/reject/merge/check_synonyms）
+│   │   │   └── drilldown.py       ← 质量指标钻取
+│   │   ├── query_router.py        ← POST /api/v1/query（声明式查询引擎入口）
+│   │   └── copilot_router.py      ← POST /api/v1/copilot（自然语言知识问答）
+│   │
+│   ├── query/                     ← 声明式查询引擎
+│   │   ├── types.py               ← NodeRef, ResultSet, WorkingMemory, StepTrace, 常量
+│   │   ├── engine.py              ← QueryEngine（分波执行、超时控制、结果序列化）
+│   │   ├── planner.py             ← QueryPlanner（变量依赖分析→拓扑排序→执行波）
+│   │   ├── validator.py           ← QueryValidator（静态验证：op/variable/edge/depth）
+│   │   ├── executors.py           ← 5 执行器：Seed/Expand/Combine/Aggregate/Project
+│   │   └── reranker.py            ← HTTP cross-encoder reranker 客户端
 │   │
 │   ├── pipeline/
 │   │   ├── pipeline_factory.py    ← 组装 7 阶段 Pipeline
