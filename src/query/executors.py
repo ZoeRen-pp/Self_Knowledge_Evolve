@@ -34,9 +34,10 @@ SOURCE_RANK_SCORES = {"S": 1.0, "A": 0.85, "B": 0.65, "C": 0.40}
 def _node_ref_from_neo4j(row: dict, key: str = "m") -> NodeRef | None:
     """Extract a NodeRef from a Neo4j result row."""
     props = row.get(key)
-    if isinstance(props, dict):
-        nid = props.get("node_id") or props.get("id", "")
-        return NodeRef(node_id=nid, node_type="node", properties=dict(props))
+    if props is not None and hasattr(props, "get"):
+        p = dict(props)
+        nid = p.get("node_id") or p.get("id", "")
+        return NodeRef(node_id=nid, node_type="node", properties=p)
     nid = row.get("node_id") or row.get("id", "")
     if nid:
         return NodeRef(node_id=str(nid), node_type="node", properties=dict(row))
@@ -64,8 +65,9 @@ def _dedup_nodes(nodes: list[NodeRef]) -> list[NodeRef]:
     return result
 
 
-def _placeholders(n: int) -> str:
-    return ", ".join(["%s"] * n)
+def _placeholders(n: int, cast: str = "") -> str:
+    ph = f"%s{cast}" if cast else "%s"
+    return ", ".join([ph] * n)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -114,14 +116,16 @@ class SeedExecutor:
     def _seed_segments_by_id(self, ids: list[str], app: SemanticApp) -> list[NodeRef]:
         if not ids:
             return []
-        sql = f"SELECT * FROM segments WHERE segment_id IN ({_placeholders(len(ids))}) AND lifecycle_state = 'active'"
+        ph = ",".join("%s::uuid" for _ in ids)
+        sql = f"SELECT * FROM segments WHERE segment_id IN ({ph}) AND lifecycle_state = 'active'"
         rows = app.store.fetchall(sql, tuple(ids))
         return [_segment_ref(r) for r in rows]
 
     def _seed_facts_by_id(self, ids: list[str], app: SemanticApp) -> list[NodeRef]:
         if not ids:
             return []
-        sql = f"SELECT * FROM facts WHERE fact_id IN ({_placeholders(len(ids))}) AND lifecycle_state = 'active'"
+        ph = ",".join("%s::uuid" for _ in ids)
+        sql = f"SELECT * FROM facts WHERE fact_id IN ({ph}) AND lifecycle_state = 'active'"
         rows = app.store.fetchall(sql, tuple(ids))
         return [_fact_ref(r) for r in rows]
 
@@ -322,7 +326,7 @@ class ExpandExecutor:
         app: SemanticApp,
     ) -> list[NodeRef]:
         max_depth = MAX_TRAVERSE_NODES if depth == "unlimited" else depth
-        rels = "|".join(rel_types)
+        rels = "|".join(r.upper() for r in rel_types)
 
         if direction == "outbound":
             pattern = f"(n)-[r:{rels}]->(m)"
@@ -407,7 +411,7 @@ class ExpandExecutor:
     def _expand_rst_adjacent(self, segment_ids: list[str], app: SemanticApp) -> list[NodeRef]:
         if not segment_ids:
             return []
-        ph = _placeholders(len(segment_ids))
+        ph = _placeholders(len(segment_ids), "::uuid")
         sql = f"""
             SELECT DISTINCT
                 CASE WHEN r.src_edu_id IN ({ph}) THEN r.dst_edu_id ELSE r.src_edu_id END AS segment_id,
@@ -431,15 +435,20 @@ class ExpandExecutor:
     def _expand_evidenced_by(self, fact_ids: list[str], app: SemanticApp) -> list[NodeRef]:
         if not fact_ids:
             return []
-        ph = _placeholders(len(fact_ids))
+        ph = _placeholders(len(fact_ids), "::uuid")
+        # DISTINCT ON (s.segment_id): one segment may support multiple facts,
+        # so without dedup the same segment would appear once per fact_id.
+        # Keep the evidence row with the highest score for each segment.
         sql = f"""
-            SELECT s.segment_id, s.raw_text, s.normalized_text, s.segment_type,
+            SELECT DISTINCT ON (s.segment_id)
+                   s.segment_id, s.raw_text, s.normalized_text, s.segment_type,
                    s.token_count, s.confidence, s.source_doc_id,
                    e.fact_id, e.evidence_score, e.extraction_method
             FROM evidence e
             JOIN segments s ON e.segment_id = s.segment_id
             WHERE e.fact_id IN ({ph})
               AND s.lifecycle_state = 'active'
+            ORDER BY s.segment_id, e.evidence_score DESC
         """
         rows = app.store.fetchall(sql, tuple(fact_ids))
         return [_segment_ref(r) for r in rows]
@@ -575,8 +584,8 @@ class AggregateExecutor:
         budget = step.get("budget")
         limit = step.get("limit", 30)
 
-        # Phase 4a: feature scoring
-        self._phase_4a_score(source.nodes, signals, wm)
+        # Phase 4a: feature scoring + keyword relevance
+        self._phase_4a_score(source.nodes, signals, wm, query_text)
         scored = sorted(source.nodes, key=lambda n: n.properties.get("_feature_score", 0), reverse=True)
 
         # Phase 4b: cross-encoder
@@ -594,14 +603,15 @@ class AggregateExecutor:
 
         return ResultSet(nodes=scored)
 
-    def _phase_4a_score(self, nodes: list[NodeRef], signals: list[str], wm: WorkingMemory) -> None:
+    def _phase_4a_score(self, nodes: list[NodeRef], signals: list[str], wm: WorkingMemory, query_text: str = "") -> None:
         weights = {
-            "source_rank": 0.25,
-            "confidence": 0.20,
-            "anchor_coverage": 0.25,
-            "rst_coherence": 0.15,
-            "freshness": 0.15,
+            "source_rank": 0.15,
+            "confidence": 0.15,
+            "anchor_coverage": 0.15,
+            "rst_coherence": 0.10,
+            "freshness": 0.10,
         }
+        query_terms = [t.lower() for t in query_text.split() if len(t) >= 2] if query_text else []
         for n in nodes:
             score = 0.0
             for sig in signals:
@@ -612,7 +622,12 @@ class AggregateExecutor:
                 else:
                     val = float(n.properties.get(sig, 0) or 0)
                 score += w * val
-            n.properties["_feature_score"] = score
+            if query_terms:
+                text = (n.properties.get("raw_text") or n.properties.get("normalized_text") or "").lower()
+                hits = sum(1 for t in query_terms if t in text)
+                keyword_score = min(hits / max(len(query_terms), 1), 1.0)
+                score += 0.35 * keyword_score
+            n.properties["_feature_score"] = round(score, 4)
 
     def _phase_4b_cross_encoder(self, nodes: list[NodeRef], query: str) -> None:
         from src.query.reranker import rerank_pairs

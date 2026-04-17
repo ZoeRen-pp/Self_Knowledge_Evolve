@@ -43,9 +43,10 @@ class QueryPlanner:
 
     def _extract_refs(self, step: dict[str, Any]) -> list[str]:
         refs: list[str] = []
-        from_var = step.get("from")
-        if isinstance(from_var, str) and from_var.startswith("$"):
-            refs.append(from_var)
+        for key in ("from", "input"):
+            val = step.get(key)
+            if isinstance(val, str) and val.startswith("$"):
+                refs.append(val)
         sets_val = step.get("sets")
         if isinstance(sets_val, list):
             for s in sets_val:

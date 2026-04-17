@@ -144,6 +144,7 @@ table.data tr:hover { background: #1e2130; }
   <div class="tab" onclick="switchTab('quality')">质量评估</div>
   <div class="tab" onclick="switchTab('evolution')">知识演化</div>
   <div class="tab" onclick="switchTab('monitoring')">运行监控</div>
+  <div class="tab" onclick="switchTab('copilot')">Copilot</div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -310,6 +311,26 @@ table.data tr:hover { background: #1e2130; }
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- Tab 6: Copilot -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<div id="tab-copilot" class="tab-content">
+  <div class="panel" style="border-left:4px solid #7c4dff;">
+    <h3>Knowledge Copilot</h3>
+    <div class="desc">输入自然语言问题，系统从语义知识基础设施中检索并组织答案</div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <input id="copilot-input" style="flex:1;background:#1a1d23;border:1px solid #333;color:#e0e0e0;padding:10px 14px;border-radius:6px;font-size:0.9rem;" placeholder="例：BGP路由反射器的工作原理是什么？" onkeydown="if(event.key==='Enter')askCopilot()">
+      <button class="btn btn-primary" onclick="askCopilot()" style="background:#7c4dff;white-space:nowrap;">提问</button>
+    </div>
+    <div style="margin-top:8px;font-size:0.75rem;color:#555;">
+      试试：<span style="color:#7c4dff;cursor:pointer;" onclick="document.getElementById('copilot-input').value='OSPF邻居建立的前置条件有哪些？';askCopilot()">OSPF邻居建立的前置条件</span>
+      &nbsp;|&nbsp; <span style="color:#7c4dff;cursor:pointer;" onclick="document.getElementById('copilot-input').value='VXLAN和EVPN是什么关系？';askCopilot()">VXLAN和EVPN的关系</span>
+      &nbsp;|&nbsp; <span style="color:#7c4dff;cursor:pointer;" onclick="document.getElementById('copilot-input').value='BGP和IGP如何配合工作？';askCopilot()">BGP和IGP如何配合</span>
+    </div>
+  </div>
+  <div id="copilot-chat" style="margin-top:12px;"></div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
 <!-- Modal -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <div class="modal" id="modal">
@@ -326,6 +347,7 @@ table.data tr:hover { background: #1e2130; }
 <script>
 const API = '/api/v1/system';
 const SEM = '/api/v1/semantic';
+const QE  = '/api/v1/query';
 let sourceChart, trendChart, radarChart, candDistChart;
 
 /* ── Tabs ── */
@@ -430,101 +452,80 @@ async function doSearch() {
   container.innerHTML = '<p class="loading">搜索中...</p>';
 
   try {
-    // Lookup
-    const lookupRes = await fetch(`${SEM}/lookup?term=${encodeURIComponent(term)}`);
-    const lookupData = await lookupRes.json();
-    const result = lookupData.result || lookupData;
-    const node = result.matched_node || result.node || {};
-    const nodeId = node.node_id || result.node_id;
+    const plan = {
+      name: `search-${term}`,
+      intent: term,
+      steps: [
+        {op:'seed', by:'alias', target:'node', value:term, as:'$node'},
+        {op:'expand', from:'$node', any_of:['depends_on','configured_by','contains','explains','composed_of'], direction:'both', depth:2, as:'$graph'},
+        {op:'combine', method:'union', sets:['$node','$graph'], as:'$all_nodes'},
+        {op:'expand', from:'$all_nodes', any_of:['tagged_in'], direction:'outbound', as:'$segments'},
+        {op:'aggregate', function:'rerank', from:'$segments', query:term, limit:10, as:'$ranked_segs'},
+        {op:'project', from:'$ranked_segs', fields:['node_id','raw_text','segment_type','section_title','token_count','confidence','source_doc_id','matched_node','_feature_score'], as:'$segs_out'},
+      ]
+    };
+    const res = await fetch(QE, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(plan)});
+    const d = await res.json();
 
-    let html = '';
+    if (d.error) { container.innerHTML = `<div class="panel"><p style="color:#f44336">${d.error}: ${(d.details||[]).join(', ')}</p></div>`; return; }
 
-    // Node info
-    if (nodeId) {
+    const meta = d.meta || {};
+    const result = d.result || {};
+    const nodeArr = result.$node || [];
+    const node = Array.isArray(nodeArr) && nodeArr.length ? nodeArr[0] : null;
+    const graphNodes = Array.isArray(result.$graph) ? result.$graph : [];
+    const segments = Array.isArray(result.$segs_out) ? result.$segs_out : [];
+
+    let html = `<div style="font-size:0.72rem;color:#555;margin-bottom:8px;">查询引擎 ${meta.steps_executed||0} 步完成，耗时 ${(meta.latency_ms||0).toFixed(1)}ms</div>`;
+
+    if (node) {
+      const p = node.properties || node;
       html += `<div class="panel">
-        <h3>本体节点: ${node.canonical_name || nodeId}</h3>
-        <div class="desc">${node.description || '暂无描述'}</div>
+        <h3>本体节点: ${p.canonical_name || node.node_id}</h3>
+        <div class="desc">${p.description || '暂无描述'}</div>
         <div style="font-size:0.8rem;">
-          <strong>节点ID:</strong> ${nodeId} &nbsp;
-          <strong>知识层:</strong> ${node.knowledge_layer || 'concept'} &nbsp;
-          <strong>生命周期:</strong> ${node.lifecycle_state || '?'}
+          <strong>节点ID:</strong> ${node.node_id} &nbsp;
+          <strong>知识层:</strong> ${p.layer || p.knowledge_layer || 'concept'} &nbsp;
+          <strong>域:</strong> ${p.domain || ''}
         </div>
-        ${(result.aliases||[]).length ? `<div style="font-size:0.8rem;margin-top:4px;"><strong>别名:</strong> ${result.aliases.map(a=>typeof a==='string'?a:a.surface_form||a).join(', ')}</div>` : ''}
       </div>`;
 
-      // Context assemble for rich data
-      try {
-        const ctxRes = await fetch(`${SEM}/context_assemble`, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({node_ids: [nodeId], max_segments: 5, max_hops: 2}),
-        });
-        const ctxData = await ctxRes.json();
-        const ctx = ctxData.result || ctxData;
-
-        // Facts
-        const facts = ctx.facts || [];
-        if (facts.length) {
-          html += `<div class="panel"><h3>知识条目 (${facts.length})</h3>
-            <div class="desc">从文档中抽取的结构化三元组（主语、谓语、宾语），每条附带置信度评分</div>`;
-          html += facts.slice(0, 20).map(f =>
-            `<div class="fact-row">
-              <span class="fact-s">${f.subject||''}</span>
-              <span class="fact-p">${f.predicate||''}</span>
-              <span class="fact-o">${f.object||''}</span>
-              <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span>
-            </div>`
-          ).join('');
-          if (facts.length > 20) html += `<div style="color:#666;font-size:0.75rem;margin-top:4px;">... and ${facts.length-20} more</div>`;
-          html += '</div>';
+      // Graph neighbors
+      if (graphNodes.length) {
+        const layerColors = {concept:'#4fc3f7',mechanism:'#ff9800',method:'#81c784',condition:'#ce93d8',scenario:'#f44336'};
+        html += `<div class="panel"><h3>关联节点 (${graphNodes.length})</h3>
+          <div class="desc">通过本体图谱关系发现的关联概念、机制、方法、条件、场景</div>`;
+        for (const gn of graphNodes.slice(0, 30)) {
+          const gp = gn.properties || gn;
+          const layer = gp.knowledge_layer || gp.layer || 'concept';
+          const lcolor = layerColors[layer] || '#aaa';
+          const hop = gp._hop || '';
+          html += `<div style="padding:3px 0 3px 8px;font-size:0.82rem;">
+            <span style="color:${lcolor};font-weight:600;">[${layer}]</span>
+            <span style="color:#e0e0e0;">${gp.canonical_name || gn.node_id}</span>
+            ${gp._rel_type ? `<span style="color:#666;font-size:0.72rem;margin-left:6px;">${gp._rel_type}</span>` : ''}
+            ${hop ? `<span style="color:#444;font-size:0.72rem;margin-left:4px;">hop=${hop}</span>` : ''}
+          </div>`;
         }
-
-        // Reasoning chain
-        const chain = ctx.reasoning_chain || [];
-        if (chain.length) {
-          html += `<div class="panel"><h3>五层推理链</h3>
-            <div class="desc">概念 &rarr; 机制 &rarr; 方法 &rarr; 条件 &rarr; 场景</div>`;
-          const layerNames = {concept:'可配置对象',mechanism:'协议机制',method:'操作方法',condition:'适用条件',scenario:'业务场景'};
-          const layerColors = {concept:'#4fc3f7',mechanism:'#ff9800',method:'#81c784',condition:'#ce93d8',scenario:'#f44336'};
-          for (const item of chain) {
-            const seed = item.seed || '';
-            html += `<div style="padding:4px 0;font-size:0.85rem;font-weight:600;color:#4fc3f7;border-bottom:1px solid #252830;margin-bottom:6px;">
-              [概念] ${seed}</div>`;
-            const layers = item.layers || {};
-            for (const [layerKey, nodes] of Object.entries(layers)) {
-              if (!nodes || !nodes.length) continue;
-              const lname = layerNames[layerKey] || layerKey;
-              const lcolor = layerColors[layerKey] || '#aaa';
-              for (const n of nodes) {
-                html += `<div style="padding:3px 0 3px 16px;font-size:0.82rem;">
-                  <span style="color:${lcolor};font-weight:600;">[${lname}]</span>
-                  <span style="color:#e0e0e0;">${n.name||n.node_id||''}</span>
-                  <span style="color:#666;font-size:0.72rem;margin-left:6px;">${n.relation||''}</span>
-                  ${n.description ? `<div style="color:#555;font-size:0.72rem;padding-left:16px;margin-top:2px;">${n.description.substring(0,120)}</div>` : ''}
-                </div>`;
-              }
-            }
-          }
-          html += '</div>';
-        }
-
-        // Source segments
-        const segs = ctx.segments || [];
-        if (segs.length) {
-          html += `<div class="panel"><h3>来源文本段落 (${segs.length})</h3>
-            <div class="desc">知识被抽取的原始文本片段，可追溯至具体文档</div>`;
-          html += segs.slice(0, 5).map(s =>
-            `<div class="segment-box">
-              <div class="seg-meta">[${s.segment_type||'?'}] ${s.section_title||''} <span style="color:#444">tokens=${s.token_count||'?'}</span></div>
-              <div class="seg-text">${(s.raw_text||'').substring(0,600)}${(s.raw_text||'').length>600?'...':''}</div>
-            </div>`
-          ).join('');
-          html += '</div>';
-        }
-      } catch(e) {
-        html += `<div class="panel"><p style="color:#666">上下文组装不可用: ${e.message}</p></div>`;
+        html += '</div>';
       }
     } else {
       html += `<div class="panel"><p class="empty">术语 "${term}" 未在本体中找到。它可能作为候选词存在于待审核池中。</p></div>`;
+    }
+
+    // Source segments
+    if (segments.length) {
+      html += `<div class="panel"><h3>相关文本段落 (${segments.length})</h3>
+        <div class="desc">经过相关性排序的知识片段，可追溯至具体文档</div>`;
+      html += segments.map(s => {
+        const sp = s.properties || s;
+        const text = sp.raw_text || '';
+        return `<div class="segment-box">
+          <div class="seg-meta">[${sp.segment_type||'?'}] ${sp.section_title||''} <span style="color:#444">tokens=${sp.token_count||'?'} score=${(sp._feature_score||0).toFixed(2)}</span></div>
+          <div class="seg-text">${text.substring(0,600)}${text.length>600?'...':''}</div>
+        </div>`;
+      }).join('');
+      html += '</div>';
     }
 
     container.innerHTML = html;
@@ -556,8 +557,6 @@ function renderShowcase(d) {
   </div>`;
 
   if (d.case === 'fault_impact') {
-    html += `<div class="panel"><h3>受影响的节点 (${(d.affected_nodes||[]).length})</h3>` +
-      tableHtml(d.affected_nodes||[], ['name','layer','relation','predicate']) + '</div>';
     html += `<div class="panel"><h3>相关知识条目 (${(d.related_facts||[]).length})</h3>` +
       (d.related_facts||[]).map(f =>
         `<div class="fact-row"><span class="fact-s">${f.subject}</span>
@@ -565,7 +564,7 @@ function renderShowcase(d) {
          <span class="fact-o">${f.object}</span>
          <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span></div>`
       ).join('') + '</div>';
-    html += renderSegments(d.source_segments, '原文证据 — 排障/故障相关文本');
+    html += renderSegments(d.source_segments, '原文证据');
   }
 
   else if (d.case === 'multi_source') {
@@ -604,11 +603,17 @@ function renderShowcase(d) {
   }
 
   else if (d.case === 'dependency_closure') {
-    html += `<div class="panel"><h3>${d.target.name} 依赖什么 (${(d.depends_on||[]).length})</h3>` +
-      tableHtml(d.depends_on||[], ['node_id','name','hops','path_types']) + '</div>';
-    html += `<div class="panel"><h3>谁依赖 ${d.target.name} (${(d.depended_by||[]).length})</h3>` +
-      tableHtml(d.depended_by||[], ['node_id','name','layer','hops']) + '</div>';
-    html += renderSegments(d.source_segments, '原文证据 — 依赖关系相关文本');
+    const facts = d.related_facts || [];
+    if (facts.length) {
+      html += `<div class="panel"><h3>相关知识条目 (${facts.length})</h3>` +
+        facts.map(f =>
+          `<div class="fact-row"><span class="fact-s">${f.subject}</span>
+           <span class="fact-p">${f.predicate}</span>
+           <span class="fact-o">${f.object}</span>
+           <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span></div>`
+        ).join('') + '</div>';
+    }
+    html += renderSegments(d.source_segments, '原文证据');
   }
 
   else if (d.case === 'cross_layer_reasoning') {
@@ -1149,6 +1154,89 @@ async function loadHistory() {
       {label:'文档数',data:docs,borderColor:'#4caf50',tension:0.3,pointRadius:1},
     ]}, options:{responsive:true,scales:{x:{ticks:{color:'#666'}},y:{ticks:{color:'#666'}}},plugins:{legend:{labels:{color:'#aaa'}}}} });
   } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Tab 6: Copilot                                                         */
+/* ════════════════════════════════════════════════════════════════════════ */
+async function askCopilot() {
+  const input = document.getElementById('copilot-input');
+  const question = input.value.trim();
+  if (!question) return;
+  const chat = document.getElementById('copilot-chat');
+
+  // Append user message
+  chat.innerHTML += `<div class="panel" style="border-left:3px solid #7c4dff;margin-bottom:8px;">
+    <div style="font-size:0.75rem;color:#7c4dff;font-weight:600;">You</div>
+    <div style="color:#e0e0e0;margin-top:4px;">${question}</div>
+  </div>`;
+  input.value = '';
+  chat.innerHTML += `<div id="copilot-loading" class="panel" style="border-left:3px solid #4caf50;margin-bottom:8px;">
+    <div style="font-size:0.75rem;color:#4caf50;font-weight:600;">Knowledge Copilot</div>
+    <p class="loading">思考中...</p>
+  </div>`;
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    const res = await fetch('/api/v1/copilot', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question}),
+    });
+    const d = await res.json();
+    const loading = document.getElementById('copilot-loading');
+    if (loading) loading.remove();
+
+    let html = `<div class="panel" style="border-left:3px solid #4caf50;margin-bottom:8px;">
+      <div style="font-size:0.75rem;color:#4caf50;font-weight:600;">Knowledge Copilot</div>`;
+
+    if (d.error) {
+      html += `<div style="color:#f44336;margin-top:6px;">${d.error}</div>`;
+    } else {
+      // Answer summary
+      if (d.answer) {
+        html += `<div style="color:#e0e0e0;margin-top:6px;line-height:1.6;white-space:pre-wrap;">${d.answer}</div>`;
+      }
+      // Facts
+      const facts = d.facts || [];
+      if (facts.length) {
+        html += `<div style="margin-top:10px;font-size:0.8rem;color:#888;font-weight:600;">知识条目 (${facts.length})</div>`;
+        html += facts.slice(0, 10).map(f =>
+          `<div class="fact-row"><span class="fact-s">${f.subject||''}</span>
+           <span class="fact-p">${f.predicate||''}</span>
+           <span class="fact-o">${f.object||''}</span>
+           <span class="fact-conf">conf=${(f.confidence||0).toFixed(2)}</span></div>`
+        ).join('');
+      }
+      // Segments
+      const segs = d.segments || [];
+      if (segs.length) {
+        html += `<div style="margin-top:10px;font-size:0.8rem;color:#888;font-weight:600;">原文证据 (${segs.length})</div>`;
+        html += segs.slice(0, 5).map(s =>
+          `<div class="segment-box">
+            <div class="seg-meta">[${s.segment_type||'?'}] ${s.section_title||''}</div>
+            <div class="seg-text">${(s.raw_text||'').substring(0,500)}${(s.raw_text||'').length>500?'...':''}</div>
+          </div>`
+        ).join('');
+      }
+      // Query plan (collapsible)
+      if (d.query_plan) {
+        html += `<details style="margin-top:10px;"><summary style="font-size:0.75rem;color:#555;cursor:pointer;">查询计划</summary>
+          <pre style="font-size:0.7rem;color:#666;background:#1a1d23;padding:8px;border-radius:4px;overflow-x:auto;margin-top:4px;">${JSON.stringify(d.query_plan, null, 2)}</pre>
+        </details>`;
+      }
+      if (d.latency_ms) {
+        html += `<div style="font-size:0.7rem;color:#444;margin-top:6px;">耗时 ${d.latency_ms.toFixed(0)}ms</div>`;
+      }
+    }
+    html += '</div>';
+    chat.innerHTML += html;
+  } catch(e) {
+    const loading = document.getElementById('copilot-loading');
+    if (loading) loading.remove();
+    chat.innerHTML += `<div class="panel" style="border-left:3px solid #f44336;margin-bottom:8px;">
+      <div style="color:#f44336;">Error: ${e.message}</div></div>`;
+  }
+  chat.scrollTop = chat.scrollHeight;
 }
 
 /* ── Init ── */

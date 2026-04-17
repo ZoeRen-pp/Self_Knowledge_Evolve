@@ -450,21 +450,24 @@ def _crawler_thread(app, stop_event: threading.Event) -> None:
 def _pipeline_thread(app, stop_event: threading.Event) -> None:
     """Continuously process raw documents through the pipeline.
 
-    Uses a thread pool to process multiple documents in parallel.
+    Uses a long-lived thread pool with continuous feed: each worker grabs a
+    new document as soon as it finishes the previous one. A slow document on
+    one worker never blocks the others.
+
     LLM availability is a hard requirement: if LLM cannot be reached the
     thread pauses and retries every 2 minutes until it recovers.
     """
     thread_name = "pipeline"
-    log.info("[%s] Thread started (workers=%d)", thread_name,
-             settings.WORKER_PIPELINE_WORKERS)
+    max_workers = settings.WORKER_PIPELINE_WORKERS
+    log.info("[%s] Thread started (workers=%d)", thread_name, max_workers)
 
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor, Future, FIRST_COMPLETED, wait
     from src.utils.llm_extract import LLMExtractor
 
-    _LLM_RETRY_SECS = 120  # pause duration when LLM is down
+    _LLM_RETRY_SECS = 120
+    _POLL_SECS = settings.WORKER_SLEEP_SECS * 2
 
     def _process_one(doc_id: str) -> tuple[str, int, str | None]:
-        """Process a single document. Returns (doc_id, error_count, error_msg)."""
         ctx = PipelineContext(source_doc_id=doc_id)
         try:
             app.ingest_context(ctx)
@@ -472,69 +475,85 @@ def _pipeline_thread(app, stop_event: threading.Event) -> None:
         except Exception as exc:
             return (doc_id, -1, str(exc))
 
+    def _fetch_raw_ids(limit: int) -> list[str]:
+        rows = app.store.fetchall(
+            """SELECT source_doc_id FROM documents
+               WHERE status = 'raw'
+               ORDER BY created_at ASC
+               LIMIT %s""",
+            (limit,),
+        )
+        return [str(r["source_doc_id"]) for r in rows]
+
+    def _handle_done(fut: Future) -> None:
+        doc_id, err_count, err_msg = fut.result()
+        if err_msg:
+            log.error("[%s] Failed doc=%s err=%s", thread_name, doc_id, err_msg)
+        else:
+            log.info("[%s] Completed doc=%s errors=%d",
+                     thread_name, doc_id, err_count)
+
     idle_count = 0
+    pool = ThreadPoolExecutor(max_workers=max_workers,
+                              thread_name_prefix="pipeline-worker")
+    in_flight: set[Future] = set()
+
     try:
         while not stop_event.is_set():
 
-            # ── Hard LLM check before each batch ─────────────────────────────
+            # ── Hard LLM check ───────────────────────────────────────────
             if not LLMExtractor().ping(timeout=10.0):
                 log.warning(
                     "[%s] LLM not available — pipeline paused. "
-                    "Retrying in %ds. Fix LLM_API_KEY / LLM_BASE_URL to resume.",
-                    thread_name, _LLM_RETRY_SECS,
+                    "Retrying in %ds.", thread_name, _LLM_RETRY_SECS,
                 )
                 stop_event.wait(_LLM_RETRY_SECS)
                 continue
 
-            try:
-                rows = app.store.fetchall(
-                    """SELECT source_doc_id FROM documents
-                       WHERE status = 'raw'
-                       ORDER BY created_at ASC
-                       LIMIT %s""",
-                    (settings.WORKER_PIPELINE_LIMIT,),
-                )
-                doc_ids = [str(r["source_doc_id"]) for r in rows]
+            # ── Harvest completed futures ─────────────────────────────────
+            done = {f for f in in_flight if f.done()}
+            for f in done:
+                try:
+                    _handle_done(f)
+                except Exception as exc:
+                    log.error("[%s] Result error: %s", thread_name, exc)
+            in_flight -= done
 
-                if doc_ids:
-                    idle_count = 0
-                    # Process batch in parallel
-                    with ThreadPoolExecutor(
-                        max_workers=settings.WORKER_PIPELINE_WORKERS,
-                        thread_name_prefix="pipeline-worker",
-                    ) as pool:
-                        futures = {
-                            pool.submit(_process_one, did): did
-                            for did in doc_ids
-                            if not stop_event.is_set()
-                        }
-                        for future in as_completed(futures):
+            # ── Fill pool to capacity ─────────────────────────────────────
+            free_slots = max_workers - len(in_flight)
+            if free_slots > 0:
+                try:
+                    in_flight_ids = set()
+                    doc_ids = _fetch_raw_ids(free_slots)
+                    if doc_ids:
+                        idle_count = 0
+                        for did in doc_ids:
                             if stop_event.is_set():
                                 break
-                            doc_id, err_count, err_msg = future.result()
-                            if err_msg:
-                                log.error("[%s] Failed doc=%s err=%s",
-                                          thread_name, doc_id, err_msg)
-                            else:
-                                log.info("[%s] Completed doc=%s errors=%d",
-                                         thread_name, doc_id, err_count)
-                else:
-                    idle_count += 1
-            except Exception as exc:
-                log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
-                idle_count = 0
+                            if did not in in_flight_ids:
+                                fut = pool.submit(_process_one, did)
+                                in_flight.add(fut)
+                                in_flight_ids.add(did)
+                    elif not in_flight:
+                        idle_count += 1
+                except Exception as exc:
+                    log.error("[%s] Error: %s", thread_name, exc, exc_info=True)
 
-            # Pipeline checks less frequently — docs arrive via crawler
-            sleep_secs = settings.WORKER_SLEEP_SECS * 2
-            if idle_count > _IDLE_BACKOFF_START:
-                backoff = min(
-                    sleep_secs * (2 ** (idle_count - _IDLE_BACKOFF_START)),
-                    _IDLE_BACKOFF_MAX,
-                )
-                stop_event.wait(backoff)
+            # ── Wait for next event ───────────────────────────────────────
+            if in_flight:
+                wait(in_flight, timeout=_POLL_SECS,
+                     return_when=FIRST_COMPLETED)
             else:
-                stop_event.wait(sleep_secs)
+                if idle_count > _IDLE_BACKOFF_START:
+                    backoff = min(
+                        _POLL_SECS * (2 ** (idle_count - _IDLE_BACKOFF_START)),
+                        _IDLE_BACKOFF_MAX,
+                    )
+                    stop_event.wait(backoff)
+                else:
+                    stop_event.wait(_POLL_SECS)
     finally:
+        pool.shutdown(wait=False, cancel_futures=True)
         log.info("[%s] Thread stopped", thread_name)
 
 

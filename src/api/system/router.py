@@ -98,87 +98,93 @@ def list_drilldown_metrics():
     return {"metrics": sorted(METRIC_TO_QUERY.keys())}
 
 
+
 @router.get("/showcase/{case_id}")
 def showcase(case_id: str, _app=Depends(get_app)):
-    """Showcase cases — complex graph+PG combined queries that demonstrate unique value."""
+    """Showcase cases powered by the declarative query engine."""
     log.info("GET /showcase/%s", case_id)
-    store = _app.store
-    graph = _app.graph
+    from src.query.engine import QueryEngine
+    engine = QueryEngine(_app)
+    meta = _SHOWCASE_META.get(case_id)
+    if not meta:
+        return {"error": f"Unknown case: {case_id}"}
     try:
-        if case_id == "fault_impact":
-            return _case_fault_impact(store, graph)
-        elif case_id == "multi_source":
-            return _case_multi_source(store, graph)
-        elif case_id == "dependency_closure":
-            return _case_dependency_closure(store, graph)
-        elif case_id == "cross_layer_reasoning":
-            return _case_cross_layer(store, graph)
-        elif case_id == "knowledge_gap":
-            return _case_knowledge_gap(store, graph)
-        else:
-            return {"error": f"Unknown case: {case_id}"}
+        builder = _SHOWCASE_BUILDERS[case_id]
+        return builder(engine, _app, meta)
     except Exception as exc:
         log.error("Showcase %s error: %s", case_id, exc, exc_info=True)
         return {"error": str(exc)}
 
 
-def _case_fault_impact(store, graph):
-    """Case 1: 配置依赖链分析 — 新建 OSPF 网络，要先配什么、再配什么？"""
-    target = "IP.OSPF_INSTANCE"
-    # Graph: dependency chain — what must be configured before OSPF Instance can work?
-    affected = graph.read(
-        """MATCH (n:OntologyNode {node_id: $target})-[r]-(m)
-           WHERE m:OntologyNode OR m:MechanismNode OR m:ScenarioPatternNode
-                 OR m:MethodNode OR m:ConditionRuleNode
-           RETURN m.node_id AS node_id, m.canonical_name AS name,
-                  labels(m)[0] AS layer, type(r) AS relation, r.predicate AS predicate
-           ORDER BY labels(m)[0]""",
-        target=target,
-    )
-    # What depends on OSPF Instance — must be configured after it
-    upstream = graph.read(
-        """MATCH path = (upstream:OntologyNode)-[:DEPENDS_ON*1..3]->(n:OntologyNode {node_id: $target})
-           RETURN upstream.node_id AS node_id, upstream.canonical_name AS name,
-                  'OntologyNode' AS layer, 'DEPENDS_ON' AS relation,
-                  'depends_on (transitive)' AS predicate
-           ORDER BY length(path)""",
-        target=target,
-    )
-    all_affected = [dict(r) for r in affected] + [dict(r) for r in upstream]
-    # PG: related segments with configuration/design content
-    segments = store.fetchall(
-        """SELECT s.raw_text, s.segment_type, s.section_title, st.tag_value
-           FROM segments s
-           JOIN segment_tags st ON s.segment_id = st.segment_id
-           WHERE st.ontology_node_id LIKE 'IP.OSPF%%'
-             AND (s.segment_type IN ('configuration', 'mechanism', 'definition', 'design')
-                  OR s.raw_text ILIKE '%%neighbor%%' OR s.raw_text ILIKE '%%adjacen%%'
-                  OR s.raw_text ILIKE '%%configur%%' OR s.raw_text ILIKE '%%prerequisit%%')
-             AND s.lifecycle_state = 'active'
-           ORDER BY s.token_count DESC
-           LIMIT 8"""
-    )
-    # PG: related facts (match any OSPF-family node)
-    facts = store.fetchall(
-        """SELECT f.subject, f.predicate, f.object, f.confidence
-           FROM facts f WHERE f.lifecycle_state = 'active'
-             AND (f.subject LIKE 'IP.OSPF%%' OR f.object LIKE 'IP.OSPF%%')
-           ORDER BY f.confidence DESC LIMIT 15"""
-    )
-    return {
-        "case": "fault_impact",
-        "title": "配置依赖链分析",
+_SHOWCASE_META = {
+    "fault_impact": {
+        "case": "fault_impact", "title": "配置依赖链分析",
         "question": "新建 OSPF 网络，OSPF Instance 依赖哪些前置配置？配完 OSPF 后还需要配什么上层对象？",
-        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统从 OSPF Instance 出发，通过图遍历找到所有前置依赖（接口、IP地址等）和后置依赖（Area、路由导入等），呈现完整的配置顺序链。",
-        "affected_nodes": all_affected,
-        "related_facts": [dict(r) for r in facts],
-        "source_segments": [dict(r) for r in segments],
-    }
+        "why_unique": "传统搜索只能找到包含 OSPF 的文档。本系统从 OSPF Instance 出发，通过图遍历找到所有前置依赖和后置依赖，呈现完整的配置顺序链。",
+    },
+    "multi_source": {
+        "case": "multi_source", "title": "多源矛盾裁决",
+        "question": "不同文档对同一事实说法不一致，系统如何量化裁决？",
+        "why_unique": "传统系统只返回文档列表。本系统自动检测矛盾，按来源权威等级和置信度评分量化裁决，并展示双方原文证据。",
+    },
+    "dependency_closure": {
+        "case": "dependency_closure", "title": "动网割接影响面",
+        "question": "割接 BGP Instance 时，哪些 Peer、Address Family、Route Policy 会被波及？",
+        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过传递闭包找到所有直接和间接依赖的可配置对象，让交付工程师完整评估影响面。",
+    },
+    "cross_layer_reasoning": {
+        "case": "cross_layer_reasoning", "title": "方案设计依据追溯",
+        "question": "为什么在这个场景下选择这个配置对象？",
+        "why_unique": "五层模型能为方案设计提供完整的决策依据链，每一层都有原文证据支撑。",
+    },
+    "knowledge_gap": {
+        "case": "knowledge_gap", "title": "知识盲区发现",
+        "question": "哪些技术领域的知识储备不足？",
+        "why_unique": "通过对比本体定义和实际知识覆盖，精确定位哪些概念缺少知识、哪些关系类型从未被使用。",
+    },
+}
 
 
-def _case_multi_source(store, graph):
-    """Case 2: 多源矛盾裁决 — 不同来源说法不一，听谁的？"""
-    # Use governance.conflict_records for real conflict pairs
+def _nodes_to_list(result, var):
+    arr = result.get(var)
+    if isinstance(arr, list):
+        out = []
+        for n in arr:
+            item = {"node_id": n.get("node_id", "")}
+            item.update(n.get("properties") or n)
+            out.append(item)
+        return out
+    return []
+
+
+def _build_fault_impact(engine, app, meta):
+    target = "IP.OSPF_INSTANCE"
+    plan = {"intent": "OSPF config dependency", "steps": [
+        {"op": "seed", "by": "id", "target": "node", "value": [target], "as": "$root"},
+        {"op": "expand", "from": "$root", "any_of": ["depends_on", "configured_by", "contains", "explains", "composed_of"], "direction": "both", "depth": 2, "as": "$affected"},
+        {"op": "expand", "from": "$root", "any_of": ["tagged_in"], "direction": "outbound", "as": "$segs"},
+        {"op": "aggregate", "function": "rerank", "from": "$segs", "query": "OSPF configuration dependency prerequisite neighbor adjacency", "limit": 8, "as": "$ranked"},
+    ]}
+    d = engine.execute(plan)
+    r = d.get("result", {})
+    affected = _nodes_to_list(r, "$affected")
+    for n in affected:
+        n.setdefault("name", n.get("canonical_name", ""))
+        n.setdefault("layer", n.get("knowledge_layer", ""))
+        n.setdefault("relation", n.get("_rel_type", ""))
+        n.setdefault("predicate", "")
+    segments = _nodes_to_list(r, "$ranked")
+    facts = [dict(f) for f in app.store.fetchall(
+        "SELECT subject, predicate, object, confidence FROM facts "
+        "WHERE lifecycle_state='active' AND (subject LIKE 'IP.OSPF%%' OR object LIKE 'IP.OSPF%%') "
+        "ORDER BY confidence DESC LIMIT 15"
+    )]
+    return {**meta, "affected_nodes": affected, "related_facts": facts,
+            "source_segments": [{"raw_text": s.get("raw_text", ""), "segment_type": s.get("segment_type", ""), "section_title": s.get("section_title", "")} for s in segments]}
+
+
+def _build_multi_source(engine, app, meta):
+    store = app.store
     conflicts = store.fetchall(
         """SELECT cr.conflict_id, cr.conflict_type, cr.resolution,
                   cr.fact_id_a AS fid1, cr.fact_id_b AS fid2,
@@ -189,33 +195,21 @@ def _case_multi_source(store, graph):
            FROM governance.conflict_records cr
            JOIN facts f1 ON cr.fact_id_a = f1.fact_id
            JOIN facts f2 ON cr.fact_id_b = f2.fact_id
-           ORDER BY cr.created_at DESC
-           LIMIT 10"""
+           ORDER BY cr.created_at DESC LIMIT 10"""
     )
-    # For each conflict, get evidence with source authority
     detailed = []
     for c in conflicts[:5]:
-        ev_a = store.fetchall(
-            """SELECT e.source_rank, e.extraction_method,
-                      left(s.raw_text, 300) AS text_preview,
-                      d.title AS doc_title
-               FROM evidence e
-               JOIN segments s ON e.segment_id = s.segment_id
-               LEFT JOIN documents d ON e.source_doc_id = d.source_doc_id
-               WHERE e.fact_id = %s LIMIT 2""", (c["fid1"],)
-        )
-        ev_b = store.fetchall(
-            """SELECT e.source_rank, e.extraction_method,
-                      left(s.raw_text, 300) AS text_preview,
-                      d.title AS doc_title
-               FROM evidence e
-               JOIN segments s ON e.segment_id = s.segment_id
-               LEFT JOIN documents d ON e.source_doc_id = d.source_doc_id
-               WHERE e.fact_id = %s LIMIT 2""", (c["fid2"],)
-        )
-        conf_a = float(c["conf_a"] or 0)
-        conf_b = float(c["conf_b"] or 0)
-        # Determine verdict: prefer active over conflicted, then higher confidence
+        fact_ids = [str(c["fid1"]), str(c["fid2"])]
+        plan = {"intent": "conflict evidence", "steps": [
+            {"op": "seed", "by": "id", "target": "fact", "value": fact_ids, "as": "$facts"},
+            {"op": "expand", "from": "$facts", "any_of": ["evidenced_by"], "direction": "outbound", "as": "$ev"},
+            {"op": "project", "from": "$ev", "fields": ["node_id", "raw_text", "evidence_score", "source_doc_id"], "as": "$out"},
+        ]}
+        d = engine.execute(plan)
+        ev_segs = _nodes_to_list(d.get("result", {}), "$out")
+        ev_list = [{"text_preview": s.get("raw_text", "")[:300], "source_rank": "", "extraction_method": "", "doc_title": ""} for s in ev_segs]
+        half = max(1, len(ev_list) // 2)
+        conf_a, conf_b = float(c["conf_a"] or 0), float(c["conf_b"] or 0)
         if c.get("state_a") == "active" and c.get("state_b") != "active":
             verdict = "A"
         elif c.get("state_b") == "active" and c.get("state_a") != "active":
@@ -224,84 +218,46 @@ def _case_multi_source(store, graph):
             verdict = "A" if conf_a >= conf_b else "B"
         detailed.append({
             "subject": c["subject"], "predicate": c["predicate"],
-            "conflict_type": c.get("conflict_type", "unknown"),
-            "resolution": c.get("resolution", "open"),
-            "claim_a": {"object": c["object_a"], "confidence": conf_a,
-                        "lifecycle_state": c.get("state_a", "unknown"),
-                        "evidence": [dict(e) for e in ev_a]},
-            "claim_b": {"object": c["object_b"], "confidence": conf_b,
-                        "lifecycle_state": c.get("state_b", "unknown"),
-                        "evidence": [dict(e) for e in ev_b]},
+            "conflict_type": c.get("conflict_type", "unknown"), "resolution": c.get("resolution", "open"),
+            "claim_a": {"object": c["object_a"], "confidence": conf_a, "lifecycle_state": c.get("state_a", "unknown"), "evidence": ev_list[:half]},
+            "claim_b": {"object": c["object_b"], "confidence": conf_b, "lifecycle_state": c.get("state_b", "unknown"), "evidence": ev_list[half:]},
             "verdict": verdict,
         })
-    return {
-        "case": "multi_source",
-        "title": "多源矛盾裁决",
-        "question": "不同文档对同一事实说法不一致，系统如何量化裁决？",
-        "why_unique": "传统系统只返回文档列表，人自己判断。本系统自动检测矛盾，按来源权威等级（S>A>B>C）和置信度评分量化���决，并展示双方原文证据。",
-        "conflicts": detailed,
-        "total_conflicts": len(conflicts),
-    }
+    return {**meta, "conflicts": detailed, "total_conflicts": len(conflicts)}
 
 
-def _case_dependency_closure(store, graph):
-    """Case 3: 动网割接影响面 — 割接 BGP Instance，波及哪些对象？"""
+def _build_dependency_closure(engine, app, meta):
     target = "IP.BGP_INSTANCE"
-    # Graph: dependency closure (all transitive dependencies)
-    deps = graph.read(
-        """MATCH path = (n:OntologyNode {node_id: $target})
-                  -[:DEPENDS_ON|USES_PROTOCOL|REQUIRES*1..3]->(m)
-           RETURN m.node_id AS node_id, m.canonical_name AS name,
-                  length(path) AS hops,
-                  [r IN relationships(path) | type(r)] AS path_types
-           ORDER BY hops""",
-        target=target,
-    )
-    # Reverse: who depends on BGP Instance?
-    dependents = graph.read(
-        """MATCH path = (m)-[:DEPENDS_ON|USES_PROTOCOL|REQUIRES*1..3]->
-                  (n:OntologyNode {node_id: $target})
-           RETURN m.node_id AS node_id, m.canonical_name AS name,
-                  labels(m)[0] AS layer, length(path) AS hops
-           ORDER BY hops""",
-        target=target,
-    )
-    # PG: segments about BGP dependencies (match any BGP-family node)
-    segments = store.fetchall(
-        """SELECT left(s.raw_text, 400) AS raw_text, s.section_title, s.segment_type
-           FROM segments s
-           JOIN segment_tags st ON s.segment_id = st.segment_id
-           WHERE st.ontology_node_id LIKE 'IP.BGP%%'
-             AND (s.raw_text ILIKE '%%depend%%' OR s.raw_text ILIKE '%%require%%'
-                  OR s.raw_text ILIKE '%%prerequisite%%')
-             AND s.lifecycle_state = 'active'
-           LIMIT 5"""
-    )
-    target_node = graph.read(
-        "MATCH (n:OntologyNode {node_id: $t}) RETURN n.canonical_name AS name", t=target
-    )
-    name = target_node[0]["name"] if target_node else target
-    return {
-        "case": "dependency_closure",
-        "title": "动网割接影响面",
-        "question": f"割接 {name} 时，哪些 Peer、Address Family、Route Policy 会被波及？需要同步调整什么？",
-        "why_unique": "传统搜索只能找提到 BGP 的文档。本系统通过图数据库的传递闭包，从 BGP Instance 出发找到所有直接和间接依赖的可配置对象，让交付工程师在割接前完整评估影响面。",
-        "target": {"node_id": target, "name": name},
-        "depends_on": [dict(r) for r in deps],
-        "depended_by": [dict(r) for r in dependents],
-        "source_segments": [dict(r) for r in segments],
-    }
+    plan = {"intent": "BGP cutover impact", "steps": [
+        {"op": "seed", "by": "id", "target": "node", "value": [target], "as": "$root"},
+        {"op": "expand", "from": "$root", "any_of": ["depends_on", "requires"], "direction": "outbound", "depth": 3, "track_path": True, "as": "$deps"},
+        {"op": "expand", "from": "$root", "any_of": ["depends_on", "requires"], "direction": "inbound", "depth": 3, "track_path": True, "as": "$dependents"},
+        {"op": "expand", "from": "$root", "any_of": ["tagged_in"], "direction": "outbound", "as": "$segs"},
+        {"op": "aggregate", "function": "rerank", "from": "$segs", "query": "BGP dependency prerequisite cutover impact", "limit": 5, "as": "$ranked"},
+    ]}
+    d = engine.execute(plan)
+    r = d.get("result", {})
+    root_node = _nodes_to_list(r, "$root")
+    name = root_node[0].get("canonical_name", target) if root_node else target
+    segments = _nodes_to_list(r, "$ranked")
+    facts = [dict(f) for f in app.store.fetchall(
+        "SELECT subject, predicate, object, confidence FROM facts "
+        "WHERE lifecycle_state='active' AND (subject LIKE 'IP.BGP%%' OR object LIKE 'IP.BGP%%') "
+        "ORDER BY confidence DESC LIMIT 15"
+    )]
+    return {**meta, "target": {"node_id": target, "name": name},
+            "related_facts": facts,
+            "source_segments": [{"raw_text": s.get("raw_text", "")[:400], "section_title": s.get("section_title", ""), "segment_type": s.get("segment_type", "")} for s in segments]}
 
 
-def _case_cross_layer(store, graph):
-    """Case 4: 方案设计依据追溯 — 从可配置对象到业务场景的完整设计依据"""
-    # Try full 5-layer chains first; fall back to partial chains if none found
+def _build_cross_layer(engine, app, meta):
+    graph = app.graph
     chains = graph.read(
         """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode),
-                 (m)-[r2]-(mt:MethodNode),
-                 (mt)-[r3]-(cn:ConditionRuleNode),
-                 (cn)-[r4]-(s:ScenarioPatternNode)
+                 (m)-[r2]-(mt:MethodNode)
            WHERE c.lifecycle_state = 'active'
+           OPTIONAL MATCH (mt)-[r3]-(cn:ConditionRuleNode)
+           OPTIONAL MATCH (cn)-[r4]-(s:ScenarioPatternNode)
            RETURN c.node_id AS concept_id, c.canonical_name AS concept,
                   m.canonical_name AS mechanism, m.description AS mech_desc,
                   mt.canonical_name AS method, mt.description AS method_desc,
@@ -310,103 +266,59 @@ def _case_cross_layer(store, graph):
                   type(r1) AS rel1, type(r2) AS rel2, type(r3) AS rel3, type(r4) AS rel4
            LIMIT 10"""
     )
-    if not chains:
-        # Fall back to partial chains: concept → mechanism → method (3-layer)
-        chains = graph.read(
-            """MATCH (c:OntologyNode)-[r1]-(m:MechanismNode)-[r2]-(mt:MethodNode)
-               WHERE c.lifecycle_state = 'active'
-               OPTIONAL MATCH (mt)-[r3]-(cn:ConditionRuleNode)
-               OPTIONAL MATCH (cn)-[r4]-(s:ScenarioPatternNode)
-               RETURN c.node_id AS concept_id, c.canonical_name AS concept,
-                      m.canonical_name AS mechanism, m.description AS mech_desc,
-                      mt.canonical_name AS method, mt.description AS method_desc,
-                      cn.canonical_name AS condition, cn.description AS cond_desc,
-                      s.canonical_name AS scenario, s.description AS scenario_desc,
-                      type(r1) AS rel1, type(r2) AS rel2, type(r3) AS rel3, type(r4) AS rel4
-               LIMIT 10"""
-        )
-    # For each chain's concept, get source evidence
     enriched = []
     for chain in chains:
-        segments = store.fetchall(
-            """SELECT left(s.raw_text, 300) AS raw_text, s.section_title
-               FROM segments s
-               JOIN segment_tags st ON s.segment_id = st.segment_id
-               WHERE st.ontology_node_id = %s AND s.lifecycle_state = 'active'
-               ORDER BY s.token_count DESC LIMIT 2""",
-            (chain["concept_id"],)
-        )
-        enriched.append({
-            **dict(chain),
-            "source_segments": [dict(s) for s in segments],
-        })
-    return {
-        "case": "cross_layer_reasoning",
-        "title": "方案设计依据追溯",
-        "question": "为什么在这个场景下选择这个配置对象？把从业务场景到具体配置的设计依据完整展示出来。",
-        "why_unique": "传统知识图谱只有概念和关系两层。本系统的五层模型（业务场景→适用条件→操作方法→协议机制→YANG可配置对象）能为方案设计提供完整的决策依据链，每一层都有原文证据支撑。",
-        "chains": enriched,
-    }
+        concept_id = chain["concept_id"]
+        plan = {"steps": [
+            {"op": "seed", "by": "id", "target": "node", "value": [concept_id], "as": "$n"},
+            {"op": "expand", "from": "$n", "any_of": ["tagged_in"], "direction": "outbound", "as": "$segs"},
+            {"op": "aggregate", "function": "rank", "from": "$segs", "by_fields": ["token_count"], "order": "desc", "limit": 2, "as": "$top"},
+            {"op": "project", "from": "$top", "fields": ["raw_text", "section_title"], "as": "$out"},
+        ]}
+        d = engine.execute(plan)
+        segs = _nodes_to_list(d.get("result", {}), "$out")
+        enriched.append({**dict(chain), "source_segments": [{"raw_text": s.get("raw_text", "")[:300], "section_title": s.get("section_title", "")} for s in segs]})
+    return {**meta, "chains": enriched}
 
 
-def _case_knowledge_gap(store, graph):
-    """Case 5: 知识空白发现（元认知）— 系统知道自己不知道���么"""
-    # Nodes with no facts
+def _build_knowledge_gap(engine, app, meta):
+    store, graph = app.store, app.graph
+    from src.ontology.registry import OntologyRegistry
+    reg = OntologyRegistry.from_default()
+    total_nodes_row = graph.read("MATCH (n:OntologyNode) WHERE n.lifecycle_state='active' RETURN count(n) AS cnt")
+    total_nodes = total_nodes_row[0]["cnt"] if total_nodes_row else 0
+    tagged_row = store.fetchone("SELECT count(DISTINCT ontology_node_id) AS cnt FROM segment_tags WHERE tag_type='canonical'")
+    tagged = tagged_row["cnt"] if tagged_row else 0
+    core_ids = ['IP.BGP_INSTANCE','IP.BGP_PEER','IP.BGP_ADDRESS_FAMILY','IP.OSPF_INSTANCE','IP.OSPF_AREA','IP.OSPF_INTERFACE',
+                'IP.ISIS_INSTANCE','IP.MPLS_GLOBAL','IP.MPLS_SR','IP.EVPN_INSTANCE','IP.VXLAN_VNI','IP.SRV6_LOCATOR',
+                'IP.BFD_SESSION','IP.VRRP_GROUP','IP.QOS','IP.NAT_RULE','IP.DHCP_RELAY','IP.INTERFACE','IP.ROUTE_POLICY','IP.ROUTE_TABLE']
+    tagged_ids = {r["ontology_node_id"] for r in store.fetchall(
+        "SELECT DISTINCT ontology_node_id FROM segment_tags WHERE tag_type='canonical'"
+    )}
+    no_segs = [{"node_id": nid} for nid in core_ids if nid not in tagged_ids]
+    used_preds = {r["predicate"] for r in store.fetchall("SELECT DISTINCT predicate FROM facts WHERE lifecycle_state='active'")}
+    unused = sorted(reg.relation_ids - used_preds)
     no_facts = graph.read(
         """MATCH (n:OntologyNode) WHERE n.lifecycle_state = 'active'
-           AND NOT (n)<-[:TAGGED_WITH]-(:KnowledgeSegment)-[:EXTRACTED_FROM]->(:Fact)
+           OPTIONAL MATCH (n)<-[:TAGGED_IN]-(s)
+           WITH n, count(s) AS seg_count WHERE seg_count = 0
            RETURN n.node_id AS node_id, n.canonical_name AS name
            ORDER BY n.node_id LIMIT 20"""
     )
-    # Nodes with no segments at all
-    no_segments_row = store.fetchall(
-        """SELECT n_id AS node_id FROM (
-             SELECT DISTINCT st.ontology_node_id AS n_id FROM segment_tags st
-             WHERE st.tag_type = 'canonical'
-           ) tagged
-           RIGHT JOIN (SELECT unnest(ARRAY[
-             'IP.BGP_INSTANCE','IP.BGP_PEER','IP.BGP_ADDRESS_FAMILY',
-             'IP.OSPF_INSTANCE','IP.OSPF_AREA','IP.OSPF_INTERFACE',
-             'IP.ISIS_INSTANCE','IP.MPLS_GLOBAL','IP.MPLS_SR',
-             'IP.EVPN_INSTANCE','IP.VXLAN_VNI','IP.SRV6_LOCATOR',
-             'IP.BFD_SESSION','IP.VRRP_GROUP','IP.QOS',
-             'IP.NAT_RULE','IP.DHCP_RELAY','IP.INTERFACE',
-             'IP.ROUTE_POLICY','IP.ROUTE_TABLE'
-           ]) AS node_id) core ON tagged.n_id = core.node_id
-           WHERE tagged.n_id IS NULL"""
-    )
-    # Relation types with zero facts
-    from src.ontology.registry import OntologyRegistry
-    reg = OntologyRegistry.from_default()
-    used_preds = {r["predicate"] for r in store.fetchall(
-        "SELECT DISTINCT predicate FROM facts WHERE lifecycle_state='active'"
-    )}
-    unused = sorted(reg.relation_ids - used_preds)
-    # Overall coverage stats
-    total_nodes_row = graph.read(
-        "MATCH (n:OntologyNode) WHERE n.lifecycle_state='active' RETURN count(n) AS cnt"
-    )
-    total_nodes = total_nodes_row[0]["cnt"] if total_nodes_row else 0
-    tagged_row = store.fetchone(
-        "SELECT count(DISTINCT ontology_node_id) AS cnt FROM segment_tags WHERE tag_type='canonical'"
-    )
-    tagged = tagged_row["cnt"] if tagged_row else 0
-    return {
-        "case": "knowledge_gap",
-        "title": "知识盲区发现",
-        "question": "哪些技术领域的知识储备不足？交付方案设计中可能踩到哪些知识盲区？",
-        "why_unique": "这是传统系统完全做不到的。本系统通过对比本体定义和实际知识覆盖，精确定位哪些概念缺少知识、哪些关系类型从未被使用，帮助交付团队提前识别知识风险。",
-        "coverage": {
-            "total_ontology_nodes": total_nodes,
-            "nodes_with_knowledge": tagged,
-            "coverage_rate": round(tagged / max(total_nodes, 1), 4),
-        },
-        "nodes_without_facts": [dict(r) for r in no_facts],
-        "core_nodes_without_segments": [dict(r) for r in no_segments_row],
-        "unused_relation_types": unused[:20],
-        "unused_relation_count": len(unused),
-    }
+    return {**meta,
+            "coverage": {"total_ontology_nodes": total_nodes, "nodes_with_knowledge": tagged, "coverage_rate": round(tagged / max(total_nodes, 1), 4)},
+            "nodes_without_facts": [dict(r) for r in no_facts],
+            "core_nodes_without_segments": no_segs,
+            "unused_relation_types": unused[:20], "unused_relation_count": len(unused)}
 
+
+_SHOWCASE_BUILDERS = {
+    "fault_impact": _build_fault_impact,
+    "multi_source": _build_multi_source,
+    "dependency_closure": _build_dependency_closure,
+    "cross_layer_reasoning": _build_cross_layer,
+    "knowledge_gap": _build_knowledge_gap,
+}
 
 # ── Pipeline flow + recent activity ─────────────────────────────────────────
 
