@@ -1,0 +1,1 @@
+"""Declarative query engine — 5 orthogonal primitives over the HIN."""

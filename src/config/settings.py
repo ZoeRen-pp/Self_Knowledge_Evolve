@@ -87,6 +87,10 @@ class Settings(BaseSettings):
     OLLAMA_URL: str = "http://localhost:11434"
     OLLAMA_EMBED_MODEL: str = "bge-m3"
 
+    # ── Reranker (bge-reranker-v2, WSL2 HTTP service) ───────
+    RERANKER_HTTP_URL: str = "http://localhost:8002"
+    RERANKER_ENABLED: bool = False
+
     # ── Ontology Maintenance ─────────────────────────────────
     ONTOLOGY_MAINTENANCE_INTERVAL_HOURS: int = 24
     ONTOLOGY_MAINTENANCE_ENABLED: bool = True

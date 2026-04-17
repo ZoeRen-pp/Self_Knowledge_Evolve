@@ -27,6 +27,7 @@ from src.db import health_check
 from src.utils.health import startup_health_check
 from src.api.semantic.router import router as semantic_router
 from src.api.system.router import router as system_router
+from src.api.query_router import router as query_router
 from src.utils.logging import setup_logging
 
 app = FastAPI(
@@ -59,6 +60,7 @@ async def on_startup() -> None:
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(semantic_router)
 app.include_router(system_router)
+app.include_router(query_router)
 
 # ── Static files (dashboard) ─────────────────────────────────────────────────
 _static_dir = Path(__file__).resolve().parents[1] / "static"
