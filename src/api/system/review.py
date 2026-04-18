@@ -337,18 +337,18 @@ def _approve_concept(
     store: RelationalStore, graph: GraphStore, ontology,
 ) -> dict:
     """Write new concept to Neo4j + OntologyRegistry + lexicon_aliases."""
-    # Generate node_id: IP.UPPER_SNAKE from the best surface form
     raw_name = surface_forms[0] if surface_forms else normalized
-    node_id = "IP." + re.sub(r"[^A-Za-z0-9]+", "_", raw_name).upper().strip("_")
+    candidate_type = candidate.get("candidate_type", "concept")
+    layer_prefix = {"concept": "IP", "mechanism": "MECH", "method": "METHOD",
+                    "condition": "COND", "scenario": "SCENE"}.get(candidate_type, "IP")
+    node_id = layer_prefix + "." + re.sub(r"[^A-Za-z0-9]+", "_", raw_name).upper().strip("_")
     display_name = raw_name
 
-    # Validate parent: must be a concept-layer node (IP.*), not mechanism/condition/etc
-    if parent_node_id and not parent_node_id.startswith("IP."):
-        log.warning("parent_node_id %s is not a concept node, clearing", parent_node_id)
+    if parent_node_id and not parent_node_id.startswith(layer_prefix + "."):
+        log.warning("parent_node_id %s layer mismatch with %s, clearing", parent_node_id, layer_prefix)
         parent_node_id = None
 
-    # Auto-generate description from related segments
-    description = _generate_description(candidate, surface_forms, store)
+    description = _generate_bilingual_description(candidate, surface_forms, candidate_type, store)
 
     # Build complete alias list: surface_forms + common variants
     all_aliases = list(set(aliases or surface_forms))
@@ -357,12 +357,14 @@ def _approve_concept(
         if sf.lower() not in {a.lower() for a in all_aliases}:
             all_aliases.append(sf)
 
-    # Neo4j node
+    neo4j_label = {"concept": "OntologyNode", "mechanism": "MechanismNode", "method": "MethodNode",
+                    "condition": "ConditionRuleNode", "scenario": "ScenarioPatternNode"}.get(candidate_type, "OntologyNode")
     graph.write(
-        """
-        MERGE (n:OntologyNode {node_id: $node_id})
+        f"""
+        MERGE (n:{neo4j_label} {{node_id: $node_id}})
         SET n.canonical_name = $name,
             n.description = $description,
+            n.knowledge_layer = $layer,
             n.lifecycle_state = 'active',
             n.maturity_level = 'evolved',
             n.approved = true,
@@ -370,6 +372,7 @@ def _approve_concept(
             n.composite_score = $composite_score
         """,
         node_id=node_id, name=display_name, description=description,
+        layer=candidate_type,
         source_count=int(candidate.get("source_count") or 0),
         composite_score=float(candidate.get("composite_score") or 0),
     )
@@ -385,24 +388,24 @@ def _approve_concept(
             child_id=node_id, parent_id=parent_node_id,
         )
 
-    # Aliases → Neo4j + PG
     for alias in all_aliases:
         alias_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{node_id}:{alias}"))
+        lang = "zh" if any('\u4e00' <= c <= '\u9fff' for c in alias) else "en"
         graph.write(
-            """
-            MERGE (a:Alias {alias_id: $alias_id})
+            f"""
+            MERGE (a:Alias {{alias_id: $alias_id}})
             SET a.surface_form = $form
             WITH a
-            MATCH (n:OntologyNode {node_id: $node_id})
+            MATCH (n:{neo4j_label} {{node_id: $node_id}})
             MERGE (a)-[:ALIAS_OF]->(n)
             """,
             alias_id=alias_id, form=alias.lower(), node_id=node_id,
         )
         store.execute(
             """INSERT INTO lexicon_aliases (alias_id, surface_form, canonical_node_id, alias_type, language)
-               VALUES (%s, %s, %s, 'evolved', 'en')
+               VALUES (%s, %s, %s, 'evolved', %s)
                ON CONFLICT (surface_form, canonical_node_id) DO NOTHING""",
-            (alias_id, alias.lower(), node_id),
+            (alias_id, alias.lower(), node_id, lang),
         )
 
     # Update in-memory OntologyRegistry
@@ -512,8 +515,9 @@ def _approve_relation(
     }
 
 
-def _generate_description(candidate: dict, surface_forms: list[str], store: RelationalStore) -> str:
-    """Auto-generate a description from related segments via LLM."""
+def _generate_bilingual_description(candidate: dict, surface_forms: list[str],
+                                     candidate_type: str, store: RelationalStore) -> str:
+    """Auto-generate a bilingual (EN + ZH) description from related segments via LLM."""
     examples = candidate.get("examples") or []
     if isinstance(examples, str):
         try:
@@ -521,7 +525,6 @@ def _generate_description(candidate: dict, surface_forms: list[str], store: Rela
         except Exception:
             examples = []
 
-    # Collect segment texts from examples
     texts = []
     for ex in examples[:5]:
         seg_id = ex.get("segment_id")
@@ -535,26 +538,38 @@ def _generate_description(candidate: dict, surface_forms: list[str], store: Rela
     if not texts:
         return ""
 
-    # Use LLM to generate concise description
     try:
         from src.utils.llm_extract import LLMExtractor
         llm = LLMExtractor()
         if not llm.is_enabled():
             return ""
 
+        layer_hint = {"concept": "configurable object", "mechanism": "protocol mechanism",
+                      "method": "configuration/troubleshooting procedure",
+                      "condition": "applicability condition or constraint",
+                      "scenario": "deployment pattern or business scenario"}.get(candidate_type, "concept")
         term = surface_forms[0] if surface_forms else candidate.get("normalized_form", "")
         context = "\n---\n".join(texts[:3])
         system = (
-            "Generate a concise technical description (1-2 sentences, max 200 chars) "
-            "for a networking/telecom concept based on the context provided. "
-            "Return ONLY the description text, nothing else."
+            "Generate a bilingual description for a telecom knowledge base node. "
+            "First write 1-2 sentences in English with RFC/protocol terminology, "
+            "then write the Chinese translation. "
+            "Return format: English description. Chinese description. "
+            "Max 300 chars total. Return ONLY the description text."
         )
-        prompt = f"Concept: {term}\n\nContext from documents:\n{context}\n\nDescription:"
-        desc = llm._call_llm(system, prompt, 128)
+        prompt = (
+            f"Term: {term}\n"
+            f"Knowledge layer: {layer_hint}\n\n"
+            f"Context from source documents:\n{context}\n\n"
+            f"Bilingual description:"
+        )
+        desc = llm._call_llm(system, prompt, 256)
         if desc:
-            return desc.strip()[:300]
+            import re as _re
+            desc = _re.sub(r"<think>.*?</think>", "", desc, flags=_re.DOTALL).strip()
+            return desc[:400]
     except Exception as exc:
-        log.warning("Failed to generate description: %s", exc)
+        log.warning("Failed to generate bilingual description: %s", exc)
 
     return ""
 
