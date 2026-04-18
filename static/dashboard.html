@@ -1156,6 +1156,8 @@ async function loadReviewList() {
         <div class="term">${(c.surface_forms&&c.surface_forms[0])||c.normalized_form||'?'}${typeBadge}</div>
         <div class="meta">来源数: ${c.source_count||0} &middot; 评分: ${(c.composite_score||0).toFixed(2)} &middot; 状态: ${c.review_status} &middot; 首次发现: ${(c.first_seen_at||'').substring(0,10)}</div>
         <div class="meta">表面形式: ${(c.surface_forms||[]).join(', ')}</div>
+        ${c.description ? `<div class="meta" style="color:#e0e0e0;margin-top:4px;line-height:1.5;">${c.description}</div>` : ''}
+        ${c.suggested_aliases && c.suggested_aliases.length ? `<div class="meta" style="margin-top:2px;">建议别名: <span style="color:#4fc3f7;">${c.suggested_aliases.join(', ')}</span></div>` : ''}
         <div style="display:flex;gap:6px;margin-top:8px;">${actions}</div>
         <div id="ctx-${c.candidate_id}" style="display:none;margin-top:8px;"></div>
       </div>`;
