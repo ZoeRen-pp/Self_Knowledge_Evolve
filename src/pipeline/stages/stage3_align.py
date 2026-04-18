@@ -209,28 +209,60 @@ class AlignStage(Stage):
     _onto_node_ids = None
     _onto_node_layers = None
 
+    _EMBED_CACHE_PATH = None
+
     def _ensure_onto_embeddings(self):
-        """Lazily compute and cache ontology node embeddings."""
+        """Lazily compute and cache ontology node embeddings. Persists to disk."""
         if self.__class__._onto_embeddings is not None:
             return True
         from src.config.settings import settings
         if not getattr(settings, "EMBEDDING_ENABLED", False):
             return False
+
+        from pathlib import Path
+        import numpy as np
+        cache_dir = Path(__file__).resolve().parents[3] / "tmp"
+        cache_dir.mkdir(exist_ok=True)
+        cache_path = cache_dir / "onto_embeddings.npz"
+        self.__class__._EMBED_CACHE_PATH = cache_path
+
+        ontology = self._ontology
+        nodes = [n for n in ontology.nodes.values() if n.get("canonical_name")]
+        if not nodes:
+            return False
+        node_ids = [n["node_id"] for n in nodes]
+        node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
+
+        if cache_path.exists():
+            try:
+                data = np.load(cache_path, allow_pickle=True)
+                cached_ids = list(data["node_ids"])
+                if cached_ids == node_ids:
+                    self.__class__._onto_embeddings = data["embeddings"]
+                    self.__class__._onto_node_ids = cached_ids
+                    self.__class__._onto_node_layers = list(data["node_layers"])
+                    log.info("Loaded cached embeddings for %d nodes from %s", len(cached_ids), cache_path.name)
+                    return True
+                log.info("Ontology changed (%d vs %d nodes), recomputing embeddings", len(cached_ids), len(node_ids))
+            except Exception as exc:
+                log.warning("Failed to load embedding cache: %s", exc)
+
         try:
             from src.utils.embedding import get_embeddings
-            ontology = self._ontology
-            nodes = [n for n in ontology.nodes.values() if n.get("canonical_name")]
-            if not nodes:
-                return False
             texts = [n["canonical_name"].lower() for n in nodes]
+            log.info("Computing embeddings for %d ontology nodes (one-time, ~9 min)...", len(texts))
             vecs = get_embeddings(texts)
             if vecs is None:
                 return False
-            import numpy as np
-            self.__class__._onto_embeddings = np.array(vecs)
-            self.__class__._onto_node_ids = [n["node_id"] for n in nodes]
-            self.__class__._onto_node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
-            log.info("Cached embeddings for %d ontology nodes", len(nodes))
+            emb = np.array(vecs)
+            self.__class__._onto_embeddings = emb
+            self.__class__._onto_node_ids = node_ids
+            self.__class__._onto_node_layers = node_layers
+            try:
+                np.savez(cache_path, embeddings=emb, node_ids=np.array(node_ids), node_layers=np.array(node_layers))
+                log.info("Saved embedding cache to %s", cache_path.name)
+            except Exception as exc:
+                log.warning("Failed to save embedding cache: %s", exc)
             return True
         except Exception as exc:
             log.debug("Embedding init failed: %s", exc)
