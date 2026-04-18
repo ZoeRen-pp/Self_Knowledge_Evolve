@@ -127,28 +127,21 @@ class AlignStage(Stage):
                 "tagger":          "rule",
             })
 
-        # Embedding enrichment: always try to match non-concept layers
-        # (concept layer is well-covered by alias matching; mechanism/method/
-        # condition/scenario layers have sparse aliases and need embedding help)
-        matched_layers = {
-            (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept")
-            for n in matched_nodes
-        }
-        missing_layers = {"mechanism", "method", "condition", "scenario"} - matched_layers
-        if missing_layers:
-            for node_id, conf in self._embedding_match(text, target_layers=missing_layers):
-                if node_id not in matched_nodes:
-                    matched_nodes[node_id] = conf
-                    node = ontology.get_node_dict(node_id)
-                    layer = node.get("knowledge_layer", "concept") if node else "concept"
-                    tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
-                    tags.append({
-                        "tag_type":        tag_type,
-                        "tag_value":       node["canonical_name"] if node else node_id,
-                        "ontology_node_id": node_id,
-                        "confidence":      conf,
-                        "tagger":          "embedding",
-                    })
+        # Embedding enrichment: always run for non-concept layers to supplement
+        # alias matching (concept layer has 2000+ aliases; other layers have <12)
+        for node_id, conf in self._embedding_match(text, target_layers={"mechanism", "method", "condition", "scenario"}):
+            if node_id not in matched_nodes:
+                matched_nodes[node_id] = conf
+                node = ontology.get_node_dict(node_id)
+                layer = node.get("knowledge_layer", "concept") if node else "concept"
+                tag_type = _LAYER_TAG_TYPE.get(layer, "canonical")
+                tags.append({
+                    "tag_type":        tag_type,
+                    "tag_value":       node["canonical_name"] if node else node_id,
+                    "ontology_node_id": node_id,
+                    "confidence":      conf,
+                    "tagger":          "embedding",
+                })
 
         candidate_terms = self._collect_candidates(
             raw_text, matched_nodes, segment["source_doc_id"], str(segment["segment_id"]),
