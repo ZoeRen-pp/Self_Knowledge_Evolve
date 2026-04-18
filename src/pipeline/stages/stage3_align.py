@@ -199,6 +199,7 @@ class AlignStage(Stage):
     # ── Embedding-based caches (class-level, loaded once) ────────
 
     _onto_embeddings = None
+    _onto_embeddings_zh = None
     _onto_node_ids = None
     _onto_node_layers = None
 
@@ -230,11 +231,12 @@ class AlignStage(Stage):
             try:
                 data = np.load(cache_path, allow_pickle=True)
                 cached_ids = list(data["node_ids"])
-                if cached_ids == node_ids:
-                    self.__class__._onto_embeddings = data["embeddings"]
+                if cached_ids == node_ids and "embeddings_en" in data:
+                    self.__class__._onto_embeddings = data["embeddings_en"]
+                    self.__class__._onto_embeddings_zh = data["embeddings_zh"]
                     self.__class__._onto_node_ids = cached_ids
                     self.__class__._onto_node_layers = list(data["node_layers"])
-                    log.info("Loaded cached embeddings for %d nodes from %s", len(cached_ids), cache_path.name)
+                    log.info("Loaded cached embeddings for %d nodes x2 from %s", len(cached_ids), cache_path.name)
                     return True
                 log.info("Ontology changed (%d vs %d nodes), recomputing embeddings", len(cached_ids), len(node_ids))
             except Exception as exc:
@@ -242,21 +244,42 @@ class AlignStage(Stage):
 
         try:
             from src.utils.embedding import get_embeddings
-            texts = [
-                (n["canonical_name"] + ". " + n.get("description", "")).strip().lower()
-                for n in nodes
-            ]
-            log.info("Computing embeddings for %d ontology nodes (one-time, ~9 min)...", len(texts))
-            vecs = get_embeddings(texts)
+            desc_full = [n.get("description", "").strip() for n in nodes]
+            en_texts = []
+            zh_texts = []
+            for i, n in enumerate(nodes):
+                name = n["canonical_name"].lower()
+                desc = desc_full[i]
+                parts = desc.split("\u3002")
+                if len(parts) < 2:
+                    parts = desc.split(". ", 1)
+                en_part = ""
+                zh_part = ""
+                for p in ([desc] if len(parts) < 2 else parts):
+                    p = p.strip()
+                    if any('\u4e00' <= c <= '\u9fff' for c in p[:20]):
+                        zh_part = p
+                    else:
+                        en_part = p
+                en_texts.append((name + ". " + en_part).strip() if en_part else name)
+                zh_texts.append((n.get("display_name_zh", "") + " " + zh_part).strip() if zh_part else name)
+
+            all_texts = en_texts + zh_texts
+            log.info("Computing embeddings for %d ontology nodes x2 languages (one-time)...", len(nodes))
+            vecs = get_embeddings(all_texts)
             if vecs is None:
                 return False
-            emb = np.array(vecs)
-            self.__class__._onto_embeddings = emb
+            arr = np.array(vecs)
+            emb_en = arr[:len(nodes)]
+            emb_zh = arr[len(nodes):]
+            self.__class__._onto_embeddings = emb_en
+            self.__class__._onto_embeddings_zh = emb_zh
             self.__class__._onto_node_ids = node_ids
             self.__class__._onto_node_layers = node_layers
             try:
-                np.savez(cache_path, embeddings=emb, node_ids=np.array(node_ids), node_layers=np.array(node_layers))
-                log.info("Saved embedding cache to %s", cache_path.name)
+                np.savez(cache_path, embeddings_en=emb_en, embeddings_zh=emb_zh,
+                         node_ids=np.array(node_ids), node_layers=np.array(node_layers))
+                log.info("Saved embedding cache to %s (%d nodes x2)", cache_path.name, len(nodes))
             except Exception as exc:
                 log.warning("Failed to save embedding cache: %s", exc)
             return True
@@ -279,9 +302,11 @@ class AlignStage(Stage):
             if not vecs:
                 return []
             seg_vec = np.array(vecs[0])
-            similarities = np.dot(self.__class__._onto_embeddings, seg_vec)
+            sims_en = np.dot(self.__class__._onto_embeddings, seg_vec)
+            sims_zh = np.dot(self.__class__._onto_embeddings_zh, seg_vec) if self.__class__._onto_embeddings_zh is not None else sims_en
+            similarities = np.maximum(sims_en, sims_zh)
 
-            THRESHOLD = 0.75
+            THRESHOLD = 0.65
             MAX_MATCHES = 5
             top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES * 3]
             results = []

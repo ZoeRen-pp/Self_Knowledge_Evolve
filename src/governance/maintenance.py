@@ -575,23 +575,38 @@ class OntologyMaintenance:
             except Exception:
                 pass
 
-        log.info("Ontology changed, rebuilding embedding cache for %d nodes...", len(current_ids))
+        log.info("Ontology changed, rebuilding embedding cache for %d nodes x2 langs...", len(current_ids))
         try:
             from src.utils.embedding import get_embeddings
-            texts = [
-                (n["canonical_name"] + ". " + n.get("description", "")).strip().lower()
-                for n in nodes
-            ]
-            vecs = get_embeddings(texts)
+            en_texts = []
+            zh_texts = []
+            for n in nodes:
+                name = n["canonical_name"].lower()
+                desc = n.get("description", "").strip()
+                en_part = ""
+                zh_part = ""
+                for p in desc.split(". ", 1) if ". " in desc else [desc]:
+                    p = p.strip()
+                    if any('\u4e00' <= c <= '\u9fff' for c in p[:20]):
+                        zh_part = p
+                    else:
+                        en_part = p
+                en_texts.append((name + ". " + en_part).strip() if en_part else name)
+                zh_texts.append((n.get("display_name_zh", "") + " " + zh_part).strip() if zh_part else name)
+            vecs = get_embeddings(en_texts + zh_texts)
             if vecs is None:
                 return {"status": "failed", "reason": "embedding_service_unavailable"}
-            emb = np.array(vecs)
+            arr = np.array(vecs)
+            emb_en = arr[:len(nodes)]
+            emb_zh = arr[len(nodes):]
             node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
             cache_path.parent.mkdir(exist_ok=True)
-            np.savez(cache_path, embeddings=emb, node_ids=np.array(current_ids), node_layers=np.array(node_layers))
+            np.savez(cache_path, embeddings_en=emb_en, embeddings_zh=emb_zh,
+                     node_ids=np.array(current_ids), node_layers=np.array(node_layers))
 
             from src.pipeline.stages.stage3_align import AlignStage
-            AlignStage._onto_embeddings = emb
+            AlignStage._onto_embeddings = emb_en
+            AlignStage._onto_embeddings_zh = emb_zh
             AlignStage._onto_node_ids = current_ids
             AlignStage._onto_node_layers = node_layers
 
