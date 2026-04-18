@@ -348,11 +348,20 @@ def _approve_concept(
         log.warning("parent_node_id %s layer mismatch with %s, clearing", parent_node_id, layer_prefix)
         parent_node_id = None
 
-    description = _generate_bilingual_description(candidate, surface_forms, candidate_type, store)
+    description = candidate.get("description") or ""
+    if not description:
+        description = _generate_bilingual_description(candidate, surface_forms, candidate_type, store)
 
-    # Build complete alias list: surface_forms + common variants
+    suggested = candidate.get("suggested_aliases") or []
+    if isinstance(suggested, str):
+        try:
+            suggested = json.loads(suggested)
+        except Exception:
+            suggested = []
     all_aliases = list(set(aliases or surface_forms))
-    # Ensure both original case and lowercase are included
+    for sa in suggested:
+        if isinstance(sa, str) and sa.lower() not in {a.lower() for a in all_aliases}:
+            all_aliases.append(sa)
     for sf in surface_forms:
         if sf.lower() not in {a.lower() for a in all_aliases}:
             all_aliases.append(sf)

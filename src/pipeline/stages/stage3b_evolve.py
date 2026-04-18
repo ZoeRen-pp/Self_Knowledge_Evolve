@@ -61,12 +61,13 @@ class EvolveStage(Stage):
         gate,
     ) -> dict:
         scored = self._score_candidates(source_doc_id, store, graph, ontology)
+        enriched = self._enrich_candidates(source_doc_id, store)
         promoted = self._gate_and_promote(store, graph, ontology, gate)
         log.info(
-            "Evolve doc=%s: scored=%d promoted=%d",
-            source_doc_id, scored, promoted,
+            "Evolve doc=%s: scored=%d enriched=%d promoted=%d",
+            source_doc_id, scored, enriched, promoted,
         )
-        return {"candidates_scored": scored, "candidates_promoted": promoted}
+        return {"candidates_scored": scored, "candidates_enriched": enriched, "candidates_promoted": promoted}
 
     # ── Scoring ────────────────────────────────────────────────────
 
@@ -372,3 +373,101 @@ class EvolveStage(Stage):
         if hasattr(ontology, "alias_map"):
             for sf in surface_forms:
                 ontology.alias_map[sf.lower()] = node_id
+
+    # ── Enrichment (description + aliases via LLM) ─────────────────
+
+    def _enrich_candidates(self, source_doc_id: str, store) -> int:
+        """Generate bilingual description + suggested aliases for scored candidates missing them."""
+        candidates = store.fetchall(
+            """
+            SELECT candidate_id, normalized_form, surface_forms, candidate_type, examples,
+                   description, suggested_aliases
+            FROM governance.evolution_candidates
+            WHERE %s::uuid = ANY(seen_source_doc_ids)
+              AND composite_score > 0
+              AND (description IS NULL OR description = '')
+            LIMIT 5
+            """,
+            (source_doc_id,),
+        )
+        if not candidates:
+            return 0
+
+        try:
+            from src.utils.llm_extract import LLMExtractor
+            llm = LLMExtractor()
+            if not llm.is_enabled():
+                return 0
+        except Exception:
+            return 0
+
+        import json as _json
+        enriched = 0
+        for cand in candidates:
+            cid = cand["candidate_id"]
+            normalized = cand.get("normalized_form", "")
+            surface_forms = cand.get("surface_forms") or []
+            ctype = cand.get("candidate_type", "concept")
+
+            examples = cand.get("examples") or []
+            if isinstance(examples, str):
+                try:
+                    examples = _json.loads(examples)
+                except Exception:
+                    examples = []
+            texts = []
+            for ex in examples[:3]:
+                seg_id = ex.get("segment_id")
+                if seg_id:
+                    row = store.fetchone(
+                        "SELECT raw_text FROM segments WHERE segment_id::text = %s", (str(seg_id),)
+                    )
+                    if row and row.get("raw_text"):
+                        texts.append(row["raw_text"][:400])
+            if not texts:
+                continue
+
+            layer_hint = {"concept": "configurable object", "mechanism": "protocol mechanism",
+                          "method": "configuration/troubleshooting procedure",
+                          "condition": "applicability condition or constraint",
+                          "scenario": "deployment pattern"}.get(ctype, "concept")
+            context = "\n---\n".join(texts)
+            term = surface_forms[0] if surface_forms else normalized
+
+            prompt = (
+                f"Term: {term}\nKnowledge layer: {layer_hint}\n\n"
+                f"Source text:\n{context}\n\n"
+                f"Tasks:\n"
+                f"1. Write a bilingual description (English first, then Chinese). Max 200 chars.\n"
+                f"2. Suggest 3-5 aliases (English technical terms + Chinese translations).\n\n"
+                f"Return JSON: {{\"description\": \"...\", \"aliases\": [\"...\", ...]}}"
+            )
+            try:
+                raw = llm._call_llm(
+                    "Generate description and aliases for a telecom ontology node. Return JSON only.",
+                    prompt, 256
+                )
+                if not raw:
+                    continue
+                raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+                raw = re.sub(r"```json\s*", "", raw)
+                raw = re.sub(r"```\s*$", "", raw)
+                result = _json.loads(raw)
+                desc = result.get("description", "")[:400]
+                aliases = result.get("aliases", [])
+                if not isinstance(aliases, list):
+                    aliases = []
+                aliases = [str(a).strip() for a in aliases if a][:8]
+
+                store.execute(
+                    """UPDATE governance.evolution_candidates
+                       SET description = %s, suggested_aliases = %s::jsonb
+                       WHERE candidate_id = %s""",
+                    (desc, _json.dumps(aliases, ensure_ascii=False), cid),
+                )
+                enriched += 1
+                log.debug("Enriched candidate %s: desc=%d aliases=%d", str(cid)[:12], len(desc), len(aliases))
+            except Exception as exc:
+                log.debug("Failed to enrich candidate %s: %s", str(cid)[:12], exc)
+
+        return enriched
