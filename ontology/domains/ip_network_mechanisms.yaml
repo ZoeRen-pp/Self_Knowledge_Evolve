@@ -2,464 +2,422 @@ domain: IP / Data Communication Network
 knowledge_layer: mechanism
 version: v0.2.0
 nodes:
-
-  # ── Routing Mechanisms ──────────────────────────────────────
-  - id: MECH.LinkStateFlooding
-    canonical_name: LinkStateFlooding
-    display_name_zh: 链路状态泛洪
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      链路状态路由协议（OSPF/IS-IS）中，每台路由器将自身链路状态信息泛洪
-      到整个区域，使所有节点获得一致的全局拓扑视图。
-    aliases:
-      - link state flooding
-      - LSA flooding
-      - link-state advertisement flood
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-      - causes
-
-  - id: MECH.PathVectorPropagation
-    canonical_name: PathVectorPropagation
-    display_name_zh: 路径矢量传播
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      BGP 使用的路由信息传播机制：每条路由携带完整的 AS-Path，防止路由环路，
-      并使接收方可根据路径属性做策略决策。
-    aliases:
-      - path vector propagation
-      - BGP route propagation
-      - AS-path propagation
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  - id: MECH.BestPathSelection
-    canonical_name: BestPathSelection
-    display_name_zh: 最优路径选择
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      BGP 按 Weight → LocalPref → AS-Path 长度 → Origin → MED → eBGP/iBGP →
-      IGP Metric 等属性依次比较，选出最优路由安装到路由表。
-    aliases:
-      - best path selection
-      - BGP best path
-      - route selection algorithm
-      - 最优路由选择
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-      - causes
-
-  - id: MECH.RecursiveNextHopResolution
-    canonical_name: RecursiveNextHopResolution
-    display_name_zh: 递归下一跳解析
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      BGP 路由的 next-hop 地址需通过 IGP 递归查表解析为直连出口，
-      next-hop 不可达时路由不会被安装。
-    aliases:
-      - recursive next hop
-      - next-hop resolution
-      - 递归下一跳
-    allowed_relations:
-      - participates_in
-      - explains
-      - depends_on
-
-  - id: MECH.ECMPSelection
-    canonical_name: ECMPSelection
-    display_name_zh: 等价多路径选择
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      当存在多条等价路径时，路由器可同时使用多条路径进行负载分担，
-      提升带宽利用率并提供一定冗余。
-    aliases:
-      - ECMP
-      - equal-cost multipath
-      - 等价多路径
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.RouteRedistribution
-    canonical_name: RouteRedistribution
-    display_name_zh: 路由重分布
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      将一种路由协议学到的路由引入到另一种协议中，实现跨协议域路由互通。
-      需配合 route-policy 做边界管控以防止路由环路和路由泄漏。
-    aliases:
-      - route redistribution
-      - route import
-      - 路由引入
-      - 路由重分发
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - risky_under
-
-  - id: MECH.DefaultRoutePropagation
-    canonical_name: DefaultRoutePropagation
-    display_name_zh: 默认路由传播
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      边界路由器向内网注入或传播 0.0.0.0/0 默认路由，使内网设备在无更精确路由时
-      将流量导向出口。
-    aliases:
-      - default route propagation
-      - default route injection
-      - 默认路由下发
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  # ── Forwarding Mechanisms ───────────────────────────────────
-  - id: MECH.LongestPrefixMatch
-    canonical_name: LongestPrefixMatch
-    display_name_zh: 最长前缀匹配
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      路由查表时优先使用掩码最长（最精确）的路由条目转发报文。
-    aliases:
-      - longest prefix match
-      - LPM
-      - 最长掩码匹配
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.LabelSwitching
-    canonical_name: LabelSwitching
-    display_name_zh: 标签交换
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      MPLS 数据平面核心机制：转发设备根据报文携带的标签查 LFIB 完成
-      Pop/Swap/Push 操作，无需查 IP 路由表。
-    aliases:
-      - label switching
-      - MPLS forwarding
-      - 标签转发
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  - id: MECH.EncapsulationDecapsulation
-    canonical_name: EncapsulationDecapsulation
-    display_name_zh: 封装与解封装
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      Overlay 技术（VXLAN/GRE/IPsec）在报文进出隧道时添加或去除外层报头的机制。
-    aliases:
-      - encapsulation decapsulation
-      - tunnel encap decap
-      - 封装解封装
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.VxlanOverlayForwarding
-    canonical_name: VxlanOverlayForwarding
-    display_name_zh: VXLAN Overlay 转发
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      VTEP 将二层帧封装进 UDP/IP 后通过 Underlay 转发，实现跨三层网络的
-      二层 Overlay 互联，支持大规模多租户隔离。
-    aliases:
-      - VXLAN overlay forwarding
-      - VTEP forwarding
-      - overlay forwarding
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  - id: MECH.PolicyBasedForwarding
-    canonical_name: PolicyBasedForwarding
-    display_name_zh: 策略转发
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      根据 ACL/流分类结果而非目的地址决定转发路径，用于实现出口选路、
-      流量绕行、业务链等。
-    aliases:
-      - policy based forwarding
-      - PBR
-      - policy-based routing
-      - 策略路由
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  # ── Redundancy Mechanisms ───────────────────────────────────
-  - id: MECH.FirstHopRedundancy
-    canonical_name: FirstHopRedundancy
-    display_name_zh: 首跳冗余
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      多台网关设备虚拟为单一 IP 网关，主设备故障时备设备接管，
-      终端无需感知。典型实现：VRRP、HSRP、Anycast Gateway。
-    aliases:
-      - first hop redundancy
-      - FHRP
-      - gateway redundancy
-      - 网关冗余
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.FastFailureDetection
-    canonical_name: FastFailureDetection
-    display_name_zh: 快速故障检测
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      利用 BFD 等轻量级探测机制在毫秒级感知链路或邻居故障，
-      触发路由协议快速收敛。
-    aliases:
-      - fast failure detection
-      - BFD detection
-      - 快速检测
-      - 亚秒级故障检测
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.PrimaryBackupSwitchover
-    canonical_name: PrimaryBackupSwitchover
-    display_name_zh: 主备切换
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      主路径或主设备故障后，流量自动切换到预先配置的备用路径或备设备，
-      切换时间由检测机制和抢占策略共同决定。
-    aliases:
-      - primary backup switchover
-      - failover
-      - active standby switchover
-      - 主备倒换
-      - 故障切换
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  - id: MECH.LoadSharing
-    canonical_name: LoadSharing
-    display_name_zh: 负载分担
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      多条并行链路或路径同时承载流量，按 hash 或 round-robin 分配。
-    aliases:
-      - load sharing
-      - load balancing
-      - 负载均衡
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  # ── Isolation Mechanisms ────────────────────────────────────
-  - id: MECH.VRFIsolation
-    canonical_name: VRFIsolation
-    display_name_zh: VRF 隔离
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      在同一台路由器上创建多个独立路由表（VRF），实现不同租户或业务的
-      三层隔离，路由和转发完全独立。
-    aliases:
-      - VRF isolation
-      - VRF-based isolation
-      - 虚拟路由转发隔离
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.RouteTargetBasedIsolation
-    canonical_name: RouteTargetBasedIsolation
-    display_name_zh: Route Target 隔离
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      MPLS L3VPN 中通过 RT（Route Target）的 import/export 策略控制
-      VPN 路由的可见范围，实现精细化多租户隔离与互通。
-    aliases:
-      - route target isolation
-      - RT-based isolation
-      - route target import export
-      - 路由目标隔离
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.OverlayTenantIsolation
-    canonical_name: OverlayTenantIsolation
-    display_name_zh: Overlay 租户隔离
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      EVPN/VXLAN 中通过 VNI 和 EVI 将不同租户的流量封装在独立 Overlay 中，
-      Underlay 共用但逻辑完全隔离。
-    aliases:
-      - overlay tenant isolation
-      - VNI-based isolation
-      - EVPN tenant isolation
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  # ── Control Plane Coordination ──────────────────────────────
-  - id: MECH.NeighborAdjacencyFormation
-    canonical_name: NeighborAdjacencyFormation
-    display_name_zh: 邻居关系建立
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      路由协议（OSPF/IS-IS/BGP）建立邻居/邻接关系的握手过程，
-      是路由信息交换的前提。
-    aliases:
-      - neighbor adjacency
-      - neighbor formation
-      - BGP session establishment
-      - OSPF adjacency
-      - 邻居建立
-      - 邻接关系
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  - id: MECH.ReflectionAndReAdvertisement
-    canonical_name: ReflectionAndReAdvertisement
-    display_name_zh: 路由反射与重播
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      BGP RR 将从 iBGP 客户端收到的路由反射给其他客户端，解决 iBGP 全互联
-      扩展性问题。
-    aliases:
-      - route reflection
-      - RR reflection
-      - BGP route reflector
-      - 路由反射
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.RouteImportExport
-    canonical_name: RouteImportExport
-    display_name_zh: 路由导入导出
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      VPN 路由在 PE 上通过 RD 标识后导出为 VPNv4/VPNv6 路由，
-      其他 PE 按 RT 策略导入对应 VRF，完成 VPN 路由跨站点分发。
-    aliases:
-      - route import export
-      - VPN route distribution
-      - VPNv4 advertisement
-      - 路由导入导出
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-      - depends_on
-
-  # ── Traffic Control Mechanisms ──────────────────────────────
-  - id: MECH.ClassificationMarking
-    canonical_name: ClassificationMarking
-    display_name_zh: 流量分类与标记
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      在入口处按 ACL/DSCP/802.1p 等条件识别流量并打标，为后续队列调度
-      和策略执行提供依据。
-    aliases:
-      - traffic classification
-      - QoS marking
-      - DSCP marking
-      - 流量分类标记
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
-
-  - id: MECH.QueueScheduling
-    canonical_name: QueueScheduling
-    display_name_zh: 队列调度
-    knowledge_layer: mechanism
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      通过 PQ/WFQ/CBWFQ/LLQ 等调度算法控制不同优先级队列的出口带宽分配，
-      保证高优先级流量的时延和带宽。
-    aliases:
-      - queue scheduling
-      - QoS scheduling
-      - traffic scheduling
-      - 队列调度
-    allowed_relations:
-      - participates_in
-      - explains
-      - implemented_by
+- id: MECH.LinkStateFlooding
+  canonical_name: LinkStateFlooding
+  display_name_zh: 链路状态泛洪
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Link-state flooding: OSPF/IS-IS routers advertise link-state information (LSA/LSP) to all nodes in the flooding
+    domain, building a synchronized topology database (LSDB). 链路状态路由协议（OSPF/IS-IS）中，每台路由器将自身链路状态信息泛洪 到整个区域，使所有节点获得一致的全局拓扑视图。'
+  aliases:
+  - link state flooding
+  - LSA flooding
+  - link-state advertisement flood
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+  - causes
+- id: MECH.PathVectorPropagation
+  canonical_name: PathVectorPropagation
+  display_name_zh: 路径矢量传播
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Path vector propagation: BGP carries the full AS-Path with each route update, enabling loop detection (reject
+    routes containing own AS) and policy-based path selection. BGP 使用的路由信息传播机制：每条路由携带完整的 AS-Path，防止路由环路， 并使接收方可根据路径属性做策略决策。'
+  aliases:
+  - path vector propagation
+  - BGP route propagation
+  - AS-path propagation
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.BestPathSelection
+  canonical_name: BestPathSelection
+  display_name_zh: 最优路径选择
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'BGP best-path selection: decision process comparing Weight > LocalPref > AS-Path length > Origin > MED > eBGP/iBGP
+    > IGP metric to select the optimal route for installation. BGP 按 Weight → LocalPref → AS-Path 长度 → Origin → MED → eBGP/iBGP
+    → IGP Metric 等属性依次比较，选出最优路由安装到路由表。'
+  aliases:
+  - best path selection
+  - BGP best path
+  - route selection algorithm
+  - 最优路由选择
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+  - causes
+- id: MECH.RecursiveNextHopResolution
+  canonical_name: RecursiveNextHopResolution
+  display_name_zh: 递归下一跳解析
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Recursive next-hop resolution: BGP next-hop addresses are resolved through IGP routing table lookup to find
+    a directly connected egress; unreachable next-hops prevent route installation. BGP 路由的 next-hop 地址需通过 IGP 递归查表解析为直连出口，
+    next-hop 不可达时路由不会被安装。'
+  aliases:
+  - recursive next hop
+  - next-hop resolution
+  - 递归下一跳
+  allowed_relations:
+  - participates_in
+  - explains
+  - depends_on
+- id: MECH.ECMPSelection
+  canonical_name: ECMPSelection
+  display_name_zh: 等价多路径选择
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Equal-Cost Multi-Path (ECMP): when multiple equal-cost routes exist, the router forwards traffic across all
+    paths simultaneously using hash-based or round-robin distribution. 当存在多条等价路径时，路由器可同时使用多条路径进行负载分担， 提升带宽利用率并提供一定冗余。'
+  aliases:
+  - ECMP
+  - equal-cost multipath
+  - 等价多路径
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.RouteRedistribution
+  canonical_name: RouteRedistribution
+  display_name_zh: 路由重分布
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Route redistribution: importing routes learned by one routing protocol into another, enabling cross-protocol
+    reachability. Requires route-policy boundary control to prevent loops and leaks. 将一种路由协议学到的路由引入到另一种协议中，实现跨协议域路由互通。 需配合
+    route-policy 做边界管控以防止路由环路和路由泄漏。'
+  aliases:
+  - route redistribution
+  - route import
+  - 路由引入
+  - 路由重分发
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - risky_under
+- id: MECH.DefaultRoutePropagation
+  canonical_name: DefaultRoutePropagation
+  display_name_zh: 默认路由传播
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Default route propagation: border router injects or advertises 0.0.0.0/0 default route into the internal network,
+    directing traffic to the exit when no more specific route exists. 边界路由器向内网注入或传播 0.0.0.0/0 默认路由，使内网设备在无更精确路由时 将流量导向出口。'
+  aliases:
+  - default route propagation
+  - default route injection
+  - 默认路由下发
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.LongestPrefixMatch
+  canonical_name: LongestPrefixMatch
+  display_name_zh: 最长前缀匹配
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Longest Prefix Match (LPM): routing table lookup algorithm that selects the most specific prefix (longest
+    netmask) when multiple routes match a destination IP address. 路由查表时优先使用掩码最长（最精确）的路由条目转发报文。'
+  aliases:
+  - longest prefix match
+  - LPM
+  - 最长掩码匹配
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.LabelSwitching
+  canonical_name: LabelSwitching
+  display_name_zh: 标签交换
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'MPLS label switching: data plane mechanism where forwarding devices perform Pop/Swap/Push operations based
+    on packet labels via LFIB lookup, bypassing IP routing table. MPLS 数据平面核心机制：转发设备根据报文携带的标签查 LFIB 完成 Pop/Swap/Push 操作，无需查
+    IP 路由表。'
+  aliases:
+  - label switching
+  - MPLS forwarding
+  - 标签转发
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.EncapsulationDecapsulation
+  canonical_name: EncapsulationDecapsulation
+  display_name_zh: 封装与解封装
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Tunnel encapsulation/decapsulation: overlay technologies (VXLAN/GRE/IPsec) add or remove outer headers when
+    packets enter or exit tunnels. Overlay 技术（VXLAN/GRE/IPsec）在报文进出隧道时添加或去除外层报头的机制。'
+  aliases:
+  - encapsulation decapsulation
+  - tunnel encap decap
+  - 封装解封装
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.VxlanOverlayForwarding
+  canonical_name: VxlanOverlayForwarding
+  display_name_zh: VXLAN Overlay 转发
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'VXLAN overlay forwarding: VTEP encapsulates L2 frames into UDP/IP for transport over L3 underlay, enabling
+    L2 overlay connectivity across routed networks with multi-tenant isolation. VTEP 将二层帧封装进 UDP/IP 后通过 Underlay 转发，实现跨三层网络的
+    二层 Overlay 互联，支持大规模多租户隔离。'
+  aliases:
+  - VXLAN overlay forwarding
+  - VTEP forwarding
+  - overlay forwarding
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.PolicyBasedForwarding
+  canonical_name: PolicyBasedForwarding
+  display_name_zh: 策略转发
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Policy-based routing (PBR): forwarding decisions based on ACL/flow classification rather than destination
+    address, used for exit selection, traffic steering, and service chaining. 根据 ACL/流分类结果而非目的地址决定转发路径，用于实现出口选路、 流量绕行、业务链等。'
+  aliases:
+  - policy based forwarding
+  - PBR
+  - policy-based routing
+  - 策略路由
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.FirstHopRedundancy
+  canonical_name: FirstHopRedundancy
+  display_name_zh: 首跳冗余
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'First Hop Redundancy Protocol (FHRP): multiple gateway devices present a single virtual IP to hosts; backup
+    takes over on primary failure. Implementations: VRRP, HSRP, Anycast Gateway. 多台网关设备虚拟为单一 IP 网关，主设备故障时备设备接管， 终端无需感知。典型实现：VRRP、HSRP、Anycast
+    Gateway。'
+  aliases:
+  - first hop redundancy
+  - FHRP
+  - gateway redundancy
+  - 网关冗余
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.FastFailureDetection
+  canonical_name: FastFailureDetection
+  display_name_zh: 快速故障检测
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Fast failure detection: lightweight probing mechanisms like BFD detect link or neighbor failures in milliseconds,
+    triggering rapid routing protocol convergence. 利用 BFD 等轻量级探测机制在毫秒级感知链路或邻居故障， 触发路由协议快速收敛。'
+  aliases:
+  - fast failure detection
+  - BFD detection
+  - 快速检测
+  - 亚秒级故障检测
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.PrimaryBackupSwitchover
+  canonical_name: PrimaryBackupSwitchover
+  display_name_zh: 主备切换
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Primary-backup switchover: traffic automatically shifts to pre-configured backup path/device when the primary
+    fails; switchover time depends on detection mechanism and preemption policy. 主路径或主设备故障后，流量自动切换到预先配置的备用路径或备设备， 切换时间由检测机制和抢占策略共同决定。'
+  aliases:
+  - primary backup switchover
+  - failover
+  - active standby switchover
+  - 主备倒换
+  - 故障切换
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.LoadSharing
+  canonical_name: LoadSharing
+  display_name_zh: 负载分担
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Load sharing: distributing traffic across multiple parallel links or paths using hash-based or round-robin
+    algorithms for bandwidth utilization and redundancy. 多条并行链路或路径同时承载流量，按 hash 或 round-robin 分配。'
+  aliases:
+  - load sharing
+  - load balancing
+  - 负载均衡
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.VRFIsolation
+  canonical_name: VRFIsolation
+  display_name_zh: VRF 隔离
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'VRF isolation: creating multiple independent routing tables (VRF instances) on a single router for L3 tenant/service
+    isolation with completely separate routing and forwarding planes. 在同一台路由器上创建多个独立路由表（VRF），实现不同租户或业务的 三层隔离，路由和转发完全独立。'
+  aliases:
+  - VRF isolation
+  - VRF-based isolation
+  - 虚拟路由转发隔离
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.RouteTargetBasedIsolation
+  canonical_name: RouteTargetBasedIsolation
+  display_name_zh: Route Target 隔离
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Route Target (RT) based isolation: MPLS L3VPN controls VPN route visibility scope through RT import/export
+    policies, enabling fine-grained multi-tenant isolation and selective interconnection. MPLS L3VPN 中通过 RT（Route Target）的
+    import/export 策略控制 VPN 路由的可见范围，实现精细化多租户隔离与互通。'
+  aliases:
+  - route target isolation
+  - RT-based isolation
+  - route target import export
+  - 路由目标隔离
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.OverlayTenantIsolation
+  canonical_name: OverlayTenantIsolation
+  display_name_zh: Overlay 租户隔离
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Overlay tenant isolation: EVPN/VXLAN isolates different tenants using VNI and EVI, with shared underlay infrastructure
+    but logically separate overlay networks for L2/L3 traffic. EVPN/VXLAN 中通过 VNI 和 EVI 将不同租户的流量封装在独立 Overlay 中， Underlay
+    共用但逻辑完全隔离。'
+  aliases:
+  - overlay tenant isolation
+  - VNI-based isolation
+  - EVPN tenant isolation
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.NeighborAdjacencyFormation
+  canonical_name: NeighborAdjacencyFormation
+  display_name_zh: 邻居关系建立
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Neighbor adjacency formation: routing protocol (OSPF/IS-IS/BGP) handshake process to establish neighbor/adjacency
+    relationships, a prerequisite for route information exchange. 路由协议（OSPF/IS-IS/BGP）建立邻居/邻接关系的握手过程， 是路由信息交换的前提。'
+  aliases:
+  - neighbor adjacency
+  - neighbor formation
+  - BGP session establishment
+  - OSPF adjacency
+  - 邻居建立
+  - 邻接关系
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.ReflectionAndReAdvertisement
+  canonical_name: ReflectionAndReAdvertisement
+  display_name_zh: 路由反射与重播
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'BGP route reflection: Route Reflector (RR) re-advertises iBGP-learned routes to other iBGP peers (clients),
+    eliminating the need for full-mesh iBGP sessions. BGP RR 将从 iBGP 客户端收到的路由反射给其他客户端，解决 iBGP 全互联 扩展性问题。'
+  aliases:
+  - route reflection
+  - RR reflection
+  - BGP route reflector
+  - 路由反射
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.RouteImportExport
+  canonical_name: RouteImportExport
+  display_name_zh: 路由导入导出
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'VPN route import/export: PE routers export local VRF routes as VPNv4/VPNv6 with RD, and other PEs import matching
+    routes based on RT policy for cross-site VPN distribution. VPN 路由在 PE 上通过 RD 标识后导出为 VPNv4/VPNv6 路由， 其他 PE 按 RT 策略导入对应
+    VRF，完成 VPN 路由跨站点分发。'
+  aliases:
+  - route import export
+  - VPN route distribution
+  - VPNv4 advertisement
+  - 路由导入导出
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+  - depends_on
+- id: MECH.ClassificationMarking
+  canonical_name: ClassificationMarking
+  display_name_zh: 流量分类与标记
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Traffic classification and marking: identifying traffic at ingress using ACL/DSCP/802.1p criteria and applying
+    QoS markings for downstream queue scheduling and policy enforcement. 在入口处按 ACL/DSCP/802.1p 等条件识别流量并打标，为后续队列调度 和策略执行提供依据。'
+  aliases:
+  - traffic classification
+  - QoS marking
+  - DSCP marking
+  - 流量分类标记
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by
+- id: MECH.QueueScheduling
+  canonical_name: QueueScheduling
+  display_name_zh: 队列调度
+  knowledge_layer: mechanism
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Queue scheduling: PQ/WFQ/CBWFQ/LLQ algorithms control bandwidth allocation across priority queues, ensuring
+    delay and bandwidth guarantees for high-priority traffic. 通过 PQ/WFQ/CBWFQ/LLQ 等调度算法控制不同优先级队列的出口带宽分配， 保证高优先级流量的时延和带宽。'
+  aliases:
+  - queue scheduling
+  - QoS scheduling
+  - traffic scheduling
+  - 队列调度
+  allowed_relations:
+  - participates_in
+  - explains
+  - implemented_by

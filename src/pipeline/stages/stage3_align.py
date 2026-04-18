@@ -242,7 +242,10 @@ class AlignStage(Stage):
 
         try:
             from src.utils.embedding import get_embeddings
-            texts = [n["canonical_name"].lower() for n in nodes]
+            texts = [
+                (n["canonical_name"] + ". " + n.get("description", "")).strip().lower()
+                for n in nodes
+            ]
             log.info("Computing embeddings for %d ontology nodes (one-time, ~9 min)...", len(texts))
             vecs = get_embeddings(texts)
             if vecs is None:

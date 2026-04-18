@@ -578,7 +578,10 @@ class OntologyMaintenance:
         log.info("Ontology changed, rebuilding embedding cache for %d nodes...", len(current_ids))
         try:
             from src.utils.embedding import get_embeddings
-            texts = [n["canonical_name"].lower() for n in nodes]
+            texts = [
+                (n["canonical_name"] + ". " + n.get("description", "")).strip().lower()
+                for n in nodes
+            ]
             vecs = get_embeddings(texts)
             if vecs is None:
                 return {"status": "failed", "reason": "embedding_service_unavailable"}

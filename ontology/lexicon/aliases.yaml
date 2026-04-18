@@ -3409,9 +3409,6 @@ aliases:
   canonical_node_id: IP.NQA_TEST
   alias_type: full_name
   language: en
-
-# 5G Cloud Core Network (CN5G) v0.4.0
-
 - surface_form: Access and Mobility Management Function
   canonical_node_id: CN5G.AMF
   alias_type: full_name
@@ -3686,5 +3683,949 @@ aliases:
   language: en
 - surface_form: Helm部署包
   canonical_node_id: CN5G.HELM_CHART
+  alias_type: full_name
+  language: zh
+- surface_form: link state flooding
+  canonical_node_id: MECH.LinkStateFlooding
+  alias_type: full_name
+  language: en
+- surface_form: LSA flooding
+  canonical_node_id: MECH.LinkStateFlooding
+  alias_type: abbreviation
+  language: en
+- surface_form: link-state advertisement
+  canonical_node_id: MECH.LinkStateFlooding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: flooding mechanism
+  canonical_node_id: MECH.LinkStateFlooding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 链路状态泛洪
+  canonical_node_id: MECH.LinkStateFlooding
+  alias_type: full_name
+  language: zh
+- surface_form: path vector
+  canonical_node_id: MECH.PathVectorPropagation
+  alias_type: full_name
+  language: en
+- surface_form: path vector protocol
+  canonical_node_id: MECH.PathVectorPropagation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: AS-Path propagation
+  canonical_node_id: MECH.PathVectorPropagation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: bgp path propagation
+  canonical_node_id: MECH.PathVectorPropagation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路径矢量传播
+  canonical_node_id: MECH.PathVectorPropagation
+  alias_type: full_name
+  language: zh
+- surface_form: best path selection
+  canonical_node_id: MECH.BestPathSelection
+  alias_type: full_name
+  language: en
+- surface_form: bgp decision process
+  canonical_node_id: MECH.BestPathSelection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: bgp path selection algorithm
+  canonical_node_id: MECH.BestPathSelection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: route selection
+  canonical_node_id: MECH.BestPathSelection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 最优路径选择
+  canonical_node_id: MECH.BestPathSelection
+  alias_type: full_name
+  language: zh
+- surface_form: recursive next-hop resolution
+  canonical_node_id: MECH.RecursiveNextHopResolution
+  alias_type: full_name
+  language: en
+- surface_form: next-hop resolution
+  canonical_node_id: MECH.RecursiveNextHopResolution
+  alias_type: alternate_spelling
+  language: en
+- surface_form: recursive lookup
+  canonical_node_id: MECH.RecursiveNextHopResolution
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 递归下一跳解析
+  canonical_node_id: MECH.RecursiveNextHopResolution
+  alias_type: full_name
+  language: zh
+- surface_form: equal-cost multipath
+  canonical_node_id: MECH.ECMPSelection
+  alias_type: full_name
+  language: en
+- surface_form: ECMP
+  canonical_node_id: MECH.ECMPSelection
+  alias_type: abbreviation
+  language: en
+- surface_form: equal cost multi-path
+  canonical_node_id: MECH.ECMPSelection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: multipath forwarding
+  canonical_node_id: MECH.ECMPSelection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 等价多路径
+  canonical_node_id: MECH.ECMPSelection
+  alias_type: full_name
+  language: zh
+- surface_form: route redistribution
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: full_name
+  language: en
+- surface_form: routing redistribution
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: alternate_spelling
+  language: en
+- surface_form: redistribute
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: alternate_spelling
+  language: en
+- surface_form: mutual redistribution
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路由重分布
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: full_name
+  language: zh
+- surface_form: 路由引入
+  canonical_node_id: MECH.RouteRedistribution
+  alias_type: alternate_spelling
+  language: zh
+- surface_form: default route propagation
+  canonical_node_id: MECH.DefaultRoutePropagation
+  alias_type: full_name
+  language: en
+- surface_form: default route injection
+  canonical_node_id: MECH.DefaultRoutePropagation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: default-information originate
+  canonical_node_id: MECH.DefaultRoutePropagation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 默认路由传播
+  canonical_node_id: MECH.DefaultRoutePropagation
+  alias_type: full_name
+  language: zh
+- surface_form: longest prefix match
+  canonical_node_id: MECH.LongestPrefixMatch
+  alias_type: full_name
+  language: en
+- surface_form: longest match
+  canonical_node_id: MECH.LongestPrefixMatch
+  alias_type: alternate_spelling
+  language: en
+- surface_form: LPM
+  canonical_node_id: MECH.LongestPrefixMatch
+  alias_type: abbreviation
+  language: en
+- surface_form: 最长前缀匹配
+  canonical_node_id: MECH.LongestPrefixMatch
+  alias_type: full_name
+  language: zh
+- surface_form: label switching
+  canonical_node_id: MECH.LabelSwitching
+  alias_type: full_name
+  language: en
+- surface_form: MPLS forwarding
+  canonical_node_id: MECH.LabelSwitching
+  alias_type: alternate_spelling
+  language: en
+- surface_form: label swap
+  canonical_node_id: MECH.LabelSwitching
+  alias_type: alternate_spelling
+  language: en
+- surface_form: LFIB lookup
+  canonical_node_id: MECH.LabelSwitching
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 标签交换
+  canonical_node_id: MECH.LabelSwitching
+  alias_type: full_name
+  language: zh
+- surface_form: encapsulation and decapsulation
+  canonical_node_id: MECH.EncapsulationDecapsulation
+  alias_type: full_name
+  language: en
+- surface_form: tunnel encapsulation
+  canonical_node_id: MECH.EncapsulationDecapsulation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: packet encapsulation
+  canonical_node_id: MECH.EncapsulationDecapsulation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 封装解封装
+  canonical_node_id: MECH.EncapsulationDecapsulation
+  alias_type: full_name
+  language: zh
+- surface_form: VXLAN overlay forwarding
+  canonical_node_id: MECH.VxlanOverlayForwarding
+  alias_type: full_name
+  language: en
+- surface_form: VXLAN forwarding
+  canonical_node_id: MECH.VxlanOverlayForwarding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VTEP forwarding
+  canonical_node_id: MECH.VxlanOverlayForwarding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: overlay data plane
+  canonical_node_id: MECH.VxlanOverlayForwarding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VXLAN转发
+  canonical_node_id: MECH.VxlanOverlayForwarding
+  alias_type: full_name
+  language: zh
+- surface_form: policy-based routing
+  canonical_node_id: MECH.PolicyBasedForwarding
+  alias_type: full_name
+  language: en
+- surface_form: PBR
+  canonical_node_id: MECH.PolicyBasedForwarding
+  alias_type: abbreviation
+  language: en
+- surface_form: policy routing
+  canonical_node_id: MECH.PolicyBasedForwarding
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 策略路由
+  canonical_node_id: MECH.PolicyBasedForwarding
+  alias_type: full_name
+  language: zh
+- surface_form: first hop redundancy
+  canonical_node_id: MECH.FirstHopRedundancy
+  alias_type: full_name
+  language: en
+- surface_form: FHRP
+  canonical_node_id: MECH.FirstHopRedundancy
+  alias_type: abbreviation
+  language: en
+- surface_form: gateway redundancy
+  canonical_node_id: MECH.FirstHopRedundancy
+  alias_type: alternate_spelling
+  language: en
+- surface_form: virtual gateway
+  canonical_node_id: MECH.FirstHopRedundancy
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 网关冗余
+  canonical_node_id: MECH.FirstHopRedundancy
+  alias_type: full_name
+  language: zh
+- surface_form: fast failure detection
+  canonical_node_id: MECH.FastFailureDetection
+  alias_type: full_name
+  language: en
+- surface_form: BFD detection
+  canonical_node_id: MECH.FastFailureDetection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: sub-second detection
+  canonical_node_id: MECH.FastFailureDetection
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 快速故障检测
+  canonical_node_id: MECH.FastFailureDetection
+  alias_type: full_name
+  language: zh
+- surface_form: primary backup switchover
+  canonical_node_id: MECH.PrimaryBackupSwitchover
+  alias_type: full_name
+  language: en
+- surface_form: failover
+  canonical_node_id: MECH.PrimaryBackupSwitchover
+  alias_type: alternate_spelling
+  language: en
+- surface_form: active-standby switchover
+  canonical_node_id: MECH.PrimaryBackupSwitchover
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 主备切换
+  canonical_node_id: MECH.PrimaryBackupSwitchover
+  alias_type: full_name
+  language: zh
+- surface_form: load sharing
+  canonical_node_id: MECH.LoadSharing
+  alias_type: full_name
+  language: en
+- surface_form: load balancing
+  canonical_node_id: MECH.LoadSharing
+  alias_type: alternate_spelling
+  language: en
+- surface_form: traffic distribution
+  canonical_node_id: MECH.LoadSharing
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 负载分担
+  canonical_node_id: MECH.LoadSharing
+  alias_type: full_name
+  language: zh
+- surface_form: VRF isolation
+  canonical_node_id: MECH.VRFIsolation
+  alias_type: full_name
+  language: en
+- surface_form: VRF-based isolation
+  canonical_node_id: MECH.VRFIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: routing table isolation
+  canonical_node_id: MECH.VRFIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VRF隔离
+  canonical_node_id: MECH.VRFIsolation
+  alias_type: full_name
+  language: zh
+- surface_form: route target isolation
+  canonical_node_id: MECH.RouteTargetBasedIsolation
+  alias_type: full_name
+  language: en
+- surface_form: RT-based isolation
+  canonical_node_id: MECH.RouteTargetBasedIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VPN route isolation
+  canonical_node_id: MECH.RouteTargetBasedIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: RT隔离
+  canonical_node_id: MECH.RouteTargetBasedIsolation
+  alias_type: full_name
+  language: zh
+- surface_form: overlay tenant isolation
+  canonical_node_id: MECH.OverlayTenantIsolation
+  alias_type: full_name
+  language: en
+- surface_form: VNI isolation
+  canonical_node_id: MECH.OverlayTenantIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: EVPN tenant isolation
+  canonical_node_id: MECH.OverlayTenantIsolation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 租户隔离
+  canonical_node_id: MECH.OverlayTenantIsolation
+  alias_type: full_name
+  language: zh
+- surface_form: neighbor adjacency formation
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: full_name
+  language: en
+- surface_form: adjacency formation
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: neighbor establishment
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: hello protocol
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: neighbor state machine
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 邻居建立
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: full_name
+  language: zh
+- surface_form: 邻接关系
+  canonical_node_id: MECH.NeighborAdjacencyFormation
+  alias_type: alternate_spelling
+  language: zh
+- surface_form: route reflection
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: full_name
+  language: en
+- surface_form: BGP route reflector
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: alternate_spelling
+  language: en
+- surface_form: iBGP route reflection
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: alternate_spelling
+  language: en
+- surface_form: RR mechanism
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: abbreviation
+  language: en
+- surface_form: 路由反射
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: full_name
+  language: zh
+- surface_form: 路由反射器
+  canonical_node_id: MECH.ReflectionAndReAdvertisement
+  alias_type: alternate_spelling
+  language: zh
+- surface_form: route import export
+  canonical_node_id: MECH.RouteImportExport
+  alias_type: full_name
+  language: en
+- surface_form: VPN route distribution
+  canonical_node_id: MECH.RouteImportExport
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VPNv4 route exchange
+  canonical_node_id: MECH.RouteImportExport
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路由导入导出
+  canonical_node_id: MECH.RouteImportExport
+  alias_type: full_name
+  language: zh
+- surface_form: traffic classification and marking
+  canonical_node_id: MECH.ClassificationMarking
+  alias_type: full_name
+  language: en
+- surface_form: QoS classification
+  canonical_node_id: MECH.ClassificationMarking
+  alias_type: alternate_spelling
+  language: en
+- surface_form: DSCP marking
+  canonical_node_id: MECH.ClassificationMarking
+  alias_type: alternate_spelling
+  language: en
+- surface_form: traffic marking
+  canonical_node_id: MECH.ClassificationMarking
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 流量分类标记
+  canonical_node_id: MECH.ClassificationMarking
+  alias_type: full_name
+  language: zh
+- surface_form: queue scheduling
+  canonical_node_id: MECH.QueueScheduling
+  alias_type: full_name
+  language: en
+- surface_form: QoS scheduling
+  canonical_node_id: MECH.QueueScheduling
+  alias_type: alternate_spelling
+  language: en
+- surface_form: priority queuing
+  canonical_node_id: MECH.QueueScheduling
+  alias_type: alternate_spelling
+  language: en
+- surface_form: weighted fair queuing
+  canonical_node_id: MECH.QueueScheduling
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 队列调度
+  canonical_node_id: MECH.QueueScheduling
+  alias_type: full_name
+  language: zh
+- surface_form: routing loop
+  canonical_node_id: COND.RoutingLoopRisk
+  alias_type: full_name
+  language: en
+- surface_form: routing loop risk
+  canonical_node_id: COND.RoutingLoopRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: loop prevention
+  canonical_node_id: COND.RoutingLoopRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: redistribution loop
+  canonical_node_id: COND.RoutingLoopRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路由环路
+  canonical_node_id: COND.RoutingLoopRisk
+  alias_type: full_name
+  language: zh
+- surface_form: route leak
+  canonical_node_id: COND.RouteLeakRisk
+  alias_type: full_name
+  language: en
+- surface_form: route leaking
+  canonical_node_id: COND.RouteLeakRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: route leakage
+  canonical_node_id: COND.RouteLeakRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路由泄漏
+  canonical_node_id: COND.RouteLeakRisk
+  alias_type: full_name
+  language: zh
+- surface_form: asymmetric routing
+  canonical_node_id: COND.AsymmetricPathRisk
+  alias_type: full_name
+  language: en
+- surface_form: asymmetric path
+  canonical_node_id: COND.AsymmetricPathRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: return path mismatch
+  canonical_node_id: COND.AsymmetricPathRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 不对称路径
+  canonical_node_id: COND.AsymmetricPathRisk
+  alias_type: full_name
+  language: zh
+- surface_form: broadcast domain expansion
+  canonical_node_id: COND.BroadcastDomainExpansionRisk
+  alias_type: full_name
+  language: en
+- surface_form: large broadcast domain
+  canonical_node_id: COND.BroadcastDomainExpansionRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: L2 stretch risk
+  canonical_node_id: COND.BroadcastDomainExpansionRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 广播域扩大
+  canonical_node_id: COND.BroadcastDomainExpansionRisk
+  alias_type: full_name
+  language: zh
+- surface_form: failover oscillation
+  canonical_node_id: COND.FailoverOscillationRisk
+  alias_type: full_name
+  language: en
+- surface_form: route flapping
+  canonical_node_id: COND.FailoverOscillationRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VRRP flapping
+  canonical_node_id: COND.FailoverOscillationRisk
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 主备振荡
+  canonical_node_id: COND.FailoverOscillationRisk
+  alias_type: full_name
+  language: zh
+- surface_form: large scale network
+  canonical_node_id: COND.LargeScaleApplicability
+  alias_type: full_name
+  language: en
+- surface_form: scalability requirement
+  canonical_node_id: COND.LargeScaleApplicability
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 大规模组网
+  canonical_node_id: COND.LargeScaleApplicability
+  alias_type: full_name
+  language: zh
+- surface_form: multi-tenant
+  canonical_node_id: COND.MultiTenantApplicability
+  alias_type: full_name
+  language: en
+- surface_form: multi-tenancy
+  canonical_node_id: COND.MultiTenantApplicability
+  alias_type: alternate_spelling
+  language: en
+- surface_form: tenant isolation requirement
+  canonical_node_id: COND.MultiTenantApplicability
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 多租户
+  canonical_node_id: COND.MultiTenantApplicability
+  alias_type: full_name
+  language: zh
+- surface_form: control plane scale
+  canonical_node_id: COND.ControlPlaneScaleConstraint
+  alias_type: full_name
+  language: en
+- surface_form: routing table overflow
+  canonical_node_id: COND.ControlPlaneScaleConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: FIB overflow
+  canonical_node_id: COND.ControlPlaneScaleConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 控制平面容量
+  canonical_node_id: COND.ControlPlaneScaleConstraint
+  alias_type: full_name
+  language: zh
+- surface_form: device capability
+  canonical_node_id: COND.DeviceCapabilityConstraint
+  alias_type: full_name
+  language: en
+- surface_form: hardware limitation
+  canonical_node_id: COND.DeviceCapabilityConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: feature support
+  canonical_node_id: COND.DeviceCapabilityConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 设备能力约束
+  canonical_node_id: COND.DeviceCapabilityConstraint
+  alias_type: full_name
+  language: zh
+- surface_form: interoperability
+  canonical_node_id: COND.InteroperabilityConstraint
+  alias_type: full_name
+  language: en
+- surface_form: multi-vendor compatibility
+  canonical_node_id: COND.InteroperabilityConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: vendor interop
+  canonical_node_id: COND.InteroperabilityConstraint
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 互操作性
+  canonical_node_id: COND.InteroperabilityConstraint
+  alias_type: full_name
+  language: zh
+- surface_form: EVPN VXLAN fabric
+  canonical_node_id: SCENE.EVPNVXLANFabricScenario
+  alias_type: full_name
+  language: en
+- surface_form: data center fabric
+  canonical_node_id: SCENE.EVPNVXLANFabricScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: DC overlay network
+  canonical_node_id: SCENE.EVPNVXLANFabricScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 数据中心组网
+  canonical_node_id: SCENE.EVPNVXLANFabricScenario
+  alias_type: full_name
+  language: zh
+- surface_form: EVPN VXLAN数据中心
+  canonical_node_id: SCENE.EVPNVXLANFabricScenario
+  alias_type: alternate_spelling
+  language: zh
+- surface_form: spine-leaf architecture
+  canonical_node_id: SCENE.SpineLeafUnderlayOverlayScenario
+  alias_type: full_name
+  language: en
+- surface_form: spine leaf
+  canonical_node_id: SCENE.SpineLeafUnderlayOverlayScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: IP fabric underlay
+  canonical_node_id: SCENE.SpineLeafUnderlayOverlayScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: Clos topology
+  canonical_node_id: SCENE.SpineLeafUnderlayOverlayScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 脊叶架构
+  canonical_node_id: SCENE.SpineLeafUnderlayOverlayScenario
+  alias_type: full_name
+  language: zh
+- surface_form: dual exit internet
+  canonical_node_id: SCENE.DualExitCampusInternetScenario
+  alias_type: full_name
+  language: en
+- surface_form: dual ISP
+  canonical_node_id: SCENE.DualExitCampusInternetScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: campus internet access
+  canonical_node_id: SCENE.DualExitCampusInternetScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 双出口上网
+  canonical_node_id: SCENE.DualExitCampusInternetScenario
+  alias_type: full_name
+  language: zh
+- surface_form: headquarters branch interconnect
+  canonical_node_id: SCENE.HQBranchInterconnectScenario
+  alias_type: full_name
+  language: en
+- surface_form: branch office WAN
+  canonical_node_id: SCENE.HQBranchInterconnectScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: enterprise WAN
+  canonical_node_id: SCENE.HQBranchInterconnectScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 总部分支互联
+  canonical_node_id: SCENE.HQBranchInterconnectScenario
+  alias_type: full_name
+  language: zh
+- surface_form: MPLS L3VPN provisioning
+  canonical_node_id: SCENE.MPLSL3VPNProvisioningScenario
+  alias_type: full_name
+  language: en
+- surface_form: L3VPN service delivery
+  canonical_node_id: SCENE.MPLSL3VPNProvisioningScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VPN service provisioning
+  canonical_node_id: SCENE.MPLSL3VPNProvisioningScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: L3VPN开通
+  canonical_node_id: SCENE.MPLSL3VPNProvisioningScenario
+  alias_type: full_name
+  language: zh
+- surface_form: multi-tenant DCI
+  canonical_node_id: SCENE.MultiTenantDCIScenario
+  alias_type: full_name
+  language: en
+- surface_form: data center interconnect
+  canonical_node_id: SCENE.MultiTenantDCIScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: cross-DC extension
+  canonical_node_id: SCENE.MultiTenantDCIScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 数据中心互联
+  canonical_node_id: SCENE.MultiTenantDCIScenario
+  alias_type: full_name
+  language: zh
+- surface_form: OSPF BGP boundary
+  canonical_node_id: SCENE.OSPFToBGPBoundaryScenario
+  alias_type: full_name
+  language: en
+- surface_form: IGP EGP boundary
+  canonical_node_id: SCENE.OSPFToBGPBoundaryScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: IGP-BGP边界
+  canonical_node_id: SCENE.OSPFToBGPBoundaryScenario
+  alias_type: full_name
+  language: zh
+- surface_form: route reflector scale-out
+  canonical_node_id: SCENE.RRScaleOutScenario
+  alias_type: full_name
+  language: en
+- surface_form: iBGP scaling
+  canonical_node_id: SCENE.RRScaleOutScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: RR部署
+  canonical_node_id: SCENE.RRScaleOutScenario
+  alias_type: full_name
+  language: zh
+- surface_form: primary backup routing
+  canonical_node_id: SCENE.PrimaryBackupRoutingScenario
+  alias_type: full_name
+  language: en
+- surface_form: active standby routing
+  canonical_node_id: SCENE.PrimaryBackupRoutingScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 主备路由
+  canonical_node_id: SCENE.PrimaryBackupRoutingScenario
+  alias_type: full_name
+  language: zh
+- surface_form: failover drill
+  canonical_node_id: SCENE.FailoverDrillScenario
+  alias_type: full_name
+  language: en
+- surface_form: disaster recovery test
+  canonical_node_id: SCENE.FailoverDrillScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 倒换演练
+  canonical_node_id: SCENE.FailoverDrillScenario
+  alias_type: full_name
+  language: zh
+- surface_form: incremental migration
+  canonical_node_id: SCENE.IncrementalMigrationScenario
+  alias_type: full_name
+  language: en
+- surface_form: network migration
+  canonical_node_id: SCENE.IncrementalMigrationScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: phased cutover
+  canonical_node_id: SCENE.IncrementalMigrationScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 分阶段迁移
+  canonical_node_id: SCENE.IncrementalMigrationScenario
+  alias_type: full_name
+  language: zh
+- surface_form: branch service segmentation
+  canonical_node_id: SCENE.BranchServiceSegmentationScenario
+  alias_type: full_name
+  language: en
+- surface_form: network segmentation
+  canonical_node_id: SCENE.BranchServiceSegmentationScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 分支业务隔离
+  canonical_node_id: SCENE.BranchServiceSegmentationScenario
+  alias_type: full_name
+  language: zh
+- surface_form: inter-VRF communication
+  canonical_node_id: SCENE.InterVRFCommunicationScenario
+  alias_type: full_name
+  language: en
+- surface_form: VRF route leaking
+  canonical_node_id: SCENE.InterVRFCommunicationScenario
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VRF互通
+  canonical_node_id: SCENE.InterVRFCommunicationScenario
+  alias_type: full_name
+  language: zh
+- surface_form: OSPF area design
+  canonical_node_id: METHOD.OSPFAreaDeploymentMethod
+  alias_type: full_name
+  language: en
+- surface_form: OSPF area planning
+  canonical_node_id: METHOD.OSPFAreaDeploymentMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: OSPF区域部署
+  canonical_node_id: METHOD.OSPFAreaDeploymentMethod
+  alias_type: full_name
+  language: zh
+- surface_form: BGP policy configuration
+  canonical_node_id: METHOD.BGPPolicyConfigurationMethod
+  alias_type: full_name
+  language: en
+- surface_form: BGP route policy
+  canonical_node_id: METHOD.BGPPolicyConfigurationMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: BGP策略配置
+  canonical_node_id: METHOD.BGPPolicyConfigurationMethod
+  alias_type: full_name
+  language: zh
+- surface_form: EVPN VXLAN provisioning
+  canonical_node_id: METHOD.EVPNVXLANProvisioningMethod
+  alias_type: full_name
+  language: en
+- surface_form: VXLAN deployment
+  canonical_node_id: METHOD.EVPNVXLANProvisioningMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: EVPN配置
+  canonical_node_id: METHOD.EVPNVXLANProvisioningMethod
+  alias_type: full_name
+  language: zh
+- surface_form: MPLS VPN provisioning
+  canonical_node_id: METHOD.MPLSL3VPNProvisioningMethod
+  alias_type: full_name
+  language: en
+- surface_form: L3VPN configuration
+  canonical_node_id: METHOD.MPLSL3VPNProvisioningMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: L3VPN开通配置
+  canonical_node_id: METHOD.MPLSL3VPNProvisioningMethod
+  alias_type: full_name
+  language: zh
+- surface_form: VRF provisioning
+  canonical_node_id: METHOD.VRFProvisioningMethod
+  alias_type: full_name
+  language: en
+- surface_form: VRF configuration
+  canonical_node_id: METHOD.VRFProvisioningMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: VRF配置
+  canonical_node_id: METHOD.VRFProvisioningMethod
+  alias_type: full_name
+  language: zh
+- surface_form: QoS policy deployment
+  canonical_node_id: METHOD.QoSPolicyDeploymentMethod
+  alias_type: full_name
+  language: en
+- surface_form: QoS configuration
+  canonical_node_id: METHOD.QoSPolicyDeploymentMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: QoS策略部署
+  canonical_node_id: METHOD.QoSPolicyDeploymentMethod
+  alias_type: full_name
+  language: zh
+- surface_form: OSPF adjacency troubleshooting
+  canonical_node_id: METHOD.OSPFAdjacencyTroubleshootingMethod
+  alias_type: full_name
+  language: en
+- surface_form: OSPF neighbor troubleshoot
+  canonical_node_id: METHOD.OSPFAdjacencyTroubleshootingMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: OSPF邻居排障
+  canonical_node_id: METHOD.OSPFAdjacencyTroubleshootingMethod
+  alias_type: full_name
+  language: zh
+- surface_form: BGP session troubleshooting
+  canonical_node_id: METHOD.BGPSessionTroubleshootingMethod
+  alias_type: full_name
+  language: en
+- surface_form: BGP peer troubleshoot
+  canonical_node_id: METHOD.BGPSessionTroubleshootingMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: BGP会话排障
+  canonical_node_id: METHOD.BGPSessionTroubleshootingMethod
+  alias_type: full_name
+  language: zh
+- surface_form: routing domain partition
+  canonical_node_id: METHOD.RoutingDomainPartitionMethod
+  alias_type: full_name
+  language: en
+- surface_form: routing domain design
+  canonical_node_id: METHOD.RoutingDomainPartitionMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 路由域划分
+  canonical_node_id: METHOD.RoutingDomainPartitionMethod
+  alias_type: full_name
+  language: zh
+- surface_form: dual exit configuration
+  canonical_node_id: METHOD.DualExitConfigurationMethod
+  alias_type: full_name
+  language: en
+- surface_form: dual ISP configuration
+  canonical_node_id: METHOD.DualExitConfigurationMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 双出口配置
+  canonical_node_id: METHOD.DualExitConfigurationMethod
+  alias_type: full_name
+  language: zh
+- surface_form: configuration rollback
+  canonical_node_id: METHOD.RollbackMethod
+  alias_type: full_name
+  language: en
+- surface_form: rollback
+  canonical_node_id: METHOD.RollbackMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 配置回退
+  canonical_node_id: METHOD.RollbackMethod
+  alias_type: full_name
+  language: zh
+- surface_form: incremental deployment
+  canonical_node_id: METHOD.IncrementalDeploymentMethod
+  alias_type: full_name
+  language: en
+- surface_form: phased deployment
+  canonical_node_id: METHOD.IncrementalDeploymentMethod
+  alias_type: alternate_spelling
+  language: en
+- surface_form: 分阶段部署
+  canonical_node_id: METHOD.IncrementalDeploymentMethod
   alias_type: full_name
   language: zh

@@ -2,448 +2,401 @@ domain: IP / Data Communication Network
 knowledge_layer: method
 version: v0.2.0
 nodes:
-
-  # ── Design Methods ──────────────────────────────────────────
-  - id: METHOD.RequirementDecompositionMethod
-    canonical_name: RequirementDecompositionMethod
-    display_name_zh: 需求分解方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      将业务需求拆解为网络能力需求（连通性、隔离、冗余、QoS、安全）的
-      结构化方法，是技术选型和逻辑设计的前置步骤。
-    aliases:
-      - requirement decomposition
-      - requirements analysis
-      - 需求分解
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.AddressPlanningMethod
-    canonical_name: AddressPlanningMethod
-    display_name_zh: 地址规划方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      为网络各层（Loopback、互联地址、业务网段、管理网段）分配 IP 地址空间，
-      需考虑汇聚性、扩展性和路由策略需求。
-    aliases:
-      - address planning
-      - IP address design
-      - 地址规划
-      - IP 规划
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - governed_by
-
-  - id: METHOD.ExitStrategyDesignMethod
-    canonical_name: ExitStrategyDesignMethod
-    display_name_zh: 出口策略设计方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      设计互联网或 WAN 出口方案：单出口/双出口拓扑、主备/负载分担策略、
-      NAT 部署位置、默认路由注入方式。
-    aliases:
-      - exit strategy design
-      - dual exit design
-      - WAN exit design
-      - 出口设计
-      - 双出口设计
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.RoutingDomainPartitionMethod
-    canonical_name: RoutingDomainPartitionMethod
-    display_name_zh: 路由域划分方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      将网络划分为不同路由域（OSPF Area、IS-IS Level、BGP AS），
-      控制路由传播范围，降低协议收敛压力。
-    aliases:
-      - routing domain partition
-      - area design
-      - OSPF area planning
-      - 路由域划分
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - governed_by
-
-  # ── Configuration Methods ───────────────────────────────────
-  - id: METHOD.VRFProvisioningMethod
-    canonical_name: VRFProvisioningMethod
-    display_name_zh: VRF 配置方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      在路由器上创建 VRF 实例、配置 RD、绑定接口、设置 RT import/export，
-      完成 L3VPN 服务的基础配置步骤。
-    aliases:
-      - VRF provisioning
-      - VRF configuration
-      - VRF setup
-      - 配置VRF
-      - VRF实例配置
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.PECEPeeringConfigurationMethod
-    canonical_name: PECEPeeringConfigurationMethod
-    display_name_zh: PE-CE 对等配置方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      配置 PE 与 CE 之间的路由协议（静态/OSPF/BGP），
-      将 CE 路由引入对应 VRF，并控制路由传播。
-    aliases:
-      - PE CE peering
-      - PE-CE configuration
-      - PE CE routing
-      - PE-CE对等配置
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.OSPFAreaDeploymentMethod
-    canonical_name: OSPFAreaDeploymentMethod
-    display_name_zh: OSPF 区域部署方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      规划和配置 OSPF 骨干区域与非骨干区域，配置 ABR 路由汇总，
-      启用认证，调整定时器参数。
-    aliases:
-      - OSPF area deployment
-      - OSPF configuration
-      - OSPF setup
-      - OSPF部署
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-
-  - id: METHOD.BGPPolicyConfigurationMethod
-    canonical_name: BGPPolicyConfigurationMethod
-    display_name_zh: BGP 策略配置方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      配置 BGP 路由策略：route-policy、prefix-list、community、LocalPref、MED，
-      实现精确的路由选择和传播控制。
-    aliases:
-      - BGP policy configuration
-      - BGP route policy
-      - BGP policy
-      - BGP策略配置
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.MPLSL3VPNProvisioningMethod
-    canonical_name: MPLSL3VPNProvisioningMethod
-    display_name_zh: MPLS L3VPN 开通方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      完整的 MPLS L3VPN 业务开通步骤：创建 VRF → 配置 RD/RT → 接入 PE-CE
-      接口 → 建立 PE-CE 路由关系 → 确认 MPLS 基础可用 → 导入导出 VPNv4 →
-      验证路由表与业务可达性。
-    aliases:
-      - MPLS L3VPN provisioning
-      - L3VPN configuration
-      - VPN provisioning
-      - L3VPN开通
-      - MPLS VPN配置
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.EVPNVXLANProvisioningMethod
-    canonical_name: EVPNVXLANProvisioningMethod
-    display_name_zh: EVPN VXLAN 开通方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      配置 EVPN/VXLAN 数据中心网络：配置 Underlay IGP/BGP → 配置 VTEP →
-      建立 EVPN MP-BGP 邻居 → 配置 L2VNI/L3VNI → 验证 MAC/ARP 同步。
-    aliases:
-      - EVPN VXLAN provisioning
-      - EVPN configuration
-      - VXLAN setup
-      - EVPN部署
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.DualExitConfigurationMethod
-    canonical_name: DualExitConfigurationMethod
-    display_name_zh: 双出口配置方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      配置双 ISP 出口：VRRP 网关主备 → 默认路由主备 → NAT 策略 →
-      BFD 联动检测 → 验证主备切换和回流路径。
-    aliases:
-      - dual exit configuration
-      - dual ISP configuration
-      - redundant exit configuration
-      - 双出口配置
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-      - governed_by
-
-  - id: METHOD.QoSPolicyDeploymentMethod
-    canonical_name: QoSPolicyDeploymentMethod
-    display_name_zh: QoS 策略部署方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      端到端 QoS 方案配置：流量分类和标记 → 队列策略 →
-      限速整形 → 拥塞避免 → 全路径一致性验证。
-    aliases:
-      - QoS policy deployment
-      - QoS configuration
-      - traffic policy
-      - QoS部署
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - validated_by
-
-  # ── Verification Methods ────────────────────────────────────
-  - id: METHOD.NeighborVerificationMethod
-    canonical_name: NeighborVerificationMethod
-    display_name_zh: 邻居验证方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      验证路由协议邻居/邻接关系是否正常建立：检查 BGP Summary、
-      OSPF Neighbor、IS-IS Adjacency 状态，确认 Established/FULL。
-    aliases:
-      - neighbor verification
-      - adjacency check
-      - BGP neighbor check
-      - 邻居验证
-      - 邻居状态检查
-    allowed_relations:
-      - operates_on
-      - produces
-      - validated_by
-
-  - id: METHOD.RouteVerificationMethod
-    canonical_name: RouteVerificationMethod
-    display_name_zh: 路由验证方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      检查路由表中目标前缀是否存在、路由来源是否正确、
-      next-hop 是否可达，包括 VRF 内路由验证。
-    aliases:
-      - route verification
-      - routing table check
-      - route table verification
-      - 路由验证
-      - 路由表检查
-    allowed_relations:
-      - operates_on
-      - produces
-      - validated_by
-
-  - id: METHOD.FailoverVerificationMethod
-    canonical_name: FailoverVerificationMethod
-    display_name_zh: 故障切换验证方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      通过人为断开主链路/主设备，验证备用路径/设备是否在预期时间内
-      接管流量，测量 RTO（恢复时间目标）。
-    aliases:
-      - failover verification
-      - failover test
-      - switchover test
-      - 主备切换验证
-      - 倒换测试
-    allowed_relations:
-      - operates_on
-      - produces
-      - validated_by
-
-  - id: METHOD.PathVerificationMethod
-    canonical_name: PathVerificationMethod
-    display_name_zh: 路径验证方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      使用 traceroute/ping/BFD 验证流量实际经过的转发路径，
-      确认与设计路径一致，检测不对称路径问题。
-    aliases:
-      - path verification
-      - traceroute verification
-      - traffic path check
-      - 路径验证
-    allowed_relations:
-      - operates_on
-      - produces
-      - validated_by
-
-  - id: METHOD.ServiceAcceptanceMethod
-    canonical_name: ServiceAcceptanceMethod
-    display_name_zh: 业务验收方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      从业务角度验证端到端服务可用性：端到端 ping/traceroute、
-      应用层连通性测试、SLA 指标（时延/丢包/带宽）测量。
-    aliases:
-      - service acceptance
-      - acceptance test
-      - service validation
-      - 业务验收
-    allowed_relations:
-      - operates_on
-      - produces
-      - validated_by
-
-  # ── Troubleshooting Methods ─────────────────────────────────
-  - id: METHOD.OSPFAdjacencyTroubleshootingMethod
-    canonical_name: OSPFAdjacencyTroubleshootingMethod
-    display_name_zh: OSPF 邻接排障方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      排查 OSPF 邻居无法进入 FULL 状态：检查接口类型/MTU/认证/Hello间隔/
-      Area-ID 一致性，逐步缩小问题范围。
-    aliases:
-      - OSPF adjacency troubleshooting
-      - OSPF neighbor troubleshooting
-      - OSPF故障排除
-      - OSPF邻居排障
-    allowed_relations:
-      - operates_on
-      - produces
-
-  - id: METHOD.BGPSessionTroubleshootingMethod
-    canonical_name: BGPSessionTroubleshootingMethod
-    display_name_zh: BGP 会话排障方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      排查 BGP 会话无法建立：检查 TCP 连通性、AS 号配置、
-      update-source、next-hop 可达性、认证配置。
-    aliases:
-      - BGP session troubleshooting
-      - BGP troubleshooting
-      - BGP故障排除
-    allowed_relations:
-      - operates_on
-      - produces
-
-  - id: METHOD.VPNReachabilityTroubleshootingMethod
-    canonical_name: VPNReachabilityTroubleshootingMethod
-    display_name_zh: VPN 可达性排障方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      排查 L3VPN/EVPN 中目的站点不可达：逐层检查 CE→PE 路由→
-      VPNv4 路由→ MPLS 标签→ 对端 PE→ CE 方向。
-    aliases:
-      - VPN reachability troubleshooting
-      - VPN troubleshooting
-      - L3VPN故障排除
-    allowed_relations:
-      - operates_on
-      - produces
-
-  # ── Change Methods ──────────────────────────────────────────
-  - id: METHOD.IncrementalDeploymentMethod
-    canonical_name: IncrementalDeploymentMethod
-    display_name_zh: 增量部署方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      分阶段逐步部署新配置，每阶段验证后再推进，降低全量变更风险。
-    aliases:
-      - incremental deployment
-      - phased deployment
-      - staged rollout
-      - 增量部署
-      - 分阶段部署
-    allowed_relations:
-      - operates_on
-      - produces
-      - precedes
-      - governed_by
-
-  - id: METHOD.RollbackMethod
-    canonical_name: RollbackMethod
-    display_name_zh: 回退方法
-    knowledge_layer: method
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      变更失败或影响业务时，按预先定义的步骤恢复到变更前状态，
-      包括配置回退和路由恢复验证。
-    aliases:
-      - rollback
-      - configuration rollback
-      - change rollback
-      - 回退
-      - 配置回退
-    allowed_relations:
-      - operates_on
-      - produces
+- id: METHOD.RequirementDecompositionMethod
+  canonical_name: RequirementDecompositionMethod
+  display_name_zh: 需求分解方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: Structured decomposition of business requirements into network capability needs (connectivity, isolation, redundancy,
+    QoS, security) as a prerequisite for technology selection and logical design. 将业务需求拆解为网络能力需求（连通性、隔离、冗余、QoS、安全）的 结构化方法，是技术选型和逻辑设计的前置步骤。
+  aliases:
+  - requirement decomposition
+  - requirements analysis
+  - 需求分解
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.AddressPlanningMethod
+  canonical_name: AddressPlanningMethod
+  display_name_zh: 地址规划方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: IP address space allocation for each network layer (loopback, interconnect, service segments, management) considering
+    aggregation, scalability, and routing policy requirements. 为网络各层（Loopback、互联地址、业务网段、管理网段）分配 IP 地址空间， 需考虑汇聚性、扩展性和路由策略需求。
+  aliases:
+  - address planning
+  - IP address design
+  - 地址规划
+  - IP 规划
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - governed_by
+- id: METHOD.ExitStrategyDesignMethod
+  canonical_name: ExitStrategyDesignMethod
+  display_name_zh: 出口策略设计方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Internet/WAN exit design: single/dual exit topology, primary-backup/load-sharing strategy, NAT placement,
+    and default route injection approach. 设计互联网或 WAN 出口方案：单出口/双出口拓扑、主备/负载分担策略、 NAT 部署位置、默认路由注入方式。'
+  aliases:
+  - exit strategy design
+  - dual exit design
+  - WAN exit design
+  - 出口设计
+  - 双出口设计
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.RoutingDomainPartitionMethod
+  canonical_name: RoutingDomainPartitionMethod
+  display_name_zh: 路由域划分方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: Network partitioning into routing domains (OSPF Area, IS-IS Level, BGP AS) to control route propagation scope
+    and reduce protocol convergence pressure. 将网络划分为不同路由域（OSPF Area、IS-IS Level、BGP AS）， 控制路由传播范围，降低协议收敛压力。
+  aliases:
+  - routing domain partition
+  - area design
+  - OSPF area planning
+  - 路由域划分
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - governed_by
+- id: METHOD.VRFProvisioningMethod
+  canonical_name: VRFProvisioningMethod
+  display_name_zh: VRF 配置方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'VRF instance provisioning: create VRF, configure RD, bind interfaces, set RT import/export to complete L3VPN
+    base configuration. 在路由器上创建 VRF 实例、配置 RD、绑定接口、设置 RT import/export， 完成 L3VPN 服务的基础配置步骤。'
+  aliases:
+  - VRF provisioning
+  - VRF configuration
+  - VRF setup
+  - 配置VRF
+  - VRF实例配置
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.PECEPeeringConfigurationMethod
+  canonical_name: PECEPeeringConfigurationMethod
+  display_name_zh: PE-CE 对等配置方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'PE-CE peering configuration: set up routing protocol (static/OSPF/BGP) between PE and CE routers, import CE
+    routes into VRF, and control route propagation. 配置 PE 与 CE 之间的路由协议（静态/OSPF/BGP）， 将 CE 路由引入对应 VRF，并控制路由传播。'
+  aliases:
+  - PE CE peering
+  - PE-CE configuration
+  - PE CE routing
+  - PE-CE对等配置
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.OSPFAreaDeploymentMethod
+  canonical_name: OSPFAreaDeploymentMethod
+  display_name_zh: OSPF 区域部署方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'OSPF area deployment: plan backbone and non-backbone areas, configure ABR route summarization, enable authentication,
+    and tune timer parameters. 规划和配置 OSPF 骨干区域与非骨干区域，配置 ABR 路由汇总， 启用认证，调整定时器参数。'
+  aliases:
+  - OSPF area deployment
+  - OSPF configuration
+  - OSPF setup
+  - OSPF部署
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+- id: METHOD.BGPPolicyConfigurationMethod
+  canonical_name: BGPPolicyConfigurationMethod
+  display_name_zh: BGP 策略配置方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'BGP policy configuration: route-policy, prefix-list, community, LocalPref, MED for precise route selection
+    and propagation control. 配置 BGP 路由策略：route-policy、prefix-list、community、LocalPref、MED， 实现精确的路由选择和传播控制。'
+  aliases:
+  - BGP policy configuration
+  - BGP route policy
+  - BGP policy
+  - BGP策略配置
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.MPLSL3VPNProvisioningMethod
+  canonical_name: MPLSL3VPNProvisioningMethod
+  display_name_zh: MPLS L3VPN 开通方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Complete MPLS L3VPN provisioning: create VRF, configure RD/RT, attach PE-CE interfaces, establish PE-CE routing,
+    verify MPLS base, import/export VPNv4, validate end-to-end reachability. 完整的 MPLS L3VPN 业务开通步骤：创建 VRF → 配置 RD/RT → 接入
+    PE-CE 接口 → 建立 PE-CE 路由关系 → 确认 MPLS 基础可用 → 导入导出 VPNv4 → 验证路由表与业务可达性。'
+  aliases:
+  - MPLS L3VPN provisioning
+  - L3VPN configuration
+  - VPN provisioning
+  - L3VPN开通
+  - MPLS VPN配置
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.EVPNVXLANProvisioningMethod
+  canonical_name: EVPNVXLANProvisioningMethod
+  display_name_zh: EVPN VXLAN 开通方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'EVPN/VXLAN DC network provisioning: configure underlay IGP/BGP, set up VTEP, establish EVPN MP-BGP peers,
+    configure L2VNI/L3VNI, verify MAC/ARP synchronization. 配置 EVPN/VXLAN 数据中心网络：配置 Underlay IGP/BGP → 配置 VTEP → 建立 EVPN MP-BGP
+    邻居 → 配置 L2VNI/L3VNI → 验证 MAC/ARP 同步。'
+  aliases:
+  - EVPN VXLAN provisioning
+  - EVPN configuration
+  - VXLAN setup
+  - EVPN部署
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.DualExitConfigurationMethod
+  canonical_name: DualExitConfigurationMethod
+  display_name_zh: 双出口配置方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Dual ISP exit configuration: VRRP gateway primary-backup, default route failover, NAT policy, BFD linkage
+    detection, verify failover and return path. 配置双 ISP 出口：VRRP 网关主备 → 默认路由主备 → NAT 策略 → BFD 联动检测 → 验证主备切换和回流路径。'
+  aliases:
+  - dual exit configuration
+  - dual ISP configuration
+  - redundant exit configuration
+  - 双出口配置
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+  - governed_by
+- id: METHOD.QoSPolicyDeploymentMethod
+  canonical_name: QoSPolicyDeploymentMethod
+  display_name_zh: QoS 策略部署方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'End-to-end QoS deployment: traffic classification/marking, queue policy, rate shaping, congestion avoidance,
+    path-wide consistency verification. 端到端 QoS 方案配置：流量分类和标记 → 队列策略 → 限速整形 → 拥塞避免 → 全路径一致性验证。'
+  aliases:
+  - QoS policy deployment
+  - QoS configuration
+  - traffic policy
+  - QoS部署
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - validated_by
+- id: METHOD.NeighborVerificationMethod
+  canonical_name: NeighborVerificationMethod
+  display_name_zh: 邻居验证方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Routing protocol neighbor verification: check BGP Summary, OSPF Neighbor, IS-IS Adjacency states, confirm
+    Established/FULL status. 验证路由协议邻居/邻接关系是否正常建立：检查 BGP Summary、 OSPF Neighbor、IS-IS Adjacency 状态，确认 Established/FULL。'
+  aliases:
+  - neighbor verification
+  - adjacency check
+  - BGP neighbor check
+  - 邻居验证
+  - 邻居状态检查
+  allowed_relations:
+  - operates_on
+  - produces
+  - validated_by
+- id: METHOD.RouteVerificationMethod
+  canonical_name: RouteVerificationMethod
+  display_name_zh: 路由验证方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Route table verification: check target prefix existence, route source correctness, next-hop reachability,
+    including VRF-scoped route validation. 检查路由表中目标前缀是否存在、路由来源是否正确、 next-hop 是否可达，包括 VRF 内路由验证。'
+  aliases:
+  - route verification
+  - routing table check
+  - route table verification
+  - 路由验证
+  - 路由表检查
+  allowed_relations:
+  - operates_on
+  - produces
+  - validated_by
+- id: METHOD.FailoverVerificationMethod
+  canonical_name: FailoverVerificationMethod
+  display_name_zh: 故障切换验证方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Failover verification: deliberately disconnect primary link/device to verify backup path/device takeover within
+    expected time, measure RTO. 通过人为断开主链路/主设备，验证备用路径/设备是否在预期时间内 接管流量，测量 RTO（恢复时间目标）。'
+  aliases:
+  - failover verification
+  - failover test
+  - switchover test
+  - 主备切换验证
+  - 倒换测试
+  allowed_relations:
+  - operates_on
+  - produces
+  - validated_by
+- id: METHOD.PathVerificationMethod
+  canonical_name: PathVerificationMethod
+  display_name_zh: 路径验证方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Path verification: use traceroute/ping/BFD to validate actual forwarding path matches design, detect asymmetric
+    path issues. 使用 traceroute/ping/BFD 验证流量实际经过的转发路径， 确认与设计路径一致，检测不对称路径问题。'
+  aliases:
+  - path verification
+  - traceroute verification
+  - traffic path check
+  - 路径验证
+  allowed_relations:
+  - operates_on
+  - produces
+  - validated_by
+- id: METHOD.ServiceAcceptanceMethod
+  canonical_name: ServiceAcceptanceMethod
+  display_name_zh: 业务验收方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Service acceptance testing: end-to-end ping/traceroute, application-layer connectivity test, SLA metrics (latency/loss/bandwidth)
+    measurement. 从业务角度验证端到端服务可用性：端到端 ping/traceroute、 应用层连通性测试、SLA 指标（时延/丢包/带宽）测量。'
+  aliases:
+  - service acceptance
+  - acceptance test
+  - service validation
+  - 业务验收
+  allowed_relations:
+  - operates_on
+  - produces
+  - validated_by
+- id: METHOD.OSPFAdjacencyTroubleshootingMethod
+  canonical_name: OSPFAdjacencyTroubleshootingMethod
+  display_name_zh: OSPF 邻接排障方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'OSPF adjacency troubleshooting: check interface type/MTU/authentication/Hello interval/Area-ID consistency
+    to systematically narrow down the failure cause. 排查 OSPF 邻居无法进入 FULL 状态：检查接口类型/MTU/认证/Hello间隔/ Area-ID 一致性，逐步缩小问题范围。'
+  aliases:
+  - OSPF adjacency troubleshooting
+  - OSPF neighbor troubleshooting
+  - OSPF故障排除
+  - OSPF邻居排障
+  allowed_relations:
+  - operates_on
+  - produces
+- id: METHOD.BGPSessionTroubleshootingMethod
+  canonical_name: BGPSessionTroubleshootingMethod
+  display_name_zh: BGP 会话排障方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'BGP session troubleshooting: check TCP connectivity, AS number configuration, update-source, next-hop reachability,
+    authentication settings. 排查 BGP 会话无法建立：检查 TCP 连通性、AS 号配置、 update-source、next-hop 可达性、认证配置。'
+  aliases:
+  - BGP session troubleshooting
+  - BGP troubleshooting
+  - BGP故障排除
+  allowed_relations:
+  - operates_on
+  - produces
+- id: METHOD.VPNReachabilityTroubleshootingMethod
+  canonical_name: VPNReachabilityTroubleshootingMethod
+  display_name_zh: VPN 可达性排障方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'VPN reachability troubleshooting: layer-by-layer check from CE to PE routing, VPNv4 routes, MPLS labels, remote
+    PE, and reverse CE direction. 排查 L3VPN/EVPN 中目的站点不可达：逐层检查 CE→PE 路由→ VPNv4 路由→ MPLS 标签→ 对端 PE→ CE 方向。'
+  aliases:
+  - VPN reachability troubleshooting
+  - VPN troubleshooting
+  - L3VPN故障排除
+  allowed_relations:
+  - operates_on
+  - produces
+- id: METHOD.IncrementalDeploymentMethod
+  canonical_name: IncrementalDeploymentMethod
+  display_name_zh: 增量部署方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Incremental deployment: phased rollout of new configuration with per-phase validation before proceeding, reducing
+    full-change risk. 分阶段逐步部署新配置，每阶段验证后再推进，降低全量变更风险。'
+  aliases:
+  - incremental deployment
+  - phased deployment
+  - staged rollout
+  - 增量部署
+  - 分阶段部署
+  allowed_relations:
+  - operates_on
+  - produces
+  - precedes
+  - governed_by
+- id: METHOD.RollbackMethod
+  canonical_name: RollbackMethod
+  display_name_zh: 回退方法
+  knowledge_layer: method
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Configuration rollback: restore to pre-change state using pre-defined steps when changes fail or impact services,
+    including config revert and route recovery verification. 变更失败或影响业务时，按预先定义的步骤恢复到变更前状态， 包括配置回退和路由恢复验证。'
+  aliases:
+  - rollback
+  - configuration rollback
+  - change rollback
+  - 回退
+  - 配置回退
+  allowed_relations:
+  - operates_on
+  - produces

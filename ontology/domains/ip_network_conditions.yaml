@@ -2,371 +2,333 @@ domain: IP / Data Communication Network
 knowledge_layer: condition
 version: v0.2.0
 nodes:
-
-  # ── Applicability Conditions ────────────────────────────────
-  - id: COND.SmallScaleApplicability
-    canonical_name: SmallScaleApplicability
-    display_name_zh: 小规模适用条件
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: 网络规模较小（设备数 < 20，站点数 < 5）时的适用场景判断依据。
-    aliases:
-      - small scale network
-      - small network
-      - 小规模网络
-    allowed_relations:
-      - applies_to
-      - selects
-      - contraindicates
-
-  - id: COND.LargeScaleApplicability
-    canonical_name: LargeScaleApplicability
-    display_name_zh: 大规模适用条件
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: 网络规模较大（设备数 > 100，多 AS 域）时需要考虑的扩展性约束。
-    aliases:
-      - large scale network
-      - large network
-      - 大规模网络
-    allowed_relations:
-      - applies_to
-      - selects
-      - contraindicates
-
-  - id: COND.MultiTenantApplicability
-    canonical_name: MultiTenantApplicability
-    display_name_zh: 多租户适用条件
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: 需要在同一网络基础设施上为多个租户/VPN 提供隔离服务的场景条件。
-    aliases:
-      - multi-tenant
-      - multi tenant
-      - tenant isolation requirement
-      - 多租户
-      - 多租户场景
-    allowed_relations:
-      - applies_to
-      - selects
-      - contraindicates
-
-  - id: COND.DualExitApplicability
-    canonical_name: DualExitApplicability
-    display_name_zh: 双出口适用条件
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: 需要提供互联网出口冗余、出口带宽扩展或多 ISP 选路的场景适用条件。
-    aliases:
-      - dual exit
-      - dual ISP
-      - redundant exit
-      - 双出口
-      - 双ISP
-    allowed_relations:
-      - applies_to
-      - selects
-
-  # ── Constraint Conditions ───────────────────────────────────
-  - id: COND.DeviceCapabilityConstraint
-    canonical_name: DeviceCapabilityConstraint
-    display_name_zh: 设备能力约束
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      部分特性（SR、EVPN、BFD 微秒检测）需要特定硬件/软件版本支持，
-      设备能力不足是最常见的实施约束。
-    aliases:
-      - device capability constraint
-      - hardware limitation
-      - platform limitation
-      - 设备能力限制
-      - 硬件约束
-    allowed_relations:
-      - applies_to
-      - contraindicates
-
-  - id: COND.ControlPlaneScaleConstraint
-    canonical_name: ControlPlaneScaleConstraint
-    display_name_zh: 控制平面规模约束
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      路由表规模（BGP Full Table > 90万条）、LSA 数量、MAC 表项数量超过
-      设备控制平面处理能力时的约束条件。
-    aliases:
-      - control plane scale
-      - routing table scale
-      - BGP scale constraint
-      - 控制平面规模限制
-    allowed_relations:
-      - applies_to
-      - contraindicates
-      - selects
-
-  - id: COND.InteroperabilityConstraint
-    canonical_name: InteroperabilityConstraint
-    display_name_zh: 互通性约束
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      多厂商设备组网时，部分厂商私有特性不兼容，需选择标准协议或
-      做特殊适配，影响方案选型。
-    aliases:
-      - interoperability constraint
-      - multi-vendor interop
-      - vendor compatibility
-      - 互通性限制
-      - 多厂商互通
-    allowed_relations:
-      - applies_to
-      - contraindicates
-
-  # ── Risk Conditions ─────────────────────────────────────────
-  - id: COND.AsymmetricPathRisk
-    canonical_name: AsymmetricPathRisk
-    display_name_zh: 不对称路径风险
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      双出口或 ECMP 场景中，去程和回程经过不同链路/设备，
-      有状态防火墙无法跟踪会话，导致流量丢弃。
-    aliases:
-      - asymmetric path
-      - asymmetric routing
-      - asymmetric traffic
-      - 不对称路径
-      - 不对称路由
-    allowed_relations:
-      - risky_under
-      - contraindicates
-      - applies_to
-
-  - id: COND.RoutingLoopRisk
-    canonical_name: RoutingLoopRisk
-    display_name_zh: 路由环路风险
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      路由重分布、默认路由引入或 BGP/IGP 混合场景中，配置不当可能形成
-      路由环路，导致流量被无限转发。
-    aliases:
-      - routing loop
-      - route loop
-      - 路由环路
-    allowed_relations:
-      - risky_under
-      - contraindicates
-
-  - id: COND.RouteLeakRisk
-    canonical_name: RouteLeakRisk
-    display_name_zh: 路由泄漏风险
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      VPN 路由或 IGP 私有路由意外传播到不应可见的区域，
-      可能引起安全问题或路由黑洞。
-    aliases:
-      - route leak
-      - route leakage
-      - VPN route leak
-      - 路由泄漏
-    allowed_relations:
-      - risky_under
-      - contraindicates
-
-  - id: COND.BroadcastDomainExpansionRisk
-    canonical_name: BroadcastDomainExpansionRisk
-    display_name_zh: 广播域扩大风险
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      二层扩展（大 VLAN 跨站点）导致广播域过大，ARP 广播、未知单播泛洪
-      对核心设备造成压力，故障域也随之扩大。
-    aliases:
-      - broadcast domain expansion
-      - large L2 stretch
-      - L2 broadcast risk
-      - 广播域扩大
-      - 二层扩展风险
-    allowed_relations:
-      - risky_under
-      - contraindicates
-
-  - id: COND.FailoverOscillationRisk
-    canonical_name: FailoverOscillationRisk
-    display_name_zh: 主备震荡风险
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      链路质量不稳定时，VRRP/BFD 主备频繁切换，造成流量反复抖动，
-      需配置防抖延迟或抢占延迟。
-    aliases:
-      - failover oscillation
-      - VRRP flapping
-      - route flapping
-      - 主备震荡
-      - 路由震荡
-    allowed_relations:
-      - risky_under
-      - contraindicates
-
-  # ── Decision Rules ──────────────────────────────────────────
-  - id: COND.PreferBGPOverStaticForScalabilityRule
-    canonical_name: PreferBGPOverStaticForScalabilityRule
-    display_name_zh: 规模扩展时优先使用BGP而非静态路由规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF 分支数量持续增长 AND 需统一策略控制
-      THEN 优先考虑 BGP/路由策略而非大量静态路由，
-      静态路由在超过 50 条时管理成本显著上升。
-    aliases:
-      - prefer BGP over static
-      - BGP vs static routing
-      - BGP scalability rule
-      - 优先BGP规则
-    allowed_relations:
-      - applies_to
-      - selects
-      - contraindicates
-
-  - id: COND.PreferVRFForIsolationRule
-    canonical_name: PreferVRFForIsolationRule
-    display_name_zh: 隔离场景优先使用VRF规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF 需要在同一物理设备上实现多个租户或业务的三层隔离
-      THEN 优先使用 VRF 而非 ACL，VRF 提供完全独立的路由表和转发平面。
-    aliases:
-      - prefer VRF for isolation
-      - VRF isolation rule
-      - 优先VRF隔离
-    allowed_relations:
-      - applies_to
-      - selects
-      - contraindicates
-
-  - id: COND.AvoidLargeL2StretchRule
-    canonical_name: AvoidLargeL2StretchRule
-    display_name_zh: 避免大范围二层扩展规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF 业务要求广播域跨站点延伸 AND 规模较大（> 500 终端）
-      THEN 警惕二层扩展带来的广播与故障域风险，建议改用 EVPN/VXLAN
-      或 L3 DCI 方案。
-    aliases:
-      - avoid large L2 stretch
-      - avoid L2 extension
-      - L2 stretch risk rule
-      - 避免二层扩展
-    allowed_relations:
-      - applies_to
-      - contraindicates
-
-  - id: COND.PreferBFDForFastFailureRule
-    canonical_name: PreferBFDForFastFailureRule
-    display_name_zh: 快速故障检测优先使用BFD规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF 需亚秒级链路故障感知（< 1s 切换）
-      THEN 引入 BFD 或等效快速检测机制，并与路由协议联动。
-    aliases:
-      - prefer BFD for fast failure
-      - BFD fast detection rule
-      - sub-second detection
-      - 优先BFD检测
-    allowed_relations:
-      - applies_to
-      - selects
-
-  - id: COND.PreferRouteReflectorForScaleRule
-    canonical_name: PreferRouteReflectorForScaleRule
-    display_name_zh: 大规模iBGP优先使用路由反射器规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF iBGP 节点数量 > 10 THEN 部署 Route Reflector 替代全互联，
-      减少 BGP 会话数量（从 N*(N-1)/2 降至 N）。
-    aliases:
-      - prefer route reflector
-      - RR for iBGP scale
-      - route reflector rule
-      - 路由反射器规则
-    allowed_relations:
-      - applies_to
-      - selects
-
-  # ── Contraindication Rules ──────────────────────────────────
-  - id: COND.AvoidRedistributionWithoutBoundaryControlRule
-    canonical_name: AvoidRedistributionWithoutBoundaryControlRule
-    display_name_zh: 路由重分布必须配置边界管控规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      禁止在路由重分布时不配置 route-policy/prefix-list 边界过滤，
-      无管控的双向重分布极易引发路由环路和路由泄漏。
-    aliases:
-      - avoid redistribution without filter
-      - redistribution boundary control
-      - 重分布必须过滤
-    allowed_relations:
-      - contraindicates
-      - applies_to
-
-  - id: COND.AvoidUnboundedEVPNFloodingRule
-    canonical_name: AvoidUnboundedEVPNFloodingRule
-    display_name_zh: 避免无界EVPN泛洪规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      EVPN Type-3 路由用于 BUM 流量泛洪，VNI 过多或 VTEP 过多时泛洪开销
-      显著增加，应启用 EVPN 组播或 Ingress Replication 限制泛洪范围。
-    aliases:
-      - avoid unbounded EVPN flooding
-      - EVPN flooding control
-      - 避免EVPN泛洪
-    allowed_relations:
-      - contraindicates
-      - applies_to
-
-  - id: COND.AvoidVRRPLoadshareUnderStatefulNATRule
-    canonical_name: AvoidVRRPLoadshareUnderStatefulNATRule
-    display_name_zh: 有状态NAT下避免VRRP负载分担规则
-    knowledge_layer: condition
-    maturity_level: core
-    lifecycle_state: active
-    description: >
-      IF 部署有状态 NAT（NAT 表存储于单台设备）AND VRRP 主备切换
-      THEN 负载分担模式会导致回流报文命中不持有 NAT 表的设备，
-      连接被重置，应使用主备模式并配置会话同步。
-    aliases:
-      - avoid VRRP loadshare under NAT
-      - stateful NAT VRRP risk
-      - 有状态NAT VRRP风险
-    allowed_relations:
-      - contraindicates
-      - risky_under
-      - applies_to
+- id: COND.SmallScaleApplicability
+  canonical_name: SmallScaleApplicability
+  display_name_zh: 小规模适用条件
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Small-scale applicability: network with fewer than 20 devices and fewer than 5 sites. 网络规模较小（设备数 < 20，站点数
+    < 5）时的适用场景判断依据。'
+  aliases:
+  - small scale network
+  - small network
+  - 小规模网络
+  allowed_relations:
+  - applies_to
+  - selects
+  - contraindicates
+- id: COND.LargeScaleApplicability
+  canonical_name: LargeScaleApplicability
+  display_name_zh: 大规模适用条件
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Large-scale applicability: network with more than 100 devices and multiple AS domains, requiring scalability
+    considerations. 网络规模较大（设备数 > 100，多 AS 域）时需要考虑的扩展性约束。'
+  aliases:
+  - large scale network
+  - large network
+  - 大规模网络
+  allowed_relations:
+  - applies_to
+  - selects
+  - contraindicates
+- id: COND.MultiTenantApplicability
+  canonical_name: MultiTenantApplicability
+  display_name_zh: 多租户适用条件
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Multi-tenant applicability: requirement to provide isolated services for multiple tenants/VPNs on shared network
+    infrastructure. 需要在同一网络基础设施上为多个租户/VPN 提供隔离服务的场景条件。'
+  aliases:
+  - multi-tenant
+  - multi tenant
+  - tenant isolation requirement
+  - 多租户
+  - 多租户场景
+  allowed_relations:
+  - applies_to
+  - selects
+  - contraindicates
+- id: COND.DualExitApplicability
+  canonical_name: DualExitApplicability
+  display_name_zh: 双出口适用条件
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Dual-exit applicability: requirement for internet exit redundancy, bandwidth extension, or multi-ISP path
+    selection. 需要提供互联网出口冗余、出口带宽扩展或多 ISP 选路的场景适用条件。'
+  aliases:
+  - dual exit
+  - dual ISP
+  - redundant exit
+  - 双出口
+  - 双ISP
+  allowed_relations:
+  - applies_to
+  - selects
+- id: COND.DeviceCapabilityConstraint
+  canonical_name: DeviceCapabilityConstraint
+  display_name_zh: 设备能力约束
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Device capability constraint: certain features (SR, EVPN, microsecond BFD) require specific hardware/software
+    versions; device limitations are the most common implementation blocker. 部分特性（SR、EVPN、BFD 微秒检测）需要特定硬件/软件版本支持， 设备能力不足是最常见的实施约束。'
+  aliases:
+  - device capability constraint
+  - hardware limitation
+  - platform limitation
+  - 设备能力限制
+  - 硬件约束
+  allowed_relations:
+  - applies_to
+  - contraindicates
+- id: COND.ControlPlaneScaleConstraint
+  canonical_name: ControlPlaneScaleConstraint
+  display_name_zh: 控制平面规模约束
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Control plane scale constraint: routing table size (BGP full table >900K), LSA count, or MAC table entries
+    exceeding device control plane capacity. 路由表规模（BGP Full Table > 90万条）、LSA 数量、MAC 表项数量超过 设备控制平面处理能力时的约束条件。'
+  aliases:
+  - control plane scale
+  - routing table scale
+  - BGP scale constraint
+  - 控制平面规模限制
+  allowed_relations:
+  - applies_to
+  - contraindicates
+  - selects
+- id: COND.InteroperabilityConstraint
+  canonical_name: InteroperabilityConstraint
+  display_name_zh: 互通性约束
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Interoperability constraint: multi-vendor deployments where vendor-specific features are incompatible, requiring
+    standard protocols or special adaptation. 多厂商设备组网时，部分厂商私有特性不兼容，需选择标准协议或 做特殊适配，影响方案选型。'
+  aliases:
+  - interoperability constraint
+  - multi-vendor interop
+  - vendor compatibility
+  - 互通性限制
+  - 多厂商互通
+  allowed_relations:
+  - applies_to
+  - contraindicates
+- id: COND.AsymmetricPathRisk
+  canonical_name: AsymmetricPathRisk
+  display_name_zh: 不对称路径风险
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Asymmetric path risk: in dual-exit or ECMP scenarios, forward and return paths traverse different links/devices,
+    causing stateful firewall session tracking failures and traffic drops. 双出口或 ECMP 场景中，去程和回程经过不同链路/设备， 有状态防火墙无法跟踪会话，导致流量丢弃。'
+  aliases:
+  - asymmetric path
+  - asymmetric routing
+  - asymmetric traffic
+  - 不对称路径
+  - 不对称路由
+  allowed_relations:
+  - risky_under
+  - contraindicates
+  - applies_to
+- id: COND.RoutingLoopRisk
+  canonical_name: RoutingLoopRisk
+  display_name_zh: 路由环路风险
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Routing loop risk: misconfigured route redistribution, default route injection, or BGP/IGP hybrid scenarios
+    can create routing loops causing infinite forwarding. 路由重分布、默认路由引入或 BGP/IGP 混合场景中，配置不当可能形成 路由环路，导致流量被无限转发。'
+  aliases:
+  - routing loop
+  - route loop
+  - 路由环路
+  allowed_relations:
+  - risky_under
+  - contraindicates
+- id: COND.RouteLeakRisk
+  canonical_name: RouteLeakRisk
+  display_name_zh: 路由泄漏风险
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Route leak risk: VPN or IGP private routes unintentionally propagated to unauthorized areas, potentially causing
+    security issues or routing black holes. VPN 路由或 IGP 私有路由意外传播到不应可见的区域， 可能引起安全问题或路由黑洞。'
+  aliases:
+  - route leak
+  - route leakage
+  - VPN route leak
+  - 路由泄漏
+  allowed_relations:
+  - risky_under
+  - contraindicates
+- id: COND.BroadcastDomainExpansionRisk
+  canonical_name: BroadcastDomainExpansionRisk
+  display_name_zh: 广播域扩大风险
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Broadcast domain expansion risk: large L2 stretch (VLAN across sites) causes excessive ARP broadcast and unknown
+    unicast flooding, expanding failure domains. 二层扩展（大 VLAN 跨站点）导致广播域过大，ARP 广播、未知单播泛洪 对核心设备造成压力，故障域也随之扩大。'
+  aliases:
+  - broadcast domain expansion
+  - large L2 stretch
+  - L2 broadcast risk
+  - 广播域扩大
+  - 二层扩展风险
+  allowed_relations:
+  - risky_under
+  - contraindicates
+- id: COND.FailoverOscillationRisk
+  canonical_name: FailoverOscillationRisk
+  display_name_zh: 主备震荡风险
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Failover oscillation risk: unstable link quality causes VRRP/BFD primary-backup flapping; requires hold-down
+    delays or preemption delays to stabilize. 链路质量不稳定时，VRRP/BFD 主备频繁切换，造成流量反复抖动， 需配置防抖延迟或抢占延迟。'
+  aliases:
+  - failover oscillation
+  - VRRP flapping
+  - route flapping
+  - 主备震荡
+  - 路由震荡
+  allowed_relations:
+  - risky_under
+  - contraindicates
+- id: COND.PreferBGPOverStaticForScalabilityRule
+  canonical_name: PreferBGPOverStaticForScalabilityRule
+  display_name_zh: 规模扩展时优先使用BGP而非静态路由规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF branch count grows AND unified policy control needed THEN prefer BGP/route-policy over static routes;
+    static routes become unmanageable beyond 50 entries. IF 分支数量持续增长 AND 需统一策略控制 THEN 优先考虑 BGP/路由策略而非大量静态路由， 静态路由在超过 50 条时管理成本显著上升。'
+  aliases:
+  - prefer BGP over static
+  - BGP vs static routing
+  - BGP scalability rule
+  - 优先BGP规则
+  allowed_relations:
+  - applies_to
+  - selects
+  - contraindicates
+- id: COND.PreferVRFForIsolationRule
+  canonical_name: PreferVRFForIsolationRule
+  display_name_zh: 隔离场景优先使用VRF规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF L3 isolation needed on shared device THEN prefer VRF over ACL; VRF provides completely independent
+    routing tables and forwarding planes. IF 需要在同一物理设备上实现多个租户或业务的三层隔离 THEN 优先使用 VRF 而非 ACL，VRF 提供完全独立的路由表和转发平面。'
+  aliases:
+  - prefer VRF for isolation
+  - VRF isolation rule
+  - 优先VRF隔离
+  allowed_relations:
+  - applies_to
+  - selects
+  - contraindicates
+- id: COND.AvoidLargeL2StretchRule
+  canonical_name: AvoidLargeL2StretchRule
+  display_name_zh: 避免大范围二层扩展规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF broadcast domain crosses sites AND scale >500 endpoints THEN avoid large L2 stretch; use EVPN/VXLAN
+    or L3 DCI instead. IF 业务要求广播域跨站点延伸 AND 规模较大（> 500 终端） THEN 警惕二层扩展带来的广播与故障域风险，建议改用 EVPN/VXLAN 或 L3 DCI 方案。'
+  aliases:
+  - avoid large L2 stretch
+  - avoid L2 extension
+  - L2 stretch risk rule
+  - 避免二层扩展
+  allowed_relations:
+  - applies_to
+  - contraindicates
+- id: COND.PreferBFDForFastFailureRule
+  canonical_name: PreferBFDForFastFailureRule
+  display_name_zh: 快速故障检测优先使用BFD规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF sub-second failure detection needed (<1s switchover) THEN deploy BFD or equivalent fast detection
+    mechanism with routing protocol linkage. IF 需亚秒级链路故障感知（< 1s 切换） THEN 引入 BFD 或等效快速检测机制，并与路由协议联动。'
+  aliases:
+  - prefer BFD for fast failure
+  - BFD fast detection rule
+  - sub-second detection
+  - 优先BFD检测
+  allowed_relations:
+  - applies_to
+  - selects
+- id: COND.PreferRouteReflectorForScaleRule
+  canonical_name: PreferRouteReflectorForScaleRule
+  display_name_zh: 大规模iBGP优先使用路由反射器规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF iBGP nodes >10 THEN deploy Route Reflector to replace full-mesh, reducing session count from N*(N-1)/2
+    to N. IF iBGP 节点数量 > 10 THEN 部署 Route Reflector 替代全互联， 减少 BGP 会话数量（从 N*(N-1)/2 降至 N）。'
+  aliases:
+  - prefer route reflector
+  - RR for iBGP scale
+  - route reflector rule
+  - 路由反射器规则
+  allowed_relations:
+  - applies_to
+  - selects
+- id: COND.AvoidRedistributionWithoutBoundaryControlRule
+  canonical_name: AvoidRedistributionWithoutBoundaryControlRule
+  display_name_zh: 路由重分布必须配置边界管控规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: NEVER redistribute routes without route-policy/prefix-list boundary filtering; uncontrolled mutual redistribution
+    causes routing loops and route leaks. 禁止在路由重分布时不配置 route-policy/prefix-list 边界过滤， 无管控的双向重分布极易引发路由环路和路由泄漏。'
+  aliases:
+  - avoid redistribution without filter
+  - redistribution boundary control
+  - 重分布必须过滤
+  allowed_relations:
+  - contraindicates
+  - applies_to
+- id: COND.AvoidUnboundedEVPNFloodingRule
+  canonical_name: AvoidUnboundedEVPNFloodingRule
+  display_name_zh: 避免无界EVPN泛洪规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: EVPN Type-3 routes control BUM flooding; excessive VNIs or VTEPs increase flooding overhead; enable
+    EVPN multicast or Ingress Replication to limit scope. EVPN Type-3 路由用于 BUM 流量泛洪，VNI 过多或 VTEP 过多时泛洪开销 显著增加，应启用 EVPN 组播或
+    Ingress Replication 限制泛洪范围。'
+  aliases:
+  - avoid unbounded EVPN flooding
+  - EVPN flooding control
+  - 避免EVPN泛洪
+  allowed_relations:
+  - contraindicates
+  - applies_to
+- id: COND.AvoidVRRPLoadshareUnderStatefulNATRule
+  canonical_name: AvoidVRRPLoadshareUnderStatefulNATRule
+  display_name_zh: 有状态NAT下避免VRRP负载分担规则
+  knowledge_layer: condition
+  maturity_level: core
+  lifecycle_state: active
+  description: 'Rule: IF stateful NAT deployed AND VRRP failover THEN avoid load-sharing mode (NAT table on single device
+    causes return traffic to hit wrong device); use active-standby with session sync. IF 部署有状态 NAT（NAT 表存储于单台设备）AND VRRP 主备切换
+    THEN 负载分担模式会导致回流报文命中不持有 NAT 表的设备， 连接被重置，应使用主备模式并配置会话同步。'
+  aliases:
+  - avoid VRRP loadshare under NAT
+  - stateful NAT VRRP risk
+  - 有状态NAT VRRP风险
+  allowed_relations:
+  - contraindicates
+  - risky_under
+  - applies_to
