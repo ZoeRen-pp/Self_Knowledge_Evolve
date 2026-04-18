@@ -230,7 +230,7 @@ class AlignStage(Stage):
         nodes = [n for n in ontology.nodes.values() if n.get("canonical_name")]
         if not nodes:
             return False
-        node_ids = [n["node_id"] for n in nodes]
+        node_ids = [n.get("node_id") or n["id"] for n in nodes]
         node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
 
         if cache_path.exists():
