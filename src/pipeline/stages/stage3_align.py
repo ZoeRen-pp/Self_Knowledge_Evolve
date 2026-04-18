@@ -127,13 +127,16 @@ class AlignStage(Stage):
                 "tagger":          "rule",
             })
 
-        # Embedding fallback: if no canonical tags from exact match, try semantic matching
-        canonical_count = sum(1 for n, c in matched_nodes.items()
-                             if _LAYER_TAG_TYPE.get(
-                                 (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept"),
-                                 "canonical") == "canonical")
-        if canonical_count == 0:
-            for node_id, conf in self._embedding_match(text):
+        # Embedding enrichment: always try to match non-concept layers
+        # (concept layer is well-covered by alias matching; mechanism/method/
+        # condition/scenario layers have sparse aliases and need embedding help)
+        matched_layers = {
+            (ontology.get_node_dict(n) or {}).get("knowledge_layer", "concept")
+            for n in matched_nodes
+        }
+        missing_layers = {"mechanism", "method", "condition", "scenario"} - matched_layers
+        if missing_layers:
+            for node_id, conf in self._embedding_match(text, target_layers=missing_layers):
                 if node_id not in matched_nodes:
                     matched_nodes[node_id] = conf
                     node = ontology.get_node_dict(node_id)
@@ -204,6 +207,7 @@ class AlignStage(Stage):
 
     _onto_embeddings = None
     _onto_node_ids = None
+    _onto_node_layers = None
 
     def _ensure_onto_embeddings(self):
         """Lazily compute and cache ontology node embeddings."""
@@ -225,43 +229,49 @@ class AlignStage(Stage):
             import numpy as np
             self.__class__._onto_embeddings = np.array(vecs)
             self.__class__._onto_node_ids = [n["node_id"] for n in nodes]
+            self.__class__._onto_node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
             log.info("Cached embeddings for %d ontology nodes", len(nodes))
             return True
         except Exception as exc:
             log.debug("Embedding init failed: %s", exc)
             return False
 
-    def _embedding_match(self, text: str) -> list[tuple[str, float]]:
-        """Semantic fallback: match segment text against ontology node embeddings.
+    def _embedding_match(self, text: str, target_layers: set[str] | None = None) -> list[tuple[str, float]]:
+        """Semantic matching: match segment text against ontology node embeddings.
 
-        Only called when exact alias matching yields 0 canonical tags.
-        Returns list of (node_id, confidence) for matches above threshold.
+        If target_layers is specified, only return matches from those layers.
+        This allows enriching non-concept layers even when concept alias matches exist.
         """
         if not self._ensure_onto_embeddings():
             return []
         try:
             from src.utils.embedding import get_embeddings
             import numpy as np
-            # Encode segment text (truncated for efficiency)
             vecs = get_embeddings([text[:512]])
             if not vecs:
                 return []
             seg_vec = np.array(vecs[0])
             similarities = np.dot(self.__class__._onto_embeddings, seg_vec)
-            # Top matches above threshold
-            THRESHOLD = 0.80
-            MAX_MATCHES = 3
-            top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES]
+
+            THRESHOLD = 0.75
+            MAX_MATCHES = 5
+            top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES * 3]
             results = []
             for idx in top_indices:
+                if len(results) >= MAX_MATCHES:
+                    break
                 sim = float(similarities[idx])
-                if sim >= THRESHOLD:
-                    node_id = self.__class__._onto_node_ids[idx]
-                    confidence = round(0.60 + (sim - THRESHOLD) * 2, 2)  # 0.80→0.60, 1.0→1.0
-                    confidence = min(confidence, 0.80)  # cap at 0.80 for embedding matches
-                    results.append((node_id, confidence))
-                    log.debug("  Embedding match: %s (sim=%.3f conf=%.2f)",
-                              node_id, sim, confidence)
+                if sim < THRESHOLD:
+                    break
+                node_id = self.__class__._onto_node_ids[idx]
+                node_layer = self.__class__._onto_node_layers[idx]
+                if target_layers and node_layer not in target_layers:
+                    continue
+                confidence = round(0.55 + (sim - THRESHOLD) * 1.8, 2)
+                confidence = min(confidence, 0.80)
+                results.append((node_id, confidence))
+                log.debug("  Embedding match: %s layer=%s (sim=%.3f conf=%.2f)",
+                          node_id, node_layer, sim, confidence)
             return results
         except Exception as exc:
             log.debug("Embedding match failed: %s", exc)

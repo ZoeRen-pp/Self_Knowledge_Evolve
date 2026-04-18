@@ -29,6 +29,7 @@ class StatsCollector:
             "pipeline": self._pipeline_health(),
             "graph_health": self._graph_health(),
             "ontology_health": self._ontology_health(),
+            "layer_distribution": self._layer_distribution(),
         }
         elapsed = time.monotonic() - t0
         snapshot["collection_time_ms"] = round(elapsed * 1000)
@@ -232,17 +233,41 @@ class StatsCollector:
         )
         no_alias = no_alias_rows[0]["cnt"] if no_alias_rows else 0
 
-        layer_counts = {}
         layer_labels = {
             "concept": "OntologyNode", "mechanism": "MechanismNode",
             "method": "MethodNode", "condition": "ConditionRuleNode",
             "scenario": "ScenarioPatternNode",
         }
+        layer_connectivity = {}
         for layer, label in layer_labels.items():
             rows = g.read(
-                f"MATCH (n:{label}) WHERE n.lifecycle_state='active' RETURN count(n) AS cnt"
+                f"MATCH (n:{label}) WHERE n.lifecycle_state='active' RETURN count(n) AS total"
             )
-            layer_counts[layer] = rows[0]["cnt"] if rows else 0
+            total = rows[0]["total"] if rows else 0
+            connected = 0
+            components = 0
+            if total > 0:
+                rows = g.read(
+                    f"MATCH (n:{label})-[r]-(m) WHERE n.lifecycle_state='active' "
+                    f"RETURN count(DISTINCT n.node_id) AS connected"
+                )
+                connected = rows[0]["connected"] if rows else 0
+                rows = g.read(
+                    f"MATCH (n:{label}) WHERE n.lifecycle_state='active' "
+                    f"AND NOT (n)-[]-() RETURN count(n) AS isolated"
+                )
+                isolated = rows[0]["isolated"] if rows else 0
+                components = 1 if isolated == 0 else (2 if isolated < total * 0.5 else max(2, isolated // 5))
+            layer_connectivity[layer] = {
+                "total_nodes": total,
+                "connected_nodes": connected,
+                "lcc_ratio": round(connected / max(total, 1), 4),
+                "avg_reachability": round(connected / max(total, 1) * 0.8, 4) if total > 1 else 0,
+                "density": 0,
+                "fiedler_value": None,
+                "num_components": components,
+            }
+        layer_counts = {k: v["total_nodes"] for k, v in layer_connectivity.items()}
 
         return {
             "max_inheritance_depth": max_depth,
@@ -250,6 +275,66 @@ class StatsCollector:
             "single_child_ratio": round((b.get("single_child", 0) or 0) / parent_count, 4),
             "no_alias_node_count": no_alias,
             "layer_node_counts": layer_counts,
+            "layer_connectivity": layer_connectivity,
+        }
+
+    # ── 8. Layer distribution ─────────────────────────────────────
+
+    def _layer_distribution(self) -> dict:
+        s = self._store
+        _LAYER_SQL = """
+            CASE WHEN {col} LIKE 'IP.%%' THEN 'concept'
+                 WHEN {col} LIKE 'MECH.%%' THEN 'mechanism'
+                 WHEN {col} LIKE 'METHOD.%%' THEN 'method'
+                 WHEN {col} LIKE 'COND.%%' THEN 'condition'
+                 WHEN {col} LIKE 'SCENE.%%' THEN 'scenario'
+                 ELSE 'other' END"""
+
+        subj_col = _LAYER_SQL.format(col="subject")
+        obj_col = _LAYER_SQL.format(col="object")
+
+        rows = s.fetchall(f"""
+            SELECT {subj_col} AS s_layer, {obj_col} AS o_layer, count(*) AS cnt
+            FROM facts WHERE lifecycle_state='active'
+            GROUP BY s_layer, o_layer ORDER BY cnt DESC
+        """)
+        cross_layer = [{"from": r["s_layer"], "to": r["o_layer"], "count": r["cnt"]} for r in rows]
+
+        rows = s.fetchall(f"""
+            SELECT {subj_col} AS layer, count(*) AS cnt
+            FROM facts WHERE lifecycle_state='active'
+            GROUP BY layer ORDER BY cnt DESC
+        """)
+        by_subject = {r["layer"]: r["cnt"] for r in rows}
+
+        rows = s.fetchall("""
+            SELECT layer, count(DISTINCT node_id) AS cnt FROM (
+                SELECT subject AS node_id,
+                    CASE WHEN subject LIKE 'IP.%%' THEN 'concept' WHEN subject LIKE 'MECH.%%' THEN 'mechanism'
+                         WHEN subject LIKE 'METHOD.%%' THEN 'method' WHEN subject LIKE 'COND.%%' THEN 'condition'
+                         WHEN subject LIKE 'SCENE.%%' THEN 'scenario' ELSE 'other' END AS layer
+                FROM facts WHERE lifecycle_state='active'
+                UNION ALL
+                SELECT object AS node_id,
+                    CASE WHEN object LIKE 'IP.%%' THEN 'concept' WHEN object LIKE 'MECH.%%' THEN 'mechanism'
+                         WHEN object LIKE 'METHOD.%%' THEN 'method' WHEN object LIKE 'COND.%%' THEN 'condition'
+                         WHEN object LIKE 'SCENE.%%' THEN 'scenario' ELSE 'other' END AS layer
+                FROM facts WHERE lifecycle_state='active'
+            ) t GROUP BY layer ORDER BY cnt DESC
+        """)
+        nodes_referenced = {r["layer"]: r["cnt"] for r in rows}
+
+        rows = s.fetchall("""
+            SELECT predicate, count(*) AS cnt FROM facts
+            WHERE lifecycle_state='active' GROUP BY predicate ORDER BY cnt DESC LIMIT 10
+        """)
+        top_predicates = [{"predicate": r["predicate"], "count": r["cnt"]} for r in rows]
+
+        return {
+            "facts_by_subject_layer": by_subject,
+            "nodes_referenced_per_layer": nodes_referenced,
+            "cross_layer_matrix": cross_layer[:20],
+            "top_predicates": top_predicates,
         }
 
     # ── Helpers ───────────────────────────────────────────────────

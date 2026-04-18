@@ -165,6 +165,12 @@ table.data tr:hover { background: #1e2130; }
     <div class="flow" id="pipeline-flow"></div>
   </div>
 
+  <div class="panel">
+    <h3>五层知识分布</h3>
+    <div class="desc">知识条目在五层本体模型中的分布情况（scenario → condition → method → mechanism → concept）</div>
+    <div id="layer-distribution"><p class="loading">加载中...</p></div>
+  </div>
+
   <div class="grid2">
     <div class="panel">
       <h3>来源分布</h3>
@@ -438,6 +444,75 @@ async function loadOverview() {
       </div>`
     ).join('');
   } catch(e) {}
+
+  // Layer distribution
+  try {
+    const res = await fetch(`${API}/stats`);
+    const snap = (await res.json()).snapshot || {};
+    const ld = snap.layer_distribution || {};
+    const bySubj = ld.facts_by_subject_layer || {};
+    const nodesRef = ld.nodes_referenced_per_layer || {};
+    const crossMatrix = ld.cross_layer_matrix || [];
+    const topPreds = ld.top_predicates || [];
+
+    const layers = ['scenario','condition','method','mechanism','concept'];
+    const layerZh = {scenario:'业务场景',condition:'适用条件',method:'操作方法',mechanism:'协议机制',concept:'可配置对象'};
+    const layerColors = {scenario:'#f44336',condition:'#ce93d8',method:'#81c784',mechanism:'#ff9800',concept:'#4fc3f7'};
+    const totalFacts = Object.values(bySubj).reduce((a,b)=>a+b,0) || 1;
+
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+
+    // Left: layer bars
+    html += '<div>';
+    html += '<div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;color:#aaa;">各层知识条目分布</div>';
+    for (const layer of layers) {
+      const cnt = bySubj[layer] || 0;
+      const nodes = nodesRef[layer] || 0;
+      const pct = (cnt / totalFacts * 100).toFixed(1);
+      const barWidth = Math.max(2, cnt / totalFacts * 100);
+      html += `<div style="margin-bottom:6px;">
+        <div style="font-size:0.78rem;display:flex;justify-content:space-between;">
+          <span style="color:${layerColors[layer]};font-weight:600;">${layerZh[layer]}</span>
+          <span style="color:#666;">${fmt(cnt)} facts (${pct}%) · ${nodes} nodes</span>
+        </div>
+        <div style="background:#1e2130;border-radius:3px;height:8px;margin-top:2px;">
+          <div style="background:${layerColors[layer]};width:${barWidth}%;height:100%;border-radius:3px;"></div>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+
+    // Right: cross-layer matrix + top predicates
+    html += '<div>';
+    html += '<div style="font-size:0.82rem;font-weight:600;margin-bottom:8px;color:#aaa;">跨层知识连接</div>';
+    const crossLayerOnly = crossMatrix.filter(r => r.from !== r.to && r.from !== 'other' && r.to !== 'other');
+    if (crossLayerOnly.length) {
+      html += '<div style="font-size:0.78rem;">';
+      for (const r of crossLayerOnly.slice(0, 8)) {
+        html += `<div style="padding:2px 0;color:#888;">
+          <span style="color:${layerColors[r.from]||'#888'}">${layerZh[r.from]||r.from}</span>
+          <span style="color:#555;"> → </span>
+          <span style="color:${layerColors[r.to]||'#888'}">${layerZh[r.to]||r.to}</span>
+          <span style="color:#444;float:right;">${fmt(r.count)}</span>
+        </div>`;
+      }
+      html += '</div>';
+    } else {
+      html += '<p style="color:#555;font-size:0.78rem;">暂无跨层连接</p>';
+    }
+
+    html += '<div style="font-size:0.82rem;font-weight:600;margin:12px 0 6px;color:#aaa;">Top 谓语</div>';
+    html += '<div style="font-size:0.78rem;">';
+    for (const p of topPreds.slice(0, 6)) {
+      html += `<div style="padding:2px 0;display:flex;justify-content:space-between;">
+        <span style="color:#e0e0e0;">${p.predicate}</span>
+        <span style="color:#444;">${fmt(p.count)}</span>
+      </div>`;
+    }
+    html += '</div></div></div>';
+
+    document.getElementById('layer-distribution').innerHTML = html;
+  } catch(e) { document.getElementById('layer-distribution').innerHTML = '<p style="color:#555">暂无数据</p>'; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════ */
@@ -757,25 +832,7 @@ async function loadQuality() {
           avg_reachability: isolatedNodes < totalNodes ? Math.max(0.3, 1 - isolatedNodes / totalNodes) : 0,
           density: totalNodes > 1 ? (snap.knowledge ? ((snap.knowledge.neo4j_relationships||0) / (totalNodes * (totalNodes - 1))) : 0) : 0,
         },
-        layer_connectivity: (function() {
-          const lnc = (oh.layer_node_counts || {});
-          const layers = {concept: 114, mechanism: 24, method: 22, condition: 20, scenario: 13};
-          const result = {};
-          const neoRels = (snap.knowledge||{}).neo4j_relationships || 0;
-          for (const [layer, fallback] of Object.entries(layers)) {
-            const n = lnc[layer] || fallback;
-            const connRatio = Math.max(0, 1 - (isolatedNodes / Math.max(totalNodes, 1)));
-            result[layer] = {
-              total_nodes: n,
-              lcc_ratio: n > 1 ? Math.min(1, connRatio + 0.1) : 0,
-              avg_reachability: n > 1 ? Math.min(1, connRatio * 0.8) : 0,
-              density: n > 1 ? Math.min(0.5, neoRels / (n * (n - 1) + 1)) : 0,
-              fiedler_value: null,
-              num_components: n > 0 ? (isolatedNodes > n * 0.3 ? 2 : 1) : 0,
-            };
-          }
-          return result;
-        })(),
+        layer_connectivity: oh.layer_connectivity || {},
         S1_top_degree: [],
         S2_dependency_cycles: 0,
         S2_cycle_detail: [],
