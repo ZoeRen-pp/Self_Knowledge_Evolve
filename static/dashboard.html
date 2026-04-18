@@ -1270,17 +1270,16 @@ async function askCopilot() {
   if (!question) return;
   const chat = document.getElementById('copilot-chat');
 
-  // Append user message
-  chat.innerHTML += `<div class="panel" style="border-left:3px solid #7c4dff;margin-bottom:8px;">
-    <div style="font-size:0.75rem;color:#7c4dff;font-weight:600;">You</div>
-    <div style="color:#e0e0e0;margin-top:4px;">${question}</div>
-  </div>`;
+  // Insert at top — newest first
   input.value = '';
-  chat.innerHTML += `<div id="copilot-loading" class="panel" style="border-left:3px solid #4caf50;margin-bottom:8px;">
+  chat.insertAdjacentHTML('afterbegin', `<div id="copilot-loading" class="panel" style="border-left:3px solid #4caf50;margin-bottom:8px;">
     <div style="font-size:0.75rem;color:#4caf50;font-weight:600;">Knowledge Copilot</div>
     <p class="loading">思考中...</p>
-  </div>`;
-  chat.scrollTop = chat.scrollHeight;
+  </div>`);
+  chat.insertAdjacentHTML('afterbegin', `<div class="panel" style="border-left:3px solid #7c4dff;margin-bottom:8px;">
+    <div style="font-size:0.75rem;color:#7c4dff;font-weight:600;">You</div>
+    <div style="color:#e0e0e0;margin-top:4px;">${question}</div>
+  </div>`);
 
   try {
     const res = await fetch('/api/v1/copilot', {
@@ -1289,7 +1288,6 @@ async function askCopilot() {
     });
     const d = await res.json();
     const loading = document.getElementById('copilot-loading');
-    if (loading) loading.remove();
 
     let html = `<div class="panel" style="border-left:3px solid #4caf50;margin-bottom:8px;">
       <div style="font-size:0.75rem;color:#4caf50;font-weight:600;">Knowledge Copilot</div>`;
@@ -1334,14 +1332,16 @@ async function askCopilot() {
       }
     }
     html += '</div>';
-    chat.innerHTML += html;
+    loading.insertAdjacentHTML('afterend', html);
+    loading.remove();
   } catch(e) {
     const loading = document.getElementById('copilot-loading');
-    if (loading) loading.remove();
-    chat.innerHTML += `<div class="panel" style="border-left:3px solid #f44336;margin-bottom:8px;">
-      <div style="color:#f44336;">Error: ${e.message}</div></div>`;
+    if (loading) {
+      loading.insertAdjacentHTML('afterend', `<div class="panel" style="border-left:3px solid #f44336;margin-bottom:8px;">
+        <div style="color:#f44336;">Error: ${e.message}</div></div>`);
+      loading.remove();
+    }
   }
-  chat.scrollTop = chat.scrollHeight;
 }
 
 /* ── Init ── */

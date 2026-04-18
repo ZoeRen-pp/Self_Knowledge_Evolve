@@ -752,197 +752,84 @@
     </div>
 
     <div style="overflow-x:auto;margin:20px 0;">
-    <svg viewBox="0 0 980 572" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:760px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;">
-      <defs>
-        <marker id="ah"   markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#94a3b8"/></marker>
-        <marker id="ah-b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4f46e5"/></marker>
-        <marker id="ah-o" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#d97706"/></marker>
-        <marker id="ah-g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#059669"/></marker>
-      </defs>
-      <rect width="980" height="572" fill="#fbbf24" rx="8"/>
+    <svg viewBox="0 0 720 620" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:800px;margin:0 auto;display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif;">
+      <defs><marker id="ah" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#94a3b8"/></marker></defs>
+      <rect width="720" height="620" fill="#f8fafc" rx="10" stroke="#e2e8f0" stroke-width="1"/>
 
-      <!-- ZONE A: External Actors -->
-      <rect x="4" y="4" width="972" height="52" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5" rx="6"/>
-      <text x="12" y="16" font-size="9" fill="#94a3b8" font-weight="700" letter-spacing="0.08em">外部参与者 / 数据来源</text>
-      <rect x="12" y="20" width="290" height="30" fill="white" stroke="#bfdbfe" stroke-width="1.5" rx="4"/>
-      <text x="22" y="33" font-size="11.5" font-weight="700" fill="#1e40af">域专家 / 交付工程师 / AI Agent</text>
-      <text x="22" y="45" font-size="10" fill="#64748b">售前看网 · 方案设计 · 动网割接</text>
-      <rect x="312" y="20" width="360" height="30" fill="white" stroke="#bbf7d0" stroke-width="1.5" rx="4"/>
-      <text x="322" y="33" font-size="11.5" font-weight="700" fill="#065f46">内容源  (Source Rank: S / A / B / C)</text>
-      <text x="322" y="45" font-size="10" fill="#64748b">IETF RFC · 3GPP TS · Cisco · Huawei · Juniper · 博客</text>
-      <rect x="682" y="20" width="290" height="30" fill="#fef9c3" stroke="#fde047" stroke-width="1.5" rx="4"/>
-      <text x="692" y="33" font-size="11.5" font-weight="700" fill="#713f12">ontology/*.yaml  ← 唯一真相来源</text>
-      <text x="692" y="45" font-size="10" fill="#92400e">load_ontology.py 同步到 Neo4j + PG lexicon</text>
+      <rect x="20" y="16" width="680" height="52" fill="white" stroke="#0288d1" stroke-width="1.5" rx="6"/>
+      <text x="360" y="34" text-anchor="middle" font-size="13" font-weight="700" fill="#0277bd">&#x8868;&#x73B0;&#x5C42;  FastAPI + Dashboard + Copilot</text>
+      <text x="360" y="54" text-anchor="middle" font-size="10" fill="#78909c">/api/v1/query &#xB7; /api/v1/copilot &#xB7; /api/v1/semantic/* &#xB7; /dashboard</text>
+      <line x1="360" y1="68" x2="360" y2="84" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
 
-      <!-- ZONE B: Online Query Path -->
-      <rect x="4" y="66" width="348" height="310" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5" rx="6"/>
-      <text x="178" y="79" text-anchor="middle" font-size="9" fill="#1d4ed8" font-weight="700" letter-spacing="0.08em">在线查询路径（同步 · HTTP）</text>
-      <rect x="14" y="84" width="328" height="44" fill="white" stroke="#bfdbfe" stroke-width="1.5" rx="4"/>
-      <text x="24" y="99" font-size="13" font-weight="700" fill="#1d4ed8">FastAPI  表现层</text>
-      <text x="24" y="113" font-size="11" fill="#3b82f6">/api/v1/semantic/*  ·  /api/v1/admin/*  ·  /dashboard</text>
-      <text x="24" y="125" font-size="10" fill="#64748b">build_app() 组装所有 Provider  ·  /docs  ·  /health</text>
-      <line x1="178" y1="128" x2="178" y2="142" stroke="#a5b4fc" stroke-width="1.5" marker-end="url(#ah-b)"/>
-      <rect x="14" y="144" width="328" height="26" fill="white" stroke="#c7d2fe" stroke-width="1.5" rx="4"/>
-      <text x="24" y="156" font-size="11.5" font-weight="700" fill="#4338ca">OperatorRegistry</text>
-      <text x="138" y="156" font-size="10" fill="#64748b">  按名称路由到算子 · 统一 {meta, result} 封装</text>
-      <line x1="178" y1="170" x2="178" y2="184" stroke="#a5b4fc" stroke-width="1.5" marker-end="url(#ah-b)"/>
-      <rect x="14" y="186" width="328" height="116" fill="white" stroke="#c7d2fe" stroke-width="1.5" rx="4"/>
-      <text x="24" y="200" font-size="11.5" font-weight="700" fill="#4338ca">21 个 SemanticOperator  —  无状态 · 独立内聚</text>
-      <rect x="20" y="205" width="316" height="18" fill="#ede9fe" rx="3"/>
-      <text x="178" y="218" text-anchor="middle" font-size="10" fill="#5b21b6">知识检索  lookup · resolve · expand · semantic_search · edu_search</text>
-      <rect x="20" y="225" width="316" height="18" fill="#dbeafe" rx="3"/>
-      <text x="178" y="238" text-anchor="middle" font-size="10" fill="#1e40af">图谱分析  path · dependency_closure · impact_propagate · cross_layer_check</text>
-      <rect x="20" y="245" width="316" height="18" fill="#dcfce7" rx="3"/>
-      <text x="178" y="258" text-anchor="middle" font-size="10" fill="#14532d">证据治理  evidence_rank · conflict_detect · fact_merge · stale_knowledge</text>
-      <rect x="20" y="265" width="316" height="18" fill="#fef3c7" rx="3"/>
-      <text x="178" y="278" text-anchor="middle" font-size="10" fill="#78350f">本体演化  candidate_discover · attach_score · evolution_gate · context_assemble</text>
-      <rect x="20" y="285" width="316" height="18" fill="#f1f5f9" rx="3"/>
-      <text x="178" y="298" text-anchor="middle" font-size="10" fill="#334155">系统检视  graph_inspect · ontology_inspect · ontology_quality · filter</text>
-      <rect x="14" y="316" width="328" height="34" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" rx="4" stroke-dasharray="5,3"/>
-      <text x="24" y="330" font-size="11" font-weight="700" fill="#15803d">semcore ABCs  — 零依赖框架抽象层</text>
-      <text x="24" y="344" font-size="10" fill="#64748b">Stage · Operator · RelationalStore · GraphStore · ObjectStore</text>
+      <rect x="20" y="84" width="680" height="62" fill="white" stroke="#5c6bc0" stroke-width="1.5" rx="6"/>
+      <text x="30" y="104" font-size="13" font-weight="700" fill="#3949ab">&#x67E5;&#x8BE2;&#x5F15;&#x64CE;&#x5C42;  Query Engine &#x2014; 5 &#x4EE3;&#x6570;&#x539F;&#x8BED;</text>
+      <text x="30" y="120" font-size="10.5" fill="#5c6bc0">seed(&#x03C3;) &#x2192; expand(&#x22C8;+TC) &#x2192; combine(&#x222A;&#x2229;&#x2212;) &#x2192; aggregate(&#x03B3;+rerank) &#x2192; project(&#x03C0;)</text>
+      <text x="30" y="136" font-size="10" fill="#78909c">Planner &#x81EA;&#x52A8;&#x4F9D;&#x8D56;&#x5206;&#x6790;&#x5206;&#x6CE2;&#x5E76;&#x884C; &#xB7; Copilot NL&#x2192;&#x67E5;&#x8BE2;&#x8BA1;&#x5212;&#x2192;LLM &#x56DE;&#x7B54; &#xB7; 30s &#x8D85;&#x65F6;</text>
+      <line x1="360" y1="146" x2="360" y2="162" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
 
-      <!-- ZONE C: Worker Background Path -->
-      <rect x="362" y="66" width="380" height="310" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5" rx="6"/>
-      <text x="552" y="79" text-anchor="middle" font-size="9" fill="#92400e" font-weight="700" letter-spacing="0.08em">后台处理路径（worker.py · 4 守护线程）</text>
-      <rect x="372" y="84" width="172" height="60" fill="white" stroke="#fde68a" stroke-width="1.5" rx="4"/>
-      <text x="382" y="98" font-size="11.5" font-weight="700" fill="#b45309">Crawler Thread</text>
-      <text x="382" y="112" font-size="10" fill="#64748b">轮询 crawl_tasks(pending)</text>
-      <text x="382" y="125" font-size="10" fill="#64748b">HTTP 抓取 · robots.txt 合规</text>
-      <text x="382" y="138" font-size="10" fill="#64748b">写 MinIO raw/ + documents(raw)</text>
-      <rect x="554" y="84" width="168" height="26" fill="white" stroke="#fde68a" stroke-width="1.5" rx="4"/>
-      <text x="564" y="97" font-size="11.5" font-weight="700" fill="#b45309">Stats Thread</text>
-      <text x="564" y="109" font-size="10" fill="#64748b">每 5 min 采集系统指标快照</text>
-      <rect x="554" y="118" width="168" height="56" fill="white" stroke="#fde68a" stroke-width="1.5" rx="4"/>
-      <text x="564" y="132" font-size="11.5" font-weight="700" fill="#b45309">Maintenance Thread</text>
-      <text x="564" y="146" font-size="10" fill="#64748b">每天 03:00 CST 执行</text>
-      <text x="564" y="159" font-size="10" fill="#64748b">Embedding 聚类去重候选词</text>
-      <text x="564" y="172" font-size="10" fill="#64748b">LLM 批量分类 · 别名回填</text>
-      <rect x="372" y="186" width="360" height="144" fill="white" stroke="#fbbf24" stroke-width="1.5" rx="4"/>
-      <text x="552" y="200" text-anchor="middle" font-size="11.5" font-weight="700" fill="#b45309">Pipeline Thread  —  7 阶段文档加工流水线</text>
-      <rect x="379" y="205" width="346" height="16" fill="#f1f5f9" rx="2"/>
-      <text x="385" y="217" font-size="10" font-weight="600" fill="#334155">S1 Ingest</text>
-      <text x="430" y="217" font-size="10" fill="#64748b">HTML 抽取 · SHA-256 去重 · 句密度质量门控 · doc_type 识别</text>
-      <rect x="379" y="223" width="346" height="16" fill="#fafafa" rx="2"/>
-      <text x="385" y="235" font-size="10" font-weight="600" fill="#334155">S2 Segment</text>
-      <text x="435" y="235" font-size="10" fill="#64748b">结构切分 → LLM 17 类型分类 → 合并同类 → RST 篇章关系标注</text>
-      <rect x="379" y="241" width="346" height="16" fill="#f1f5f9" rx="2"/>
-      <text x="385" y="253" font-size="10" font-weight="600" fill="#334155">S3 Align</text>
-      <text x="425" y="253" font-size="10" fill="#64748b">精确 / 别名(828) / Embedding 模糊(&gt;0.80) 匹配 → 候选词发现</text>
-      <rect x="379" y="259" width="346" height="16" fill="#fafafa" rx="2"/>
-      <text x="385" y="271" font-size="10" fill="#94a3b8">S3b Evolve</text>
-      <text x="432" y="271" font-size="10" fill="#94a3b8">候选词 6 维评分 · 自动晋升 (≥0.85 + 6 道门控) · 每轮执行</text>
-      <rect x="379" y="277" width="346" height="16" fill="#f1f5f9" rx="2"/>
-      <text x="385" y="289" font-size="10" font-weight="600" fill="#334155">S4 Extract</text>
-      <text x="432" y="289" font-size="10" fill="#64748b">P0 RST推导 → P1 LLM抽取(引用验证) → P2 合并上下文 → P3 共现��底</text>
-      <rect x="379" y="295" width="346" height="16" fill="#fafafa" rx="2"/>
-      <text x="385" y="307" font-size="10" font-weight="600" fill="#334155">S5 Dedup</text>
-      <text x="425" y="307" font-size="10" fill="#64748b">SimHash + Embedding去重(&gt;0.90) → Fact合并 · 本体驱动冲突检测(D4)</text>
-      <rect x="379" y="313" width="346" height="16" fill="#f1f5f9" rx="2"/>
-      <text x="385" y="325" font-size="10" font-weight="600" fill="#334155">S6 Index</text>
-      <text x="425" y="325" font-size="10" fill="#64748b">置信度门控 (≥0.35) → Neo4j 本体边 + 溯源链 → pgvector HNSW</text>
-      <rect x="372" y="340" width="360" height="28" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5" rx="4"/>
-      <text x="552" y="353" text-anchor="middle" font-size="11" font-weight="700" fill="#6d28d9">治理层  — 被 Pipeline 各阶段调用</text>
-      <text x="552" y="363" text-anchor="middle" font-size="9.5" fill="#7c3aed">ConfidenceScorer · ConflictDetector · EvolutionGate · OntologyMaintenance</text>
+      <rect x="20" y="162" width="680" height="46" fill="white" stroke="#ef6c00" stroke-width="1.5" rx="6"/>
+      <text x="30" y="182" font-size="13" font-weight="700" fill="#e65100">&#x7B97;&#x5B50;&#x5C42;  21 &#x4E2A; SemanticOperator</text>
+      <text x="30" y="198" font-size="10" fill="#78909c">lookup &#xB7; expand &#xB7; dependency_closure &#xB7; impact_propagate &#xB7; conflict_detect &#xB7; context_assemble ...</text>
+      <line x1="360" y1="208" x2="360" y2="224" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
 
-      <!-- ZONE D: External Services -->
-      <rect x="752" y="66" width="224" height="310" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5" rx="6"/>
-      <text x="864" y="79" text-anchor="middle" font-size="9" fill="#15803d" font-weight="700" letter-spacing="0.08em">外部服务 / 计算资源</text>
-      <rect x="762" y="84" width="204" height="76" fill="white" stroke="#bbf7d0" stroke-width="1.5" rx="4"/>
-      <text x="772" y="99" font-size="12" font-weight="700" fill="#15803d">LLM API</text>
-      <text x="772" y="113" font-size="10" fill="#64748b">Gemini / OpenAI 兼容接口 · 阻塞熔断器</text>
-      <text x="772" y="126" font-size="10" fill="#64748b">S2: RST 关系分类 (批 15 对/call)</text>
-      <text x="772" y="139" font-size="10" fill="#64748b">S4: (S,P,O) 三元组抽取</text>
-      <text x="772" y="152" font-size="10" fill="#64748b">S3: 候选词 new / variant / noise</text>
-      <rect x="762" y="170" width="204" height="52" fill="white" stroke="#bbf7d0" stroke-width="1.5" rx="4"/>
-      <text x="772" y="185" font-size="12" font-weight="700" fill="#15803d">Embedding  bge-m3</text>
-      <text x="772" y="199" font-size="10" fill="#64748b">1024维 · HTTP BGE-M3 → Ollama → ST 三级回退</text>
-      <text x="772" y="213" font-size="10" fill="#64748b">S3 模糊对齐 (&gt;0.80) · S5 语义去重 (&gt;0.90)</text>
-      <rect x="762" y="232" width="204" height="96" fill="#ede9fe" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
-      <text x="772" y="247" font-size="11.5" font-weight="700" fill="#4c1d95">五层本体 × 多专业域</text>
-      <text x="772" y="261" font-size="10" fill="#6d28d9">① Concept      OntologyNode</text>
-      <text x="772" y="274" font-size="10" fill="#6d28d9">② Mechanism    MechanismNode</text>
-      <text x="772" y="287" font-size="10" fill="#6d28d9">③ Method       MethodNode</text>
-      <text x="772" y="300" font-size="10" fill="#6d28d9">④ Condition    ConditionRuleNode</text>
-      <text x="772" y="313" font-size="10" fill="#6d28d9">⑤ Scenario     ScenarioPatternNode</text>
-      <rect x="762" y="338" width="204" height="30" fill="#fef9c3" stroke="#fde047" stroke-width="1.5" rx="4"/>
-      <text x="864" y="351" text-anchor="middle" font-size="10.5" font-weight="700" fill="#713f12">YAML = 唯一真相 · Neo4j/PG = 运行时投影</text>
-      <text x="864" y="362" text-anchor="middle" font-size="9.5" fill="#92400e">可随时 load_ontology.py 完整重建</text>
+      <rect x="20" y="224" width="680" height="40" fill="white" stroke="#8e24aa" stroke-width="1.5" rx="6"/>
+      <text x="30" y="244" font-size="13" font-weight="700" fill="#7b1fa2">&#x6CBB;&#x7406;&#x5C42;  Governance</text>
+      <text x="30" y="258" font-size="10" fill="#78909c">ConfidenceScorer &#xB7; ConflictDetector &#xB7; EvolutionGate &#xB7; OntologyMaintenance</text>
+      <line x1="360" y1="264" x2="360" y2="280" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
 
-      <!-- ZONE E: Storage Layer -->
-      <rect x="4" y="386" width="972" height="180" fill="#faf5ff" stroke="#e9d5ff" stroke-width="1.5" rx="6"/>
-      <text x="12" y="399" font-size="9" fill="#6d28d9" font-weight="700" letter-spacing="0.08em">存储层  — 按访问模式选型</text>
-      <rect x="14" y="406" width="244" height="154" fill="white" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
-      <text x="24" y="421" font-size="11.5" font-weight="700" fill="#4c1d95">PostgreSQL · telecom_kb</text>
-      <text x="24" y="434" font-size="9.5" fill="#6d28d9">数据积累型 · 高查询频率 · pgvector HNSW</text>
-      <text x="24" y="448" font-size="10" fill="#1e293b">documents   文档状态机 (raw → indexed)</text>
-      <text x="24" y="461" font-size="10" fill="#1e293b">segments    段落 + type + RST 关系</text>
-      <text x="24" y="474" font-size="10" fill="#1e293b">facts       (S,P,O) + lifecycle 状态</text>
-      <text x="24" y="487" font-size="10" fill="#1e293b">evidence    来源证据段落</text>
-      <text x="24" y="500" font-size="10" fill="#1e293b">segment_tags  段落 → 本体节点对齐</text>
-      <text x="24" y="513" font-size="10" fill="#7c3aed">governance.*  候选词 / 冲突 / 审核记录</text>
-      <text x="24" y="526" font-size="9.5" fill="#94a3b8">WHERE 过滤 + cosine 向量搜索同一 SQL</text>
-      <rect x="266" y="406" width="192" height="154" fill="white" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
-      <text x="276" y="421" font-size="11.5" font-weight="700" fill="#4c1d95">PostgreSQL · telecom_crawler</text>
-      <text x="276" y="434" font-size="9.5" fill="#6d28d9">数据流转型 · 写频率高 · 可清理</text>
-      <text x="276" y="448" font-size="10" fill="#1e293b">source_registry  爬取源注册</text>
-      <text x="276" y="461" font-size="10" fill="#1e293b">crawl_tasks      URL 队列 + 状态</text>
-      <text x="276" y="474" font-size="10" fill="#1e293b">extraction_jobs  任务执行记录</text>
-      <rect x="276" y="484" width="172" height="66" fill="#fef2f2" rx="3"/>
-      <text x="284" y="498" font-size="10" font-weight="700" fill="#991b1b">故障隔离</text>
-      <text x="284" y="511" font-size="9.5" fill="#b91c1c">与 telecom_kb 无外键约束</text>
-      <text x="284" y="524" font-size="9.5" fill="#b91c1c">连接池独立 · 爬虫异常不影响查询</text>
-      <rect x="466" y="406" width="242" height="154" fill="white" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
-      <text x="476" y="421" font-size="11.5" font-weight="700" fill="#4c1d95">Neo4j · 原生图数据库</text>
-      <text x="476" y="434" font-size="9.5" fill="#6d28d9">邻居遍历 O(1) · 77 种关系类型 · 深度图查询</text>
-      <rect x="476" y="442" width="222" height="54" fill="#eff6ff" rx="3"/>
-      <text x="486" y="456" font-size="10.5" font-weight="700" fill="#1d4ed8">本体推理层（图遍历）</text>
-      <text x="486" y="469" font-size="10" fill="#3b82f6">OntologyNode ─[DEPENDS_ON]─▶ OntologyNode</text>
-      <text x="486" y="482" font-size="9.5" fill="#64748b">edge = Fact 聚合结论 · Alias─[:ALIAS_OF]─▶ 节点</text>
-      <rect x="476" y="500" width="222" height="50" fill="#f0fdf4" rx="3"/>
-      <text x="486" y="514" font-size="10.5" font-weight="700" fill="#15803d">知识溯源层（证据追溯）</text>
-      <text x="486" y="527" font-size="10" fill="#059669">Fact → Evidence → Segment → Document</text>
-      <text x="486" y="540" font-size="9.5" fill="#64748b">Fact 不直连 OntologyNode · 生命周期独立</text>
-      <rect x="716" y="406" width="256" height="154" fill="white" stroke="#c4b5fd" stroke-width="1.5" rx="4"/>
-      <text x="726" y="421" font-size="11.5" font-weight="700" fill="#4c1d95">MinIO · 对象存储</text>
-      <text x="726" y="434" font-size="9.5" fill="#6d28d9">大文件 · 按 key 取内容 · 零 PG 膨胀</text>
-      <text x="726" y="448" font-size="10" fill="#1e293b">raw/      原始 HTML（Crawler 写入）</text>
-      <text x="726" y="461" font-size="10" fill="#1e293b">cleaned/  Stage1 清洗文本（Pipeline 读）</text>
-      <text x="726" y="474" font-size="9.5" fill="#94a3b8">SHA-256 内容去重 · 同页面不同 URL 只存一份</text>
-      <rect x="726" y="484" width="236" height="34" fill="#f0fdf4" rx="3"/>
-      <text x="844" y="499" text-anchor="middle" font-size="10" fill="#15803d">存储(MinIO) 与计算(Pipeline) 分离</text>
-      <text x="844" y="512" text-anchor="middle" font-size="10" fill="#15803d">阶段重跑只回读 MinIO，不重新下载</text>
+      <rect x="20" y="280" width="680" height="96" fill="white" stroke="#2e7d32" stroke-width="1.5" rx="6"/>
+      <text x="30" y="300" font-size="13" font-weight="700" fill="#1b5e20">&#x7BA1;&#x7EBF;&#x5C42;  7 &#x9636;&#x6BB5; Pipeline &#x2014; 4 &#x5E76;&#x53D1;&#x6301;&#x7EED;&#x586B;&#x5145;</text>
+      <rect x="30" y="306" width="90" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="75" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S1 Ingest</text>
+      <rect x="124" y="306" width="90" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="169" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S2 Segment</text>
+      <rect x="218" y="306" width="80" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="258" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S3 Align</text>
+      <rect x="302" y="306" width="76" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="340" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S3b Evolve</text>
+      <rect x="382" y="306" width="84" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="424" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S4 Extract</text>
+      <rect x="470" y="306" width="80" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="510" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S5 Dedup</text>
+      <rect x="554" y="306" width="76" height="20" fill="#e8f5e9" stroke="#a5d6a7" rx="3"/>
+      <text x="592" y="320" text-anchor="middle" font-size="9" fill="#2e7d32">S6 Index</text>
+      <text x="30" y="348" font-size="10" fill="#78909c">LLM &#x591A; Key &#x8F6E;&#x8F6C;(4 QPS) &#xB7; Embedding 8 &#x5E76;&#x53D1; &#xB7; Worker: Crawler + Pipeline + Stats + Maintenance</text>
+      <text x="30" y="364" font-size="10" fill="#78909c">60+ &#x79CD;&#x5B50; URL &#xB7; LLM &#x7194;&#x65AD;&#x5668; &#xB7; &#x8D28;&#x91CF;&#x95E8;&#x63A7; &#xB7; &#x6301;&#x7EED;&#x586B;&#x5145;(&#x5927;&#x6587;&#x6863;&#x4E0D;&#x963B;&#x585E;&#x5176;&#x4ED6; worker)</text>
+      <line x1="360" y1="376" x2="360" y2="392" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
 
-      <!-- ARROWS -->
-      <line x1="157" y1="56" x2="157" y2="82" stroke="#4f46e5" stroke-width="2" marker-end="url(#ah-b)"/>
-      <rect x="105" y="62" width="64" height="14" fill="#eff6ff" rx="3"/>
-      <text x="137" y="72" text-anchor="middle" font-size="9" fill="#4f46e5" font-weight="600">REST API</text>
-      <line x1="461" y1="56" x2="461" y2="82" stroke="#d97706" stroke-width="2" marker-end="url(#ah-o)"/>
-      <rect x="463" y="62" width="56" height="14" fill="#fffbeb" rx="3"/>
-      <text x="491" y="72" text-anchor="middle" font-size="9" fill="#d97706" font-weight="600">HTTP 抓取</text>
-      <line x1="178" y1="352" x2="178" y2="404" stroke="#4f46e5" stroke-width="2" marker-end="url(#ah-b)"/>
-      <rect x="148" y="370" width="28" height="14" fill="#eff6ff" rx="2"/>
-      <text x="162" y="380" text-anchor="middle" font-size="9" fill="#4f46e5">R/W</text>
-      <path d="M 300 370 Q 300 384 587 404" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ah-b)" fill="none"/>
-      <text x="400" y="380" font-size="9" fill="#4f46e5">图遍历查询</text>
-      <path d="M 372 130 Q 348 384 360 404" stroke="#d97706" stroke-width="1.5" marker-end="url(#ah-o)" fill="none"/>
-      <path d="M 461 144 Q 461 384 848 404" stroke="#d97706" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ah-o)" fill="none"/>
-      <text x="700" y="399" font-size="9" fill="#d97706">write raw/</text>
-      <path d="M 552 330 L 552 404" stroke="#b45309" stroke-width="2" marker-end="url(#ah)" fill="none"/>
-      <rect x="556" y="356" width="40" height="14" fill="#fffbeb" rx="2"/>
-      <text x="576" y="366" text-anchor="middle" font-size="9" fill="#b45309">状态R/W</text>
-      <path d="M 700 310 Q 700 384 604 404" stroke="#b45309" stroke-width="1.5" marker-end="url(#ah)" fill="none"/>
-      <text x="704" y="360" font-size="9" fill="#b45309">写图</text>
-      <path d="M 700 240 Q 748 240 748 404" stroke="#b45309" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#ah)" fill="none"/>
-      <text x="752" y="322" font-size="9" fill="#94a3b8">读 cleaned/</text>
-      <line x1="732" y1="248" x2="762" y2="148" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-g)"/>
-      <rect x="734" y="190" width="46" height="14" fill="#f0fdf4" rx="2"/>
-      <text x="757" y="200" text-anchor="middle" font-size="9" fill="#059669">S,P,O 抽取</text>
-      <line x1="732" y1="284" x2="762" y2="214" stroke="#059669" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-g)"/>
-      <text x="745" y="254" font-size="9" fill="#059669">embed</text>
+      <rect x="20" y="392" width="680" height="36" fill="#fafafa" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="5,3" rx="6"/>
+      <text x="30" y="414" font-size="12" font-weight="600" fill="#616161">semcore ABCs &#x2014; &#x96F6;&#x4F9D;&#x8D56;&#x6846;&#x67B6;&#x62BD;&#x8C61;&#x5C42;</text>
+      <text x="320" y="414" font-size="10" fill="#9e9e9e">Stage &#xB7; SemanticOperator &#xB7; RelationalStore &#xB7; GraphStore &#xB7; ObjectStore &#xB7; LLMProvider</text>
+      <line x1="360" y1="428" x2="360" y2="444" stroke="#b0bec5" stroke-width="1.5" marker-end="url(#ah)"/>
+
+      <rect x="20" y="444" width="680" height="160" fill="white" stroke="#c62828" stroke-width="1.5" rx="6"/>
+      <text x="30" y="464" font-size="13" font-weight="700" fill="#b71c1c">&#x5B58;&#x50A8;&#x5C42;</text>
+      <rect x="30" y="474" width="158" height="120" fill="#e3f2fd" stroke="#90caf9" rx="4"/>
+      <text x="40" y="492" font-size="11" font-weight="700" fill="#1565c0">PostgreSQL</text>
+      <text x="40" y="506" font-size="9" fill="#546e7a">telecom_kb &#xB7; pgvector</text>
+      <text x="40" y="522" font-size="9" fill="#37474f">documents &#xB7; segments</text>
+      <text x="40" y="536" font-size="9" fill="#37474f">facts &#xB7; evidence</text>
+      <text x="40" y="550" font-size="9" fill="#37474f">segment_tags</text>
+      <text x="40" y="564" font-size="9" fill="#7b1fa2">governance.*</text>
+      <rect x="198" y="474" width="126" height="120" fill="#e3f2fd" stroke="#90caf9" rx="4"/>
+      <text x="208" y="492" font-size="11" font-weight="700" fill="#1565c0">PostgreSQL</text>
+      <text x="208" y="506" font-size="9" fill="#546e7a">telecom_crawler</text>
+      <text x="208" y="522" font-size="9" fill="#37474f">source_registry</text>
+      <text x="208" y="536" font-size="9" fill="#37474f">crawl_tasks</text>
+      <text x="208" y="554" font-size="8" fill="#c62828">&#x6545;&#x969C;&#x9694;&#x79BB; &#xB7; &#x72EC;&#x7ACB;&#x8FDE;&#x63A5;&#x6C60;</text>
+      <rect x="334" y="474" width="180" height="120" fill="#e8eaf6" stroke="#9fa8da" rx="4"/>
+      <text x="344" y="492" font-size="11" font-weight="700" fill="#283593">Neo4j &#x56FE;&#x6570;&#x636E;&#x5E93;</text>
+      <text x="344" y="508" font-size="9" fill="#546e7a">77 &#x5173;&#x7CFB; &#xB7; 5 &#x5C42;&#x672C;&#x4F53;</text>
+      <rect x="340" y="514" width="168" height="28" fill="#c8e6c9" stroke="#a5d6a7" rx="3"/>
+      <text x="348" y="532" font-size="9" fill="#2e7d32">&#x672C;&#x4F53;&#x63A8;&#x7406;&#x5C42; OntologyNode&#x2192;</text>
+      <rect x="340" y="546" width="168" height="28" fill="#fff3e0" stroke="#ffcc80" rx="3"/>
+      <text x="348" y="564" font-size="9" fill="#e65100">&#x6EAF;&#x6E90;&#x5C42; Fact&#x2192;Evidence&#x2192;Seg</text>
+      <rect x="524" y="474" width="166" height="120" fill="#fce4ec" stroke="#f48fb1" rx="4"/>
+      <text x="534" y="492" font-size="11" font-weight="700" fill="#c62828">MinIO &#x5BF9;&#x8C61;&#x5B58;&#x50A8;</text>
+      <text x="534" y="508" font-size="9" fill="#546e7a">SHA-256 &#x53BB;&#x91CD;</text>
+      <text x="534" y="526" font-size="9" fill="#37474f">raw/ &#xB7; cleaned/</text>
+      <text x="534" y="544" font-size="8" fill="#78909c">&#x5B58;&#x50A8;&#x4E0E;&#x8BA1;&#x7B97;&#x5206;&#x79BB;</text>
     </svg>
-    </div>
-
     <h3>为什么算子层和管线层必须分开</h3>
     <p>这是系统中最重要的架构切割线。<strong>Pipeline</strong> 处理的是文档加工：有状态、有序、单向，由 Worker 轮询触发，不接受 HTTP 请求。<strong>Operator</strong> 处理的是知识查询与操作：无状态，接受 HTTP 请求。分开后两层独立演化——加新算子不碰 Pipeline，改 Stage 不影响 API。</p>
 
@@ -1551,14 +1438,22 @@ maintenance_thread 读  evolution_candidates 并归类</pre>
 
     <p><code>POST /api/v1/copilot</code> — 自然语言知识问答。用户输入问题，系统自动检索语义知识基础设施并组织回答。</p>
 
-    <h3>处理流程</h3>
-    <p>用户问题 &rarr; 本体术语提取（alias 匹配） &rarr; 构建查询计划（seed &rarr; expand &rarr; tagged_in &rarr; rerank） &rarr; 查询引擎执行 &rarr; 收集 facts 三元组 + source segments &rarr; LLM 基于检索知识生成自然语言回答。</p>
+    <h3>5 步 LLM 驱动流程</h3>
+    <table>
+      <tbody>
+        <tr><td><strong>1. 关键词提取</strong></td><td>LLM 从用户问题中提取中英文技术术语（不依赖固定词表）</td></tr>
+        <tr><td><strong>2. 模糊搜索</strong></td><td>三级匹配：alias 精确 &rarr; 子串匹配 &rarr; embedding 语义匹配（&gt;0.5），返回本体节点 ID + 置信度</td></tr>
+        <tr><td><strong>3. 动态查询规划</strong></td><td>LLM 根据匹配到的节点 ID 和问题意图生成查询计划；经 QueryValidator 验证，失败时将错误信息反馈 LLM 重试（最多 3 次）</td></tr>
+        <tr><td><strong>4. 查询执行</strong></td><td>QueryEngine 执行计划，检索 facts 三元组 + 原文 segments</td></tr>
+        <tr><td><strong>5. 五层回答生成</strong></td><td>Facts 按五层分组（scenario &rarr; condition &rarr; method &rarr; mechanism &rarr; concept），LLM 按五层模型组织结构化回答</td></tr>
+      </tbody>
+    </table>
 
     <h3>LLM 集成</h3>
-    <p>当前使用 qwen-plus（通义千问，DashScope API）。LLM 不可用时退化为结构化结果展示（facts 列表 + segments 列表），不报错。</p>
+    <p>当前使用 qwen-plus（通义千问，DashScope API），支持多 Key 轮转。LLM 不可用时退化为模板查询计划 + 结构化结果展示，不报错。</p>
 
     <h3>Dashboard 入口</h3>
-    <p>Dashboard 新增 Copilot tab，对话框界面，带预置问题快捷入口，支持多轮对话。每条回答附带查询计划（可折叠查看）和耗时统计。</p>
+    <p>Dashboard Copilot tab，对话框界面，带预置问题快捷入口。每条回答附带查询计划（可折叠查看）和耗时统计，最新查询在最上方。</p>
   </section>
 
   <!-- ── Section 15: Operators ── -->

@@ -124,7 +124,14 @@ To feed the pipeline: insert a `documents` row with `status='raw'` and upload th
 Planner auto-detects variable dependencies (`from`, `input`, `sets` fields) and groups steps into parallel execution waves. Total query timeout: 30s.
 
 ### Knowledge Copilot (`POST /api/v1/copilot`)
-Natural language Q&A: question → ontology term extraction (alias matching) → build query plan → execute via QueryEngine → LLM synthesizes answer from retrieved facts + segments. Falls back to structured result listing when LLM is unavailable.
+Natural language Q&A with 5-step LLM pipeline:
+1. LLM extracts search keywords from question (Chinese/English tech terms)
+2. Fuzzy search matches keywords against ontology (alias exact → substring → embedding similarity)
+3. LLM generates query plan using matched node IDs (validates against QueryValidator, retries up to 3x on error)
+4. QueryEngine executes plan → retrieves facts + segments
+5. Facts grouped by 5-layer model (scenario→condition→method→mechanism→concept), LLM generates structured answer
+
+Falls back to template-based plan + structured result listing when LLM is unavailable.
 
 ### 21 Semantic Operators (REST `/api/v1/semantic/`)
 `lookup`, `resolve`, `expand`, `path`, `dependency_closure`, `impact_propagate`, `filter`, `evidence_rank`, `conflict_detect`, `fact_merge`, `candidate_discover`, `attach_score`, `evolution_gate`, `context_assemble`, `semantic_search`, `ontology_quality`, `stale_knowledge`, `cross_layer_check`, `graph_inspect`, `ontology_inspect`, `edu_search`

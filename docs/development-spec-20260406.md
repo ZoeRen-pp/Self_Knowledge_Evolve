@@ -60,7 +60,7 @@ Self_Knowledge_Evolve/
 │   │   │   ├── review.py          ← 候选词审核（approve/reject/merge/check_synonyms）
 │   │   │   └── drilldown.py       ← 质量指标钻取
 │   │   ├── query_router.py        ← POST /api/v1/query（声明式查询引擎入口）
-│   │   └── copilot_router.py      ← POST /api/v1/copilot（自然语言知识问答）
+│   │   └── copilot_router.py      ← POST /api/v1/copilot（LLM提词→模糊搜索→动态规划→五层回答）
 │   │
 │   ├── query/                     ← 声明式查询引擎
 │   │   ├── types.py               ← NodeRef, ResultSet, WorkingMemory, StepTrace, 常量
