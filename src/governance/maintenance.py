@@ -60,6 +60,10 @@ class OntologyMaintenance:
         cleanup_stats = self._cleanup_pass()
         stats["cleanup"] = cleanup_stats
 
+        # Pass 4: Refresh ontology embedding cache
+        emb_refresh = self._refresh_embedding_cache()
+        stats["embedding_cache"] = emb_refresh
+
         # Final counts
         final = self._status_counts()
         stats["final"] = final
@@ -547,3 +551,49 @@ class OntologyMaintenance:
                     "parent_concept": item.get("parent_concept", ""),
                 }
         return result
+
+    def _refresh_embedding_cache(self) -> dict:
+        """Rebuild ontology embedding cache if node list has changed."""
+        from pathlib import Path
+        import numpy as np
+        from src.config.settings import settings
+
+        if not getattr(settings, "EMBEDDING_ENABLED", False):
+            return {"status": "skipped", "reason": "embedding_disabled"}
+
+        cache_path = Path(__file__).resolve().parents[2] / "tmp" / "onto_embeddings.npz"
+        ontology = self._ontology
+        nodes = [n for n in ontology.nodes.values() if n.get("canonical_name")]
+        current_ids = [n.get("node_id") or n["id"] for n in nodes]
+
+        if cache_path.exists():
+            try:
+                cached_ids = list(np.load(cache_path, allow_pickle=True)["node_ids"])
+                if cached_ids == current_ids:
+                    log.info("Embedding cache up to date (%d nodes)", len(current_ids))
+                    return {"status": "up_to_date", "nodes": len(current_ids)}
+            except Exception:
+                pass
+
+        log.info("Ontology changed, rebuilding embedding cache for %d nodes...", len(current_ids))
+        try:
+            from src.utils.embedding import get_embeddings
+            texts = [n["canonical_name"].lower() for n in nodes]
+            vecs = get_embeddings(texts)
+            if vecs is None:
+                return {"status": "failed", "reason": "embedding_service_unavailable"}
+            emb = np.array(vecs)
+            node_layers = [n.get("knowledge_layer", "concept") for n in nodes]
+            cache_path.parent.mkdir(exist_ok=True)
+            np.savez(cache_path, embeddings=emb, node_ids=np.array(current_ids), node_layers=np.array(node_layers))
+
+            from src.pipeline.stages.stage3_align import AlignStage
+            AlignStage._onto_embeddings = emb
+            AlignStage._onto_node_ids = current_ids
+            AlignStage._onto_node_layers = node_layers
+
+            log.info("Embedding cache rebuilt and hot-reloaded (%d nodes)", len(current_ids))
+            return {"status": "rebuilt", "nodes": len(current_ids)}
+        except Exception as exc:
+            log.warning("Embedding cache rebuild failed: %s", exc)
+            return {"status": "failed", "reason": str(exc)}
