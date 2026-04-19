@@ -369,10 +369,12 @@ class EvolveStage(Stage):
                 parent_id=parent_id,
             )
 
-        # Update in-memory alias map for immediate visibility
+        # Update in-memory alias map (skip too-short or overly generic terms)
         if hasattr(ontology, "alias_map"):
             for sf in surface_forms:
-                ontology.alias_map[sf.lower()] = node_id
+                sf_lower = sf.strip().lower()
+                if len(sf_lower) >= 3 or sf.isupper():
+                    ontology.alias_map[sf_lower] = node_id
 
     # ── Enrichment (description + aliases via LLM) ─────────────────
 

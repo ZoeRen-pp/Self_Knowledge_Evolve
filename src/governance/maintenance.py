@@ -483,13 +483,21 @@ class OntologyMaintenance:
         return None
 
     def _add_aliases(self, node_id: str, surface_forms: list[str]) -> int:
-        """Add surface forms as aliases for an existing ontology node."""
+        """Add surface forms as aliases for an existing ontology node.
+
+        Validates each alias against corpus frequency: if it matches more than
+        5% of active segments, it's too generic and gets rejected.
+        """
         import uuid
         added = 0
         for sf in surface_forms:
-            sf_lower = sf.lower()
-            # Check not already an alias
+            sf_lower = sf.strip().lower()
+            if len(sf_lower) < 2:
+                continue
             if hasattr(self._ontology, "alias_map") and sf_lower in self._ontology.alias_map:
+                continue
+            if self._is_too_generic(sf_lower):
+                log.debug("Alias '%s' rejected: too generic (high corpus frequency)", sf_lower)
                 continue
             alias_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{node_id}:{sf_lower}"))
             try:
@@ -500,13 +508,42 @@ class OntologyMaintenance:
                        ON CONFLICT (surface_form, canonical_node_id) DO NOTHING""",
                     (alias_id, sf_lower, node_id),
                 )
-                # Update in-memory alias map
                 if hasattr(self._ontology, "alias_map"):
                     self._ontology.alias_map[sf_lower] = node_id
                 added += 1
             except Exception:
                 pass
         return added
+
+    def _is_too_generic(self, surface_form: str) -> bool:
+        """Reject alias if it matches too many segments (>5% of active corpus)."""
+        import re
+        total = self._store.fetchone(
+            "SELECT count(*) AS c FROM segments WHERE lifecycle_state='active'"
+        )
+        total_count = total["c"] if total else 0
+        if total_count == 0:
+            return False
+        if len(surface_form) <= 3:
+            pattern = r'\m' + re.escape(surface_form) + r'\M'
+            hit = self._store.fetchone(
+                "SELECT count(*) AS c FROM segments WHERE lifecycle_state='active' "
+                "AND normalized_text ~* %s",
+                (pattern,),
+            )
+        else:
+            hit = self._store.fetchone(
+                "SELECT count(*) AS c FROM segments WHERE lifecycle_state='active' "
+                "AND normalized_text ILIKE %s",
+                (f"%{surface_form}%",),
+            )
+        hit_count = hit["c"] if hit else 0
+        hit_rate = hit_count / total_count
+        if hit_rate > 0.05:
+            log.info("Alias '%s' hit %d/%d segments (%.1f%%) - rejected as too generic",
+                     surface_form, hit_count, total_count, hit_rate * 100)
+            return True
+        return False
 
     def _get_ontology_terms(self) -> tuple[list[str], list[str]]:
         """Return (names, node_ids) from ontology registry."""

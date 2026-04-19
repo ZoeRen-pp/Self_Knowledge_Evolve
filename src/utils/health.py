@@ -1,47 +1,94 @@
-"""Startup health checks for external dependencies."""
+"""Startup health checks for all external dependencies."""
 
 from __future__ import annotations
 
 import logging
 
 from src.db import health_check as db_health_check
-from src.utils.llm_extract import LLMExtractor
 
 log = logging.getLogger(__name__)
 
 
 def startup_health_check() -> bool:
-    """Check DB and LLM connectivity.
+    """Check all dependencies before starting services.
 
-    Returns True if all *required* services (postgres, neo4j) are healthy.
-    LLM is treated as optional — a failure is logged as warning, not error.
+    Required: postgres, neo4j, crawler_postgres, minio
+    Required if enabled: llm, embedding
+    Returns True only if all required services are healthy.
     """
+    from src.config.settings import settings
+
+    results: dict[str, bool | str] = {}
+
+    # ── Databases ──
     db_status = db_health_check()
-    llm_ok = LLMExtractor().ping()
+    results["postgres"] = db_status.get("postgres", False)
+    results["neo4j"] = db_status.get("neo4j", False)
+    results["crawler_postgres"] = db_status.get("crawler_postgres", False)
 
-    core_ok = all(db_status.values())  # postgres + neo4j are required
+    # ── MinIO ──
+    try:
+        from minio import Minio
+        mc = Minio(
+            settings.MINIO_ENDPOINT,
+            access_key=settings.MINIO_ACCESS_KEY,
+            secret_key=settings.MINIO_SECRET_KEY,
+            secure=settings.MINIO_SECURE,
+        )
+        mc.bucket_exists(settings.MINIO_BUCKET_RAW)
+        results["minio"] = True
+    except Exception as exc:
+        log.error("MinIO health check failed: %s", exc)
+        results["minio"] = False
 
-    if core_ok and llm_ok:
-        log.info(
-            "Startup health check ok: postgres=%s neo4j=%s llm=%s",
-            db_status.get("postgres"),
-            db_status.get("neo4j"),
-            llm_ok,
-        )
-    elif core_ok and not llm_ok:
-        log.warning(
-            "Startup health check: core services ok, LLM unavailable (degraded). "
-            "postgres=%s neo4j=%s llm=%s",
-            db_status.get("postgres"),
-            db_status.get("neo4j"),
-            llm_ok,
-        )
+    # ── LLM ──
+    if settings.LLM_ENABLED:
+        from src.utils.llm_extract import LLMExtractor
+        llm_ok = LLMExtractor().ping()
+        results["llm"] = llm_ok
     else:
-        log.error(
-            "Startup health check failed: postgres=%s neo4j=%s llm=%s",
-            db_status.get("postgres"),
-            db_status.get("neo4j"),
-            llm_ok,
-        )
+        results["llm"] = "disabled"
 
-    return core_ok
+    # ── Embedding ──
+    if getattr(settings, "EMBEDDING_ENABLED", False):
+        emb_ok = _check_embedding()
+        results["embedding"] = emb_ok
+    else:
+        results["embedding"] = "disabled"
+
+    # ── Report ──
+    failed = [k for k, v in results.items() if v is False]
+    disabled = [k for k, v in results.items() if v == "disabled"]
+    passed = [k for k, v in results.items() if v is True]
+
+    if not failed:
+        log.info("Startup health check ok: %s",
+                 ", ".join(f"{k}=ok" for k in passed) +
+                 (f" | disabled: {', '.join(disabled)}" if disabled else ""))
+        return True
+    else:
+        log.error("Startup health check FAILED: %s",
+                  ", ".join(f"{k}=FAIL" for k in failed) +
+                  " | " + ", ".join(f"{k}=ok" for k in passed) +
+                  (f" | disabled: {', '.join(disabled)}" if disabled else ""))
+        return False
+
+
+def _check_embedding() -> bool:
+    """Check if at least one embedding backend is reachable."""
+    from src.utils.embedding import _detect_backend
+    backend = _detect_backend()
+    if backend == "disabled":
+        return False
+
+    try:
+        from src.utils.embedding import get_embeddings
+        vecs = get_embeddings(["health check"])
+        if vecs and len(vecs) == 1 and len(vecs[0]) > 0:
+            log.info("Embedding health check ok (backend=%s, dim=%d)", backend, len(vecs[0]))
+            return True
+        log.error("Embedding returned empty result (backend=%s)", backend)
+        return False
+    except Exception as exc:
+        log.error("Embedding health check failed (backend=%s): %s", backend, exc)
+        return False

@@ -697,17 +697,7 @@ def _stats_thread(app, stop_event: threading.Event) -> None:
 def main() -> None:
     setup_logging(settings.LOG_LEVEL)
     if not startup_health_check():
-        raise SystemExit("Startup health check failed.")
-
-    # LLM is required for pipeline — fail fast if not reachable
-    from src.utils.llm_extract import LLMExtractor
-    log.info("Checking LLM connectivity...")
-    if not LLMExtractor().ping():
-        raise SystemExit(
-            "LLM is not available. "
-            "Fix LLM_API_KEY / LLM_BASE_URL in .env and restart."
-        )
-    log.info("LLM connectivity: ok")
+        raise SystemExit("Startup health check failed. Fix the failing services and retry.")
 
     app = get_app()
     crawler_store = app.crawler_store or app.store

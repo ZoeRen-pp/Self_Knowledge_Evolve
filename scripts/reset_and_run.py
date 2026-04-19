@@ -88,6 +88,19 @@ def kill_processes() -> None:
 
 
 # ═══════════════════════════════════════════════════════════════
+# Step 1b: Preflight check — verify all dependencies before proceeding
+# ═══════════════════════════════════════════════════════════════
+
+def preflight_check() -> None:
+    step("Preflight dependency check")
+    from src.utils.health import startup_health_check
+    if not startup_health_check():
+        log("  PREFLIGHT FAILED — fix the failing services before reset")
+        sys.exit(1)
+    log("  All dependencies healthy")
+
+
+# ═══════════════════════════════════════════════════════════════
 # Step 2: Purge Python cache
 # ═══════════════════════════════════════════════════════════════
 
@@ -427,6 +440,7 @@ def main() -> None:
     log("=" * 50)
 
     kill_processes()
+    preflight_check()
     purge_cache()
     clear_stores()
     verify_clean()

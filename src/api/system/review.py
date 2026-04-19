@@ -417,10 +417,11 @@ def _approve_concept(
             (alias_id, alias.lower(), node_id, lang),
         )
 
-    # Update in-memory OntologyRegistry
     if hasattr(ontology, "alias_map"):
         for alias in all_aliases:
-            ontology.alias_map[alias.lower()] = node_id
+            al = alias.strip().lower()
+            if len(al) >= 3 or alias.isupper():
+                ontology.alias_map[al] = node_id
 
     log.info("Concept approved: %s (node_id=%s, parent=%s, aliases=%d, desc=%d chars)",
              normalized, node_id, parent_node_id, len(all_aliases), len(description))
