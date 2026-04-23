@@ -110,8 +110,12 @@ class AlignStage(Stage):
         tags: list[dict] = []
         ontology = self._ontology
 
+        raw_matches = self._find_terms(text)
+        # Embedding verification: for each matched (surface, node_id),
+        # check segment vector vs node vector similarity. Reject if too low.
         matched_nodes: dict[str, float] = {}
-        for surface, node_id, conf in self._find_terms(text):
+        verified = self._verify_alias_matches(text, raw_matches)
+        for surface, node_id, conf in verified:
             if node_id not in matched_nodes or matched_nodes[node_id] < conf:
                 matched_nodes[node_id] = conf
 
@@ -195,6 +199,57 @@ class AlignStage(Stage):
                 found.append((surface, node_id, 0.90))
 
         return found
+
+    def _verify_alias_matches(
+        self, text: str, matches: list[tuple[str, str, float]],
+        short_threshold: int = 5,
+        min_sim: float = 0.30,
+    ) -> list[tuple[str, str, float]]:
+        """Embedding-based verification: reject alias matches where the segment
+        and the target node are semantically distant. Only verifies short aliases
+        (<=short_threshold chars) which are most prone to false positives."""
+        if not matches:
+            return matches
+        short_matches = [(s, n, c) for s, n, c in matches if len(s) <= short_threshold]
+        if not short_matches:
+            return matches
+        if not self._ensure_onto_embeddings():
+            return matches
+        try:
+            from src.utils.embedding import get_embeddings
+            import numpy as np
+            seg_vecs = get_embeddings([text[:512]])
+            if not seg_vecs:
+                return matches
+            seg_vec = np.array(seg_vecs[0])
+            node_idx = {nid: i for i, nid in enumerate(self.__class__._onto_node_ids)}
+            emb_en = self.__class__._onto_embeddings
+            emb_zh = self.__class__._onto_embeddings_zh
+
+            long_matches = [m for m in matches if len(m[0]) > short_threshold]
+            verified_short = []
+            rejected = 0
+            for surface, node_id, conf in short_matches:
+                idx = node_idx.get(node_id)
+                if idx is None:
+                    verified_short.append((surface, node_id, conf))
+                    continue
+                sim_en = float(np.dot(emb_en[idx], seg_vec))
+                sim_zh = float(np.dot(emb_zh[idx], seg_vec)) if emb_zh is not None else sim_en
+                sim = max(sim_en, sim_zh)
+                if sim >= min_sim:
+                    verified_short.append((surface, node_id, conf))
+                else:
+                    rejected += 1
+                    log.debug("  alias verify rejected: '%s'→%s sim=%.3f < %.2f",
+                              surface, node_id, sim, min_sim)
+            if rejected:
+                log.debug("  alias verification dropped %d/%d short matches",
+                          rejected, len(short_matches))
+            return long_matches + verified_short
+        except Exception as exc:
+            log.debug("Alias verification failed: %s", exc)
+            return matches
 
     # ── Embedding-based caches (class-level, loaded once) ────────
 
@@ -306,7 +361,11 @@ class AlignStage(Stage):
             sims_zh = np.dot(self.__class__._onto_embeddings_zh, seg_vec) if self.__class__._onto_embeddings_zh is not None else sims_en
             similarities = np.maximum(sims_en, sims_zh)
 
-            THRESHOLD = 0.65
+            # Threshold calibrated from empirical data: non-concept nodes rarely
+            # exceed 0.55 similarity because their names are abstract (e.g.
+            # "NeighborAdjacencyFormation") and don't appear verbatim in text.
+            # Dropping to 0.50 gives ~43% segment coverage based on 30-sample test.
+            THRESHOLD = 0.50
             MAX_MATCHES = 5
             top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES * 3]
             results = []

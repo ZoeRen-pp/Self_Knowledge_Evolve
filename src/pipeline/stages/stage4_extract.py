@@ -534,7 +534,55 @@ class ExtractStage(Stage):
                 "  seg=%s: dropped %d ungrounded triple(s), kept %d",
                 str(segment.get("segment_id", ""))[:12], dropped_no_quote, len(facts),
             )
+        # Self-verify: second independent LLM pass checks direction and predicate sanity
+        if facts:
+            facts = self._llm_verify_facts(facts, segment_raw_text, llm)
         return facts
+
+    def _llm_verify_facts(self, facts: list[dict], segment_text: str, llm) -> list[dict]:
+        """Independent LLM self-verification pass for direction and predicate sanity."""
+        if not facts:
+            return facts
+        import json as _json
+        triple_list = [
+            {"i": i, "subject": f["subject"], "predicate": f["predicate"],
+             "object": f["object"], "quote": f.get("exact_span", "")}
+            for i, f in enumerate(facts)
+        ]
+        system = (
+            "You are verifying (subject, predicate, object) triples extracted from telecom "
+            "technical text. For each triple, decide if it is CORRECT given the source quote. "
+            "Check: (1) is the direction right (A configures B vs B configures A)? "
+            "(2) does the predicate accurately describe the relationship in the quote? "
+            "Return JSON array of {i: int, valid: bool, reason: str}."
+        )
+        prompt = (
+            f"Source segment:\n{segment_text[:1500]}\n\n"
+            f"Triples to verify:\n{_json.dumps(triple_list, ensure_ascii=False)}\n\n"
+            f"Return JSON array only."
+        )
+        try:
+            raw = llm._call_llm(system, prompt, max_tokens=1024)
+            if not raw:
+                return facts
+            import re as _re
+            raw = _re.sub(r"<think>.*?</think>", "", raw, flags=_re.DOTALL).strip()
+            raw = _re.sub(r"```json\s*", "", raw)
+            raw = _re.sub(r"```\s*$", "", raw)
+            verdicts = _json.loads(raw)
+            if not isinstance(verdicts, list):
+                return facts
+            invalid_indices = {int(v["i"]) for v in verdicts
+                               if isinstance(v, dict) and "i" in v and not v.get("valid", True)}
+            if invalid_indices:
+                log.info(
+                    "  LLM self-verify: dropped %d/%d triples (direction/predicate errors)",
+                    len(invalid_indices), len(facts),
+                )
+            return [f for i, f in enumerate(facts) if i not in invalid_indices]
+        except Exception as exc:
+            log.debug("Fact verification failed: %s", exc)
+            return facts
 
     def _record_relation_candidate(
         self, predicate: str, subject: str, obj: str,

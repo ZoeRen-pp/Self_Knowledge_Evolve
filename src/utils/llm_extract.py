@@ -113,20 +113,17 @@ RELATION TYPES AND NUCLEARITY:
                    needed to understand B. B is the main content.
                    Nuclearity: SN  (B is nucleus — the main content)
 
-DECISION RULES (apply in order, stop at first match):
-1. "for example / consider / as an illustration / e.g." in B → Exemplification
-2. Numbered steps, or "first … then … next … finally" → Sequence
-3. "however / in contrast / alternatively / whereas / on the other hand" → Contrast
-4. "MUST / SHALL / MUST NOT / is required / is prohibited" in B → Constraint
-5. "if / when / unless / only if / in case" starts or dominates B → Condition
-6. "before / requires / assumes / prerequisite / first ensure" in A → Prerequisite
-7. RFC §, spec table, benchmark data, measurement result in B → Evidence
-8. History, motivation, "background", overview paragraph before technical detail → Background
-9. "because / therefore / as a result / this causes / leads to" → Causation
-10. B continues the same topic with more detail → Elaboration (default)
+SCORING INSTRUCTIONS:
+For each paragraph pair, score ALL 10 relation types on 0-100 scale based on how well
+each relation describes the actual discourse function (not how "safe" each choice is).
+DO NOT default to Elaboration when a more specific relation is plausible — if Causation,
+Condition, or Exemplification has even a moderate fit, give it a higher score.
 
 Return ONLY a JSON array. Each element:
-{"src_idx": <int>, "relation_type": "<type>", "nuclearity": "NS"|"SN"|"NN"}
+{"src_idx": <int>, "scores": {"Elaboration": <int>, "Exemplification": <int>,
+ "Sequence": <int>, "Causation": <int>, "Contrast": <int>, "Constraint": <int>,
+ "Condition": <int>, "Prerequisite": <int>, "Evidence": <int>, "Background": <int>},
+ "nuclearity": "NS"|"SN"|"NN"}
 One element per input pair. No explanation outside the JSON array."""
 
 _RST_USER_TEMPLATE = """\
@@ -707,8 +704,17 @@ class LLMExtractor:
             if not isinstance(item, dict):
                 continue
             idx = item.get("src_idx")
-            rel = item.get("relation_type", "Elaboration")
             nuc = item.get("nuclearity", "NN")
+            scores = item.get("scores")
+            if isinstance(scores, dict) and scores:
+                valid_scores = {k: v for k, v in scores.items()
+                                 if k in _valid_rel and isinstance(v, (int, float))}
+                if valid_scores:
+                    rel = max(valid_scores, key=valid_scores.get)
+                else:
+                    rel = item.get("relation_type", "Elaboration")
+            else:
+                rel = item.get("relation_type", "Elaboration")
             if isinstance(idx, int) and 0 <= idx < expected:
                 result[idx] = {
                     "relation_type": rel if rel in _valid_rel else "Elaboration",

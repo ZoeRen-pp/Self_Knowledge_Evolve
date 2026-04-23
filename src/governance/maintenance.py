@@ -101,9 +101,28 @@ class OntologyMaintenance:
             log.warning("numpy not available, skipping embedding pass")
             return {"status": "skipped"}
 
-        # Encode candidates
-        texts = [c["normalized_form"] for c in candidates]
-        log.info("  Encoding %d candidates...", len(texts))
+        # Encode candidates using rich text (name + description + suggested aliases)
+        import json as _json
+        texts = []
+        for c in candidates:
+            name = c.get("normalized_form", "")
+            desc = c.get("description") or ""
+            sa = c.get("suggested_aliases")
+            if isinstance(sa, str):
+                try:
+                    sa = _json.loads(sa)
+                except Exception:
+                    sa = []
+            sa = sa or []
+            surface_forms = c.get("surface_forms") or []
+            parts = [name]
+            if desc:
+                parts.append(desc)
+            all_aliases = list(set(surface_forms) | set(sa))
+            if all_aliases:
+                parts.append("Aliases: " + ", ".join(all_aliases))
+            texts.append(". ".join(parts))
+        log.info("  Encoding %d candidates (rich text)...", len(texts))
         raw_emb = get_embeddings(texts)
         if raw_emb is None:
             log.warning("  Embedding backend unavailable")
