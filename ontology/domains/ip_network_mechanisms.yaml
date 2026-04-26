@@ -96,9 +96,13 @@ nodes:
   knowledge_layer: mechanism
   maturity_level: core
   lifecycle_state: active
-  description: 'Route redistribution: importing routes learned by one routing protocol into another, enabling cross-protocol
-    reachability. Requires route-policy boundary control to prevent loops and leaks. 将一种路由协议学到的路由引入到另一种协议中，实现跨协议域路由互通。 需配合
-    route-policy 做边界管控以防止路由环路和路由泄漏。'
+  description: 'Route redistribution: the `redistribute` command on an ASBR injects routes
+    from one routing protocol (e.g. OSPF, IS-IS, connected, static) into another (e.g. BGP),
+    with a route-map filter and metric/tag rewrite at the protocol boundary. Typical CLI:
+    `redistribute connected|static|ospf|bgp route-map <NAME>`. Mutual redistribution between
+    two IGPs requires loop prevention via administrative distance or route tags. 在 ASBR
+    上通过 redistribute 命令把协议 A（OSPF/IS-IS/直连/静态）的路由注入协议 B（如 BGP），
+    在协议边界用 route-map 过滤并改写 metric/tag；双向互导时需用 AD 或 route tag 防环。'
   aliases:
   - route redistribution
   - route import

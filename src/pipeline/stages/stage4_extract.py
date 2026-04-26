@@ -117,12 +117,8 @@ class ExtractStage(Stage):
                     log.debug("  seg=%s merged=%d", str(seg["segment_id"])[:12], len(merged_facts))
                     continue
 
-            # P3: Co-occurrence (last resort, low quality)
-            cooc_facts = self._extract_cooccurrence(seg, source_rank)
-            if cooc_facts:
-                all_facts.extend(cooc_facts)
-                cooccurrence_count += len(cooc_facts)
-                log.debug("  seg=%s cooccurrence=%d", str(seg["segment_id"])[:12], len(cooc_facts))
+            # P3 (co-occurrence) disabled: produced 509/1818 quote-less facts
+            # with 0 source traceability. Routing fallback through RST chains instead.
 
         # P2-chain: RST chain extraction for chains with uncovered segments
         chain_facts = self._walk_rst_chains(segments, source_rank, source_doc_id, covered_ids)
@@ -539,50 +535,137 @@ class ExtractStage(Stage):
             facts = self._llm_verify_facts(facts, segment_raw_text, llm)
         return facts
 
+    # Verify in small chunks: a single empty/parse failure only loses CHUNK_SIZE
+    # facts instead of the whole segment's batch. Empirically Qwen-Plus returns
+    # empty responses ~18% of the time even on 2-fact batches; smaller chunks
+    # bound the blast radius without making any single call more reliable.
+    _VERIFY_CHUNK_SIZE = 3
+
     def _llm_verify_facts(self, facts: list[dict], segment_text: str, llm) -> list[dict]:
-        """Independent LLM self-verification pass for direction and predicate sanity."""
+        """Independent LLM self-verification pass for direction and predicate sanity.
+
+        Splits ``facts`` into small chunks and verifies each independently so
+        a single LLM hiccup doesn't pass through the whole segment's facts.
+        Uses the ontology's domain/range hints and predicate descriptions so
+        the LLM judges against ontology-defined semantics rather than literal
+        English word meaning.
+        """
         if not facts:
             return facts
+
+        rel_defs = getattr(self._ontology, "relation_definitions", {})
+        invalid_indices: set[int] = set()
+        chunk_failures = 0
+        chunk_size = self._VERIFY_CHUNK_SIZE
+        for offset in range(0, len(facts), chunk_size):
+            chunk = facts[offset : offset + chunk_size]
+            chunk_invalid, ok = self._verify_chunk(chunk, segment_text, llm, rel_defs)
+            if not ok:
+                chunk_failures += 1
+                continue  # keep this chunk's facts unchanged on failure
+            for local_i in chunk_invalid:
+                invalid_indices.add(offset + local_i)
+
+        if invalid_indices:
+            log.info(
+                "  LLM self-verify: dropped %d/%d triples (direction/predicate errors)",
+                len(invalid_indices), len(facts),
+            )
+        if chunk_failures:
+            log.warning(
+                "  LLM self-verify: %d/%d chunks failed after retry — those triples kept unverified",
+                chunk_failures, (len(facts) + chunk_size - 1) // chunk_size,
+            )
+        return [f for i, f in enumerate(facts) if i not in invalid_indices]
+
+    def _verify_chunk(
+        self, chunk: list[dict], segment_text: str, llm, rel_defs: dict,
+    ) -> tuple[set[int], bool]:
+        """Run verify on a small chunk. Returns (invalid_local_indices, ok_flag).
+
+        ok_flag=False means the LLM call failed twice (empty / parse error /
+        exception) — caller should keep the chunk's facts unchanged.
+        """
         import json as _json
+        import re as _re
+
+        predicates = sorted({f["predicate"] for f in chunk})
+        cheat_lines: list[str] = []
+        for p in predicates:
+            d = rel_defs.get(p)
+            if not d:
+                continue
+            dh = d.get("domain_hint", "any")
+            rh = d.get("range_hint", "any")
+            desc = d.get("description", "")
+            if dh == "any" and rh == "any":
+                cheat_lines.append(f"- {p}: {desc}")
+            else:
+                cheat_lines.append(f"- {p} (domain: {dh}, range: {rh}): {desc}")
+        cheat = "\n".join(cheat_lines) if cheat_lines else "(no predicate definitions available)"
+
         triple_list = [
             {"i": i, "subject": f["subject"], "predicate": f["predicate"],
              "object": f["object"], "quote": f.get("exact_span", "")}
-            for i, f in enumerate(facts)
+            for i, f in enumerate(chunk)
         ]
         system = (
             "You are verifying (subject, predicate, object) triples extracted from telecom "
-            "technical text. For each triple, decide if it is CORRECT given the source quote. "
-            "Check: (1) is the direction right (A configures B vs B configures A)? "
-            "(2) does the predicate accurately describe the relationship in the quote? "
-            "Return JSON array of {i: int, valid: bool, reason: str}."
+            "technical text against an ontology. For each triple, decide if it is CORRECT.\n\n"
+            "Node type is encoded in the ID prefix:\n"
+            "  IP.*     → ConceptNode\n"
+            "  MECH.*   → MechanismNode\n"
+            "  METHOD.* → MethodNode\n"
+            "  COND.*   → ConditionRuleNode\n"
+            "  SCENE.*  → ScenarioPatternNode\n\n"
+            "Check both:\n"
+            "  (1) Direction: does the subject's node type match the predicate's domain_hint, "
+            "and the object's node type match the range_hint? If a predicate requires "
+            "'MechanismNode → ConceptNode' but the triple is 'IP.* → MECH.*', the direction "
+            "is REVERSED and the triple is invalid.\n"
+            "  (2) Semantics: does the predicate's ontology-defined meaning (see description) "
+            "actually describe what the quote says? Judge against the ontology description, "
+            "NOT the literal English meaning of the predicate word.\n\n"
+            "Return JSON array of {i: int, valid: bool, reason: str}. "
+            "Only mark valid=false when (1) or (2) is clearly violated; when unsure, mark valid=true."
         )
         prompt = (
+            f"Predicate definitions (from ontology):\n{cheat}\n\n"
             f"Source segment:\n{segment_text[:1500]}\n\n"
             f"Triples to verify:\n{_json.dumps(triple_list, ensure_ascii=False)}\n\n"
             f"Return JSON array only."
         )
-        try:
-            raw = llm._call_llm(system, prompt, max_tokens=1024)
+        max_tokens = 200 + 150 * len(chunk)
+
+        def _parse(raw: str) -> list | None:
             if not raw:
-                return facts
-            import re as _re
-            raw = _re.sub(r"<think>.*?</think>", "", raw, flags=_re.DOTALL).strip()
-            raw = _re.sub(r"```json\s*", "", raw)
-            raw = _re.sub(r"```\s*$", "", raw)
-            verdicts = _json.loads(raw)
-            if not isinstance(verdicts, list):
-                return facts
-            invalid_indices = {int(v["i"]) for v in verdicts
-                               if isinstance(v, dict) and "i" in v and not v.get("valid", True)}
-            if invalid_indices:
-                log.info(
-                    "  LLM self-verify: dropped %d/%d triples (direction/predicate errors)",
-                    len(invalid_indices), len(facts),
-                )
-            return [f for i, f in enumerate(facts) if i not in invalid_indices]
-        except Exception as exc:
-            log.debug("Fact verification failed: %s", exc)
-            return facts
+                return None
+            cleaned = _re.sub(r"<think>.*?</think>", "", raw, flags=_re.DOTALL).strip()
+            cleaned = _re.sub(r"```json\s*", "", cleaned)
+            cleaned = _re.sub(r"```\s*$", "", cleaned)
+            try:
+                obj = _json.loads(cleaned)
+            except _json.JSONDecodeError:
+                return None
+            return obj if isinstance(obj, list) else None
+
+        verdicts: list | None = None
+        for attempt in (1, 2):
+            try:
+                raw = llm.complete(prompt, system=system, max_tokens=max_tokens)
+            except Exception as exc:
+                log.debug("  LLM self-verify chunk attempt %d call exception: %s", attempt, exc)
+                continue
+            verdicts = _parse(raw)
+            if verdicts is not None:
+                break
+
+        if verdicts is None:
+            return set(), False
+
+        invalid_local = {int(v["i"]) for v in verdicts
+                         if isinstance(v, dict) and "i" in v and not v.get("valid", True)}
+        return invalid_local, True
 
     def _record_relation_candidate(
         self, predicate: str, subject: str, obj: str,

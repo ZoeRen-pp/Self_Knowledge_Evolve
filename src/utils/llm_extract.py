@@ -590,7 +590,7 @@ class LLMExtractor:
                     f"  Paragraph B{type_hint_b}: {dst_text[:600]}"
                 )
             prompt = _RST_USER_TEMPLATE.format(pairs_text="\n\n".join(lines))
-            raw = self._call_llm(_RST_SYSTEM_PROMPT, prompt, 32 + 40 * len(batch))
+            raw = self._call_llm(_RST_SYSTEM_PROMPT, prompt, 64 + 240 * len(batch))
             if raw is None:
                 results.extend([fallback] * len(batch))
             else:

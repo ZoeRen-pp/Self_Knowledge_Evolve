@@ -101,6 +101,11 @@ class YAMLOntologyProvider(OntologyProvider):
         return self._reg.functional_predicates
 
     @property
+    def relation_definitions(self) -> dict[str, dict]:
+        """id → {description, domain_hint, range_hint, symmetric}."""
+        return self._reg.relation_definitions
+
+    @property
     def seed_relations(self):
         return self._reg.seed_relations
 

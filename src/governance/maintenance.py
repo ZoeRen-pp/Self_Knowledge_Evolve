@@ -134,7 +134,7 @@ class OntologyMaintenance:
         log.info("  Encoded: shape=%s", embeddings.shape)
 
         # Encode ontology nodes
-        onto_names, onto_ids = self._get_ontology_terms()
+        onto_names, onto_ids, onto_layers = self._get_ontology_terms()
         log.info("  Encoding %d ontology terms...", len(onto_names))
         raw_onto = get_embeddings([t.lower() for t in onto_names])
         if raw_onto is None:
@@ -145,16 +145,33 @@ class OntologyMaintenance:
         onto_norms[onto_norms == 0] = 1
         onto_emb = onto_emb / onto_norms
 
-        THRESHOLD = 0.85
+        # Layer mapping: candidate_type → allowed target node layer
+        # 'concept' candidates may only merge into ConceptNode (IP.*) targets.
+        # 'relation' candidates aren't matched against nodes here at all.
+        # Without this filter, "subnet" embeds close to "RouteRedistribution"
+        # because BGE-M3 places routing-vocabulary in the same neighbourhood,
+        # and the cleanup pass then adds bad aliases like subnet→MECH.RouteRedistribution.
+        CAND_TYPE_TO_LAYER = {"concept": "concept"}
+        # Raised from 0.85 to 0.90 — cosine similarity over BGE-M3 in the same
+        # subdomain is naturally high; 0.85 produced too many false matches.
+        THRESHOLD = 0.90
 
-        # Detect ontology variants
+        # Detect ontology variants (only same-layer matches are eligible)
         sim_onto = np.dot(embeddings, onto_emb.T)
         onto_variant_count = 0
         for i, cand in enumerate(candidates):
             if cand["review_status"] == "accepted":
                 continue
-            max_idx = int(np.argmax(sim_onto[i]))
-            max_sim = float(sim_onto[i, max_idx])
+            allowed_layer = CAND_TYPE_TO_LAYER.get(cand.get("candidate_type", ""))
+            if allowed_layer is None:
+                continue  # don't match against ontology nodes for non-concept candidates
+            # Mask out targets that are NOT in the allowed layer
+            sims_i = sim_onto[i].copy()
+            for j, lyr in enumerate(onto_layers):
+                if lyr != allowed_layer:
+                    sims_i[j] = -1.0
+            max_idx = int(np.argmax(sims_i))
+            max_sim = float(sims_i[max_idx])
             if max_sim >= THRESHOLD:
                 matched_node_id = onto_ids[max_idx]
                 self._store.execute(
@@ -564,17 +581,18 @@ class OntologyMaintenance:
             return True
         return False
 
-    def _get_ontology_terms(self) -> tuple[list[str], list[str]]:
-        """Return (names, node_ids) from ontology registry."""
+    def _get_ontology_terms(self) -> tuple[list[str], list[str], list[str]]:
+        """Return (names, node_ids, layers) from ontology registry."""
         from src.ontology.registry import OntologyRegistry
         reg = OntologyRegistry.from_default()
-        names, ids = [], []
+        names, ids, layers = [], [], []
         for nid, n in reg.nodes.items():
             name = n.get("canonical_name")
             if name:
                 names.append(name)
                 ids.append(nid)
-        return names, ids
+                layers.append(n.get("knowledge_layer", "concept"))
+        return names, ids, layers
 
     @staticmethod
     def _parse_batch(raw: str, expected: int) -> dict[int, dict]:

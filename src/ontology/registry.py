@@ -19,6 +19,7 @@ class OntologyRegistry:
         self.nodes: dict[str, dict] = {}           # node_id → node dict
         self.alias_map: dict[str, str] = {}        # lower(surface_form) → node_id
         self.relation_ids: set[str] = set()        # valid relation type ids
+        self.relation_definitions: dict[str, dict] = {}  # id → {description, domain_hint, range_hint, symmetric}
         self.functional_predicates: frozenset[str] = frozenset()  # cardinality=one relations
         self._layer_index: dict[str, list[str]] = {}  # knowledge_layer → [node_id]
 
@@ -61,9 +62,16 @@ class OntologyRegistry:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         one_cardinality: set[str] = set()
         for rel in data.get("relations", []):
-            self.relation_ids.add(rel["id"])
+            rid = rel["id"]
+            self.relation_ids.add(rid)
+            self.relation_definitions[rid] = {
+                "description": rel.get("description", ""),
+                "domain_hint": rel.get("domain_hint", "any"),
+                "range_hint":  rel.get("range_hint", "any"),
+                "symmetric":   rel.get("symmetric", False),
+            }
             if rel.get("cardinality") == "one":
-                one_cardinality.add(rel["id"])
+                one_cardinality.add(rid)
         self.functional_predicates = frozenset(one_cardinality)
 
     def _load_domain(self, path: Path) -> None:

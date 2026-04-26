@@ -361,11 +361,10 @@ class AlignStage(Stage):
             sims_zh = np.dot(self.__class__._onto_embeddings_zh, seg_vec) if self.__class__._onto_embeddings_zh is not None else sims_en
             similarities = np.maximum(sims_en, sims_zh)
 
-            # Threshold calibrated from empirical data: non-concept nodes rarely
-            # exceed 0.55 similarity because their names are abstract (e.g.
-            # "NeighborAdjacencyFormation") and don't appear verbatim in text.
-            # Dropping to 0.50 gives ~43% segment coverage based on 30-sample test.
-            THRESHOLD = 0.50
+            # Threshold raised back to 0.60 after RouteRedistribution description
+            # was made more discriminative. At 0.50 it overmatched ~40% of segments
+            # for that one node; at 0.60 + new description it drops to ~6%.
+            THRESHOLD = 0.60
             MAX_MATCHES = 5
             top_indices = np.argsort(similarities)[::-1][:MAX_MATCHES * 3]
             results = []
